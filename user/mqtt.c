@@ -301,7 +301,7 @@ void ICACHE_FLASH_ATTR mqtt_timer(void *arg)
 			INFO("\r\nMQTT: Send keepalive packet to %s:%d!\r\n", client->host, client->port);
 			client->mqtt_state.outbound_message = mqtt_msg_pingreq(&client->mqtt_state.mqtt_connection);
 			client->keepAliveTick = 0;
-
+			system_os_post(MQTT_TASK_PRIO, 0, (os_param_t)client);
 		}
 
 	} else if(client->connState == TCP_RECONNECT_REQ){
