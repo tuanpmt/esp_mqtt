@@ -85,10 +85,12 @@ void MQTT_Publish(	MQTT_Client *client,
 
 **Default configuration**
 See: *user_config.h* and *config.c*
+
 **Create SSL Self sign**
 ```
 openssl req -x509 -newkey rsa:1024 -keyout key.pem -out cert.pem -days XXX
 ```
+
 **SSL Mqtt broker for test**
 ```javascript
 var mosca = require('mosca')
@@ -136,6 +138,7 @@ function setup() {
 ```
 
 **Be careful:** This library is not fully supported  for too long messages.
+
 **Status:** *Alpha release.*
 
 [MQTT Broker for test](https://github.com/mcollina/mosca)
