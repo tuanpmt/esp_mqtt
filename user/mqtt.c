@@ -377,9 +377,10 @@ mqtt_tcpclient_recon_cb(void *arg, sint8 errType)
 void ICACHE_FLASH_ATTR
 MQTT_Publish(MQTT_Client *client, const char* topic, const char* data, int data_length, int qos, int retain)
 {
-
-  INFO("MQTT: sending publish...\r\n");
-  client->mqtt_state.outbound_message = mqtt_msg_publish(&client->mqtt_state.mqtt_connection,
+	if(client->connState != MQTT_DATA)
+		return;
+	INFO("MQTT: sending publish...\r\n");
+	client->mqtt_state.outbound_message = mqtt_msg_publish(&client->mqtt_state.mqtt_connection,
                                                  topic, data, data_length,
                                                  qos, retain,
                                                  &client->mqtt_state.pending_msg_id);

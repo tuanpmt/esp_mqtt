@@ -71,6 +71,18 @@ void user_init(void)
 	INFO("\r\nSystem started ...\r\n");
 }
 ```
+
+**Publish message**
+
+```c
+void MQTT_Publish(	MQTT_Client *client, 
+					const char* topic, 
+					const char* data, 
+					int data_length, 
+					int qos, 
+					int retain);
+```
+
 **Default configuration**
 See: *user_config.h* and *config.c*
 **Create SSL Self sign**
