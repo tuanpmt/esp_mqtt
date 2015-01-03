@@ -84,7 +84,8 @@ void MQTT_Publish(	MQTT_Client *client,
 ```
 
 **Default configuration**
-See: *user_config.h* and *config.c*
+See: *include/user_config.h* and *include/config.c*
+If you want to load new default configurations, just change the value of CFG_HOLDER in ***include/user_config.h***
 
 **Create SSL Self sign**
 ```
