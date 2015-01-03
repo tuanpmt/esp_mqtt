@@ -21,7 +21,7 @@ SDK_BASE	?= c:/Espressif/ESP8266_SDK
 #Esptool.py path and port
 PYTHON		?= C:\Python27\python.exe
 ESPTOOL		?= c:\Espressif\utils\esptool.py
-ESPPORT		?= COM2
+ESPPORT		?= COM3
 
 # name for the target project
 TARGET		= app
