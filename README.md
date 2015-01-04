@@ -111,8 +111,11 @@ void MQTT_Publish(	MQTT_Client *client,
 ```
 
 **Default configuration**
+
 See: *include/user_config.h* and *include/config.c*
+
 If you want to load new default configurations, just change the value of CFG_HOLDER in ***include/user_config.h***
+
 Now in the Makefile, it will erase section hold the user configuration at 0x3C000
 
 ```bash

@@ -168,8 +168,7 @@ mqtt_tcpclient_recv(void *arg, char *pdata, unsigned short len)
 
 			} else {
 				INFO("MQTT: Connected to %s:%d\r\n", client->host, client->port);
-				if(client->connectedCb)
-						client->connectedCb((uint32_t*)client);
+
 				client->connState = MQTT_SUBSCIBE_SEND;
 			}
 			break;
@@ -185,6 +184,8 @@ mqtt_tcpclient_recv(void *arg, char *pdata, unsigned short len)
 			} else {
 				if(QUEUE_IsEmpty(&client->topicQueue)){
 					client->connState = MQTT_DATA;
+					if(client->connectedCb)
+						client->connectedCb((uint32_t*)client);
 				} else {
 					client->connState = MQTT_SUBSCIBE_SEND;
 				}
