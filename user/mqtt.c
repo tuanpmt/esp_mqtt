@@ -168,6 +168,8 @@ mqtt_tcpclient_recv(void *arg, char *pdata, unsigned short len)
 
 			} else {
 				INFO("MQTT: Connected to %s:%d\r\n", client->host, client->port);
+				if(client->connectedCb)
+						client->connectedCb((uint32_t*)client);
 				client->connState = MQTT_SUBSCIBE_SEND;
 			}
 			break;
@@ -346,11 +348,6 @@ mqtt_tcpclient_connect_cb(void *arg)
 	espconn_regist_sentcb(client->pCon, mqtt_tcpclient_sent_cb);///////
 	INFO("MQTT: Connected to broker %s:%d\r\n", client->host, client->port);
 	client->connState = MQTT_CONNECT_SEND;
-	if(client->connectedCb)
-		client->connectedCb((uint32_t*)client);
-
-
-
 	system_os_post(MQTT_TASK_PRIO, 0, (os_param_t)client);
 }
 
@@ -561,4 +558,8 @@ void MQTT_OnDisconnected(MQTT_Client *mqttClient, MqttCallback disconnectedCb)
 void MQTT_OnData(MQTT_Client *mqttClient, MqttDataCallback dataCb)
 {
 	mqttClient->dataCb = dataCb;
+}
+void MQTT_OnPublished(MQTT_Client *mqttClient, MqttCallback publishedCb)
+{
+	mqttClient->publishedCb = publishedCb;
 }

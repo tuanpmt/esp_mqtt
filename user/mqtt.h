@@ -92,6 +92,7 @@ typedef struct  {
 	mqtt_connect_info_t connect_info;
 	MqttCallback connectedCb;
 	MqttCallback disconnectedCb;
+	MqttCallback publishedCb;
 	MqttDataCallback dataCb;
 	ETSTimer mqttTimer;
 	uint32_t keepAliveTick;
@@ -121,6 +122,7 @@ void MQTT_InitConnection(MQTT_Client *mqttClient, uint8_t* host, uint32 port, ui
 void MQTT_InitClient(MQTT_Client *mqttClient, uint8_t* client_id, uint8_t* client_user, uint8_t* client_pass, uint32_t keepAliveTime);
 void MQTT_OnConnected(MQTT_Client *mqttClient, MqttCallback connectedCb);
 void MQTT_OnDisconnected(MQTT_Client *mqttClient, MqttCallback disconnectedCb);
+void MQTT_OnPublished(MQTT_Client *mqttClient, MqttCallback publishedCb);
 void MQTT_OnData(MQTT_Client *mqttClient, MqttDataCallback dataCb);
 void MQTT_Subscribe(MQTT_Client *client, char* topic);
 void MQTT_Connect(MQTT_Client *mqttClient);

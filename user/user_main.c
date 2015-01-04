@@ -54,6 +54,7 @@ void mqttConnectedCb(uint32_t *args)
 {
 	MQTT_Client* client = (MQTT_Client*)args;
 	INFO("MQTT: Connected\r\n");
+
 }
 
 void mqttDisconnectedCb(uint32_t *args)
@@ -61,9 +62,28 @@ void mqttDisconnectedCb(uint32_t *args)
 	MQTT_Client* client = (MQTT_Client*)args;
 	INFO("MQTT: Disconnected\r\n");
 }
-void mqttDataCb(uint32_t *args, const char* topic, uint32_t topic_len, const char *data, uint32_t lengh)
+
+void mqttPublishedCb(uint32_t *args)
 {
-	INFO("MQTT topic: %s, data: %s \r\n", topic, data);
+	MQTT_Client* client = (MQTT_Client*)args;
+	INFO("MQTT: Published\r\n");
+}
+
+void mqttDataCb(uint32_t *args, const char* topic, uint32_t topic_len, const char *data, uint32_t data_len)
+{
+	char topicBuf[64], dataBuf[64];
+	MQTT_Client* client = (MQTT_Client*)args;
+
+	os_memcpy(dataBuf, topic, topic_len);
+	topicBuf[topic_len] = 0;
+
+	os_memcpy(dataBuf, data, data_len);
+	dataBuf[data_len] = 0;
+
+	INFO("MQTT topic: %s, data: %s \r\n", topicBuf, dataBuf);
+
+	/* Echo back to /echo channel*/
+	MQTT_Publish(client, "/echo", dataBuf, data_len, 0, 0);
 }
 
 
@@ -78,6 +98,7 @@ void user_init(void)
 	MQTT_InitClient(&mqttClient, sysCfg.device_id, sysCfg.mqtt_user, sysCfg.mqtt_pass, sysCfg.mqtt_keepalive);
 	MQTT_OnConnected(&mqttClient, mqttConnectedCb);
 	MQTT_OnDisconnected(&mqttClient, mqttDisconnectedCb);
+	MQTT_OnPublished(&mqttClient, mqttPublishedCb);
 	MQTT_OnData(&mqttClient, mqttDataCb);
 
 	WIFI_Connect(sysCfg.sta_ssid, sysCfg.sta_pwd, wifiConnectCb);

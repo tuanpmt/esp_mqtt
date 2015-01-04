@@ -47,9 +47,35 @@ void mqttDisconnectedCb(uint32_t *args)
 	MQTT_Client* client = (MQTT_Client*)args;
 	INFO("MQTT: Disconnected\r\n");
 }
-void mqttDataCb(uint32_t *args, const char* topic, uint32_t topic_len, const char *data, uint32_t lengh)
+
+void mqttPublishedCb(uint32_t *args)
 {
-	INFO("MQTT topic: %s, data: %s \r\n", topic, data);
+	MQTT_Client* client = (MQTT_Client*)args;
+	INFO("MQTT: Published\r\n");
+}
+
+
+void mqttDataCb(uint32_t *args, const char* topic, uint32_t topic_len, const char *data, uint32_t data_len)
+{
+	char topicBuf[64], dataBuf[64];
+	MQTT_Client* client = (MQTT_Client*)args;
+
+	os_memcpy(dataBuf, topic, topic_len);
+	topicBuf[topic_len] = 0;
+
+	os_memcpy(dataBuf, data, data_len);
+	dataBuf[data_len] = 0;
+
+	INFO("MQTT topic: %s, data: %s \r\n", topicBuf, dataBuf);
+
+	/* Echo back to /echo channel*/
+	MQTT_Publish(client, "/echo", dataBuf, data_len, 0, 0);
+}
+
+void mqttPublishedCb(uint32_t *args)
+{
+	MQTT_Client* client = (MQTT_Client*)args;
+	INFO("MQTT: Published\r\n");
 }
 
 
@@ -63,6 +89,7 @@ void user_init(void)
 	MQTT_InitConnection(&mqttClient, sysCfg.mqtt_host, sysCfg.mqtt_port, SEC_SSL);
 	MQTT_InitClient(&mqttClient, sysCfg.device_id, sysCfg.mqtt_user, sysCfg.mqtt_pass, sysCfg.mqtt_keepalive);
 	MQTT_OnConnected(&mqttClient, mqttConnectedCb);
+	MQTT_OnPublished(&mqttClient, mqttPublishedCb);
 	MQTT_OnDisconnected(&mqttClient, mqttDisconnectedCb);
 	MQTT_OnData(&mqttClient, mqttDataCb);
 
@@ -86,6 +113,12 @@ void MQTT_Publish(	MQTT_Client *client,
 **Default configuration**
 See: *include/user_config.h* and *include/config.c*
 If you want to load new default configurations, just change the value of CFG_HOLDER in ***include/user_config.h***
+Now in the Makefile, it will erase section hold the user configuration at 0x3C000
+
+```bash
+flash: firmware/0x00000.bin firmware/0x40000.bin
+	$(PYTHON) $(ESPTOOL) -p $(ESPPORT) write_flash 0x00000 firmware/0x00000.bin 0x3C000 $(BLANKER) 0x40000 firmware/0x40000.bin 
+```
 
 **Create SSL Self sign**
 ```
