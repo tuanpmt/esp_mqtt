@@ -74,7 +74,7 @@ void mqttDataCb(uint32_t *args, const char* topic, uint32_t topic_len, const cha
 	char topicBuf[64], dataBuf[64];
 	MQTT_Client* client = (MQTT_Client*)args;
 
-	os_memcpy(dataBuf, topic, topic_len);
+	os_memcpy(topicBuf, topic, topic_len);
 	topicBuf[topic_len] = 0;
 
 	os_memcpy(dataBuf, data, data_len);
