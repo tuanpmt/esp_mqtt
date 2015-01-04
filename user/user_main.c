@@ -43,17 +43,14 @@ void wifiConnectCb(uint8_t status)
 {
 	if(status == STATION_GOT_IP){
 		MQTT_Connect(&mqttClient);
-
-		MQTT_Subscribe(&mqttClient, "/test/topic");
-		MQTT_Subscribe(&mqttClient, "/test2/topic");
-
-
 	}
 }
 void mqttConnectedCb(uint32_t *args)
 {
 	MQTT_Client* client = (MQTT_Client*)args;
 	INFO("MQTT: Connected\r\n");
+	MQTT_Subscribe(&mqttClient, "/test/topic");
+	MQTT_Subscribe(&mqttClient, "/test2/topic");
 
 }
 

@@ -168,8 +168,9 @@ mqtt_tcpclient_recv(void *arg, char *pdata, unsigned short len)
 
 			} else {
 				INFO("MQTT: Connected to %s:%d\r\n", client->host, client->port);
-
-				client->connState = MQTT_SUBSCIBE_SEND;
+				client->connState = MQTT_DATA;
+				if(client->connectedCb)
+					client->connectedCb((uint32_t*)client);
 			}
 			break;
 		case MQTT_SUBSCIBE_SENDING:
@@ -184,8 +185,7 @@ mqtt_tcpclient_recv(void *arg, char *pdata, unsigned short len)
 			} else {
 				if(QUEUE_IsEmpty(&client->topicQueue)){
 					client->connState = MQTT_DATA;
-					if(client->connectedCb)
-						client->connectedCb((uint32_t*)client);
+
 				} else {
 					client->connState = MQTT_SUBSCIBE_SEND;
 				}
@@ -221,7 +221,7 @@ mqtt_tcpclient_recv(void *arg, char *pdata, unsigned short len)
 				if(client->mqtt_state.pending_msg_type == MQTT_MSG_TYPE_PUBLISH && client->mqtt_state.pending_msg_id == msg_id){
 				  INFO("MQTT: Publish successful\r\n");
 				  if(client->publishedCb)
-					  client->publishedCb(client);
+					  client->publishedCb((uint32_t*)client);
 				}
 
 				break;
@@ -235,7 +235,7 @@ mqtt_tcpclient_recv(void *arg, char *pdata, unsigned short len)
 				if(client->mqtt_state.pending_msg_type == MQTT_MSG_TYPE_PUBLISH && client->mqtt_state.pending_msg_id == msg_id){
 				  INFO("MQTT: Public successful\r\n");
 				  if(client->publishedCb)
-					  client->publishedCb(client);
+					  client->publishedCb((uint32_t*)client);
 				}
 				break;
 			  case MQTT_MSG_TYPE_PINGREQ:
@@ -295,7 +295,7 @@ mqtt_tcpclient_sent_cb(void *arg)
 	INFO("TCP: Sent\r\n");
 	if(client->connState == MQTT_DATA){
 		if(client->publishedCb)
-			client->publishedCb(client);
+			client->publishedCb((uint32_t*)client);
 	}
 	system_os_post(MQTT_TASK_PRIO, 0, (os_param_t)client);
 }
