@@ -220,7 +220,8 @@ mqtt_tcpclient_recv(void *arg, char *pdata, unsigned short len)
 			  case MQTT_MSG_TYPE_PUBACK:
 				if(client->mqtt_state.pending_msg_type == MQTT_MSG_TYPE_PUBLISH && client->mqtt_state.pending_msg_id == msg_id){
 				  INFO("MQTT: Publish successful\r\n");
-
+				  if(client->publishedCb)
+					  client->publishedCb(client);
 				}
 
 				break;
@@ -233,7 +234,8 @@ mqtt_tcpclient_recv(void *arg, char *pdata, unsigned short len)
 			  case MQTT_MSG_TYPE_PUBCOMP:
 				if(client->mqtt_state.pending_msg_type == MQTT_MSG_TYPE_PUBLISH && client->mqtt_state.pending_msg_id == msg_id){
 				  INFO("MQTT: Public successful\r\n");
-
+				  if(client->publishedCb)
+					  client->publishedCb(client);
 				}
 				break;
 			  case MQTT_MSG_TYPE_PINGREQ:
