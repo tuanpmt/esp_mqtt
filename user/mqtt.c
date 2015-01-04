@@ -293,6 +293,10 @@ mqtt_tcpclient_sent_cb(void *arg)
 	struct espconn *pCon = (struct espconn *)arg;
 	MQTT_Client* client = (MQTT_Client *)pCon->reverse;
 	INFO("TCP: Sent\r\n");
+	if(client->connState == MQTT_DATA){
+		if(client->publishedCb)
+			client->publishedCb(client);
+	}
 	system_os_post(MQTT_TASK_PRIO, 0, (os_param_t)client);
 }
 
