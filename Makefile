@@ -40,13 +40,13 @@ CFLAGS		= -Os -Wpointer-arith -Wundef -Werror -Wl,-EL -fno-inline-functions -nos
 LDFLAGS		= -nostdlib -Wl,--no-check-sections -u call_user_start -Wl,-static
 
 ifeq ($(FLAVOR),debug)
-    CFLAGS += -g -O2
-    LDFLAGS += -g -O2
+    CFLAGS += -g -O0
+    LDFLAGS += -g -O0
 endif
 
 ifeq ($(FLAVOR),release)
-    CFLAGS += -g -O0
-    LDFLAGS += -g -O0
+    CFLAGS += -g -O2
+    LDFLAGS += -g -O2
 endif
 
 # linker script used for the above linkier step
