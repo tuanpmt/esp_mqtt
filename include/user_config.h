@@ -22,5 +22,7 @@
 #define MQTT_RECONNECT_TIMEOUT 	5	/*second*/
 #define MQTT_CONNTECT_TIMER 	5 	/**/
 
-#define CLIENT_SSL_ENABLE
+#define MQTT_CLIENT_SSL_ENABLE
+//#undef MQTT_CLIENT_SSL_ENABLE
+
 #endif
