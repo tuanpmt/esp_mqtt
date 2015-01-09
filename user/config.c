@@ -94,7 +94,7 @@ void CFG_Load()
 		sysCfg.mqtt_port = MQTT_PORT;
 		os_sprintf(sysCfg.mqtt_user, "%s", MQTT_USER);
 		os_sprintf(sysCfg.mqtt_pass, "%s", MQTT_PASS);
-#ifdef MQTT_CLIENT_SSL_ENABLE
+#ifdef CLIENT_SSL_ENABLE
 		sysCfg.security = SEC_SSL;
 #else
 		sysCfg.security = SEC_NONSSL;
