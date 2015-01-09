@@ -265,7 +265,7 @@ mqtt_tcpclient_recv(void *arg, char *pdata, unsigned short len)
 
 			  if(client->mqtt_state.message_length_read < client->mqtt_state.message_length)
 			  {
-				  msg_type = MQTT_PUBLISH_RECV;
+				  //client->connState = MQTT_PUBLISH_RECV;
 			  }
 
 			}
@@ -275,7 +275,6 @@ mqtt_tcpclient_recv(void *arg, char *pdata, unsigned short len)
 				 * Long publish message, not implement yet
 				 * TODO: Implement method used deliver_publish_continuation
 				 */
-
 				break;
 		}
 	}

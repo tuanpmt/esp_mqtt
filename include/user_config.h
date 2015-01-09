@@ -15,13 +15,14 @@
 #define MQTT_USER			"DVES_USER"
 #define MQTT_PASS			"DVES_PASS"
 
+
 #define STA_SSID "DVES_HOME"
 #define STA_PASS "wifipassword"
 #define STA_TYPE AUTH_WPA2_PSK
 
 #define MQTT_RECONNECT_TIMEOUT 	5	/*second*/
 
-//#define CLIENT_SSL_ENABLE
+#define CLIENT_SSL_ENABLE
 
 
 #endif
