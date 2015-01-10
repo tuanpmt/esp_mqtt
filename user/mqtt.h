@@ -30,6 +30,7 @@
 #ifndef USER_AT_MQTT_H_
 #define USER_AT_MQTT_H_
 #include "mqtt_msg.h"
+#include "user_interface.h"
 #include "str_queue.h"
 typedef struct mqtt_event_data_t
 {

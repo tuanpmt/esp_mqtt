@@ -34,6 +34,7 @@
 #include "osapi.h"
 #include "user_interface.h"
 
+#include "mqtt.h"
 #include "config.h"
 #include "user_config.h"
 #include "debug.h"
@@ -93,6 +94,8 @@ void CFG_Load()
 		sysCfg.mqtt_port = MQTT_PORT;
 		os_sprintf(sysCfg.mqtt_user, "%s", MQTT_USER);
 		os_sprintf(sysCfg.mqtt_pass, "%s", MQTT_PASS);
+
+		sysCfg.security = SEC_NONSSL;	/* default non ssl */
 
 		sysCfg.mqtt_keepalive = MQTT_KEEPALIVE;
 
