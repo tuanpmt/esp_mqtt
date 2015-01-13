@@ -31,7 +31,8 @@
 #define USER_AT_MQTT_H_
 #include "mqtt_msg.h"
 #include "user_interface.h"
-#include "str_queue.h"
+
+#include "queue.h"
 typedef struct mqtt_event_data_t
 {
   uint8_t type;
@@ -99,7 +100,7 @@ typedef struct  {
 	uint32_t keepAliveTick;
 	uint32_t reconnectTick;
 	tConnState connState;
-	STR_QUEUE topicQueue;
+	QUEUE msgQueue;
 } MQTT_Client;
 
 #define SEC_NONSSL 0
@@ -125,8 +126,8 @@ void MQTT_OnConnected(MQTT_Client *mqttClient, MqttCallback connectedCb);
 void MQTT_OnDisconnected(MQTT_Client *mqttClient, MqttCallback disconnectedCb);
 void MQTT_OnPublished(MQTT_Client *mqttClient, MqttCallback publishedCb);
 void MQTT_OnData(MQTT_Client *mqttClient, MqttDataCallback dataCb);
-void MQTT_Subscribe(MQTT_Client *client, char* topic);
+BOOL MQTT_Subscribe(MQTT_Client *client, char* topic, uint8_t qos);
 void MQTT_Connect(MQTT_Client *mqttClient);
-void MQTT_Publish(MQTT_Client *client, const char* topic, const char* data, int data_length, int qos, int retain);
+BOOL MQTT_Publish(MQTT_Client *client, const char* topic, const char* data, int data_length, int qos, int retain);
 
 #endif /* USER_AT_MQTT_H_ */

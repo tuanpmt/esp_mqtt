@@ -49,8 +49,10 @@ void mqttConnectedCb(uint32_t *args)
 {
 	MQTT_Client* client = (MQTT_Client*)args;
 	INFO("MQTT: Connected\r\n");
-	MQTT_Subscribe(&mqttClient, "/test/topic");
-	MQTT_Subscribe(&mqttClient, "/test2/topic");
+	MQTT_Subscribe(&mqttClient, "/mqtt/topic/1", 0);
+	MQTT_Subscribe(&mqttClient, "/mqtt/topic/2", 0);
+	MQTT_Publish(client, "/mqtt/topic/2", "hello", 5, 0, 0);
+	MQTT_Publish(client, "/mqtt/topic/1", "hello2", 6, 0, 0);
 
 }
 
@@ -79,8 +81,6 @@ void mqttDataCb(uint32_t *args, const char* topic, uint32_t topic_len, const cha
 
 	INFO("MQTT topic: %s, data: %s \r\n", topicBuf, dataBuf);
 
-	/* Echo back to /echo channel*/
-	MQTT_Publish(client, "/echo", dataBuf, data_len, 0, 0);
 }
 
 

@@ -95,7 +95,7 @@ void CFG_Load()
 		os_sprintf(sysCfg.mqtt_user, "%s", MQTT_USER);
 		os_sprintf(sysCfg.mqtt_pass, "%s", MQTT_PASS);
 
-		sysCfg.security = SEC_NONSSL;	/* default non ssl */
+		sysCfg.security = DEFAULT_SECURITY;	/* default non ssl */
 
 		sysCfg.mqtt_keepalive = MQTT_KEEPALIVE;
 

@@ -7,7 +7,7 @@
 /*DEFAULT CONFIGURATIONS*/
 
 #define MQTT_HOST			"mqtt.yourdomain.com" //or "192.168.11.1"
-#define MQTT_PORT			8440
+#define MQTT_PORT			1880
 #define MQTT_BUF_SIZE		1024
 #define MQTT_KEEPALIVE		120	 /*second*/
 
@@ -17,12 +17,14 @@
 
 
 #define STA_SSID "DVES_HOME"
-#define STA_PASS "wifipassword"
+#define STA_PASS "yourpassword"
 #define STA_TYPE AUTH_WPA2_PSK
 
 #define MQTT_RECONNECT_TIMEOUT 	5	/*second*/
 
 #define CLIENT_SSL_ENABLE
+#define DEFAULT_SECURITY	0
 
+#define QUEUE_BUFFER_SIZE		 		2048
 
 #endif
