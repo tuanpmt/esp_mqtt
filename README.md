@@ -29,17 +29,17 @@ void wifiConnectCb(uint8_t status)
 {
 	if(status == STATION_GOT_IP){
 		MQTT_Connect(&mqttClient);
-
-		MQTT_Subscribe(&mqttClient, "/test/topic");
-		MQTT_Subscribe(&mqttClient, "/test2/topic");
-
-
 	}
 }
 void mqttConnectedCb(uint32_t *args)
 {
 	MQTT_Client* client = (MQTT_Client*)args;
 	INFO("MQTT: Connected\r\n");
+	MQTT_Subscribe(&mqttClient, "/mqtt/topic/1", 0);
+	MQTT_Subscribe(&mqttClient, "/mqtt/topic/2", 0);
+	MQTT_Publish(client, "/mqtt/topic/2", "hello", 5, 0, 0);
+	MQTT_Publish(client, "/mqtt/topic/1", "hello2", 6, 0, 0);
+
 }
 
 void mqttDisconnectedCb(uint32_t *args)
@@ -54,7 +54,6 @@ void mqttPublishedCb(uint32_t *args)
 	INFO("MQTT: Published\r\n");
 }
 
-
 void mqttDataCb(uint32_t *args, const char* topic, uint32_t topic_len, const char *data, uint32_t data_len)
 {
 	char topicBuf[64], dataBuf[64];
@@ -68,14 +67,6 @@ void mqttDataCb(uint32_t *args, const char* topic, uint32_t topic_len, const cha
 
 	INFO("MQTT topic: %s, data: %s \r\n", topicBuf, dataBuf);
 
-	/* Echo back to /echo channel*/
-	MQTT_Publish(client, "/echo", dataBuf, data_len, 0, 0);
-}
-
-void mqttPublishedCb(uint32_t *args)
-{
-	MQTT_Client* client = (MQTT_Client*)args;
-	INFO("MQTT: Published\r\n");
 }
 
 
@@ -89,25 +80,25 @@ void user_init(void)
 	MQTT_InitConnection(&mqttClient, sysCfg.mqtt_host, sysCfg.mqtt_port, sysCfg.security);
 	MQTT_InitClient(&mqttClient, sysCfg.device_id, sysCfg.mqtt_user, sysCfg.mqtt_pass, sysCfg.mqtt_keepalive);
 	MQTT_OnConnected(&mqttClient, mqttConnectedCb);
-	MQTT_OnPublished(&mqttClient, mqttPublishedCb);
 	MQTT_OnDisconnected(&mqttClient, mqttDisconnectedCb);
+	MQTT_OnPublished(&mqttClient, mqttPublishedCb);
 	MQTT_OnData(&mqttClient, mqttDataCb);
 
 	WIFI_Connect(sysCfg.sta_ssid, sysCfg.sta_pwd, wifiConnectCb);
 
 	INFO("\r\nSystem started ...\r\n");
 }
+
 ```
 
-**Publish message**
+**Publish message and Subscribe**
 
 ```c
-void MQTT_Publish(	MQTT_Client *client, 
-					const char* topic, 
-					const char* data, 
-					int data_length, 
-					int qos, 
-					int retain);
+/* TRUE if success */
+BOOL MQTT_Subscribe(MQTT_Client *client, char* topic, uint8_t qos);
+
+BOOL MQTT_Publish(MQTT_Client *client, const char* topic, const char* data, int data_length, int qos, int retain);
+
 ```
 
 **Default configuration**
