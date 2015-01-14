@@ -99,6 +99,18 @@ BOOL MQTT_Publish(MQTT_Client *client, const char* topic, const char* data, int 
 
 ```
 
+**Already support LWT: (Last Will and Testament)***
+Setup in **MQTT_InitClient** file ***mqtt.c***
+```c
+char willTopic[] = "/lwt";
+char willMessage[] = "offline";
+
+mqttClient->connect_info.will_topic = willTopic;
+mqttClient->connect_info.will_message = willMessage;
+mqttClient->will_qos = 0;
+mqttClient->will_retain = 0;
+```
+
 **Default configuration**
 
 See: *include/user_config.h* and *include/config.c*
