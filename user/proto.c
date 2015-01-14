@@ -106,7 +106,6 @@ I16 PROTO_Add(U8 *buf, const U8 *packet, I16 bufSize)
 I16 PROTO_AddRb(RINGBUF *rb, const U8 *packet, I16 len)
 {
     U16 i = 2;
-
     if(RINGBUF_Put(rb, 0x7E) == -1) return -1;
     while (len--) {
         switch (*packet) {
@@ -124,6 +123,7 @@ I16 PROTO_AddRb(RINGBUF *rb, const U8 *packet, I16 len)
         }
     }
     if(RINGBUF_Put(rb, 0x7F) == -1) return -1;
+
     return i;
 }
 

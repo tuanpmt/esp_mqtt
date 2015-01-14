@@ -363,11 +363,12 @@ MQTT_Publish(MQTT_Client *client, const char* topic, const char* data, int data_
 {
 	mqtt_message_t* outbound_message;
 
-	INFO("MQTT: queuing publish...\r\n");
+
 	outbound_message = mqtt_msg_publish(&client->mqtt_state.mqtt_connection,
 										 topic, data, data_length,
 										 qos, retain,
 										 &client->mqtt_state.pending_msg_id);
+	INFO("MQTT: queuing publish, length: %d...\r\n", outbound_message->length);
 	if(QUEUE_Puts(&client->msgQueue, outbound_message->data, outbound_message->length) == -1){
 		INFO("MQTT: Exceed the amount of queues\r\n");
 		return FALSE;
@@ -399,8 +400,8 @@ void ICACHE_FLASH_ATTR
 MQTT_Task(os_event_t *e)
 {
 	MQTT_Client* client = (MQTT_Client*)e->par;
-	uint8_t topic[64];
-
+	uint8_t dataBuffer[MQTT_BUF_SIZE];
+	uint16_t dataLen;
 	switch(client->connState){
 
 	case TCP_RECONNECT_REQ:
@@ -411,7 +412,6 @@ MQTT_Task(os_event_t *e)
 		client->connState = TCP_CONNECTING;
 		break;
 	case MQTT_CONNECT_SEND:
-
 		mqtt_msg_init(&client->mqtt_state.mqtt_connection, client->mqtt_state.out_buffer, client->mqtt_state.out_buffer_length);
 		client->mqtt_state.outbound_message = mqtt_msg_connect(&client->mqtt_state.mqtt_connection, client->mqtt_state.connect_info);
 		if(client->security){
@@ -428,13 +428,13 @@ MQTT_Task(os_event_t *e)
 		break;
 	case MQTT_DATA:
 
-		if(QUEUE_Gets(&client->msgQueue, client->mqtt_state.mqtt_connection.buffer, &client->mqtt_state.mqtt_connection.buffer_length, MQTT_BUF_SIZE) == 0){
+		if(QUEUE_Gets(&client->msgQueue, dataBuffer, &dataLen, MQTT_BUF_SIZE) == 0){
 			INFO("MQTT: Sending..\r\n");
 			if(client->security){
-				espconn_secure_sent(client->pCon, client->mqtt_state.mqtt_connection.buffer, client->mqtt_state.mqtt_connection.buffer_length);
+				espconn_secure_sent(client->pCon, dataBuffer, dataLen);
 			}
 			else{
-				espconn_sent(client->pCon, client->mqtt_state.mqtt_connection.buffer, client->mqtt_state.mqtt_connection.buffer_length);
+				espconn_sent(client->pCon, dataBuffer, dataLen);
 			}
 
 			client->mqtt_state.outbound_message = NULL;
