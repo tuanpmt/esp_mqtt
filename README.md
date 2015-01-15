@@ -107,8 +107,8 @@ char willMessage[] = "offline";
 
 mqttClient->connect_info.will_topic = willTopic;
 mqttClient->connect_info.will_message = willMessage;
-mqttClient->will_qos = 0;
-mqttClient->will_retain = 0;
+mqttClient->connect_info.will_qos = 0;
+mqttClient->connect_info.will_retain = 0;
 ```
 
 **Default configuration**
