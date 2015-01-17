@@ -21,7 +21,7 @@ SDK_BASE	?= c:/Espressif/ESP8266_SDK
 #Esptool.py path and port
 PYTHON		?= C:\Python27\python.exe
 ESPTOOL		?= c:\Espressif\utils\esptool.py
-ESPPORT		?= COM2
+ESPPORT		?= COM3
 
 # name for the target project
 TARGET		= app
@@ -31,7 +31,7 @@ MODULES		= driver user
 EXTRA_INCDIR    = include $(SDK_BASE)/../include
 
 # libraries used in this project, mainly provided by the SDK
-LIBS		= c gcc hal phy pp net80211 lwip wpa upgrade main
+LIBS		= c gcc hal phy pp net80211 lwip wpa upgrade main ssl
 
 # compiler flags using during compilation of source files
 CFLAGS		= -Os -Wpointer-arith -Wundef -Werror -Wl,-EL -fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DICACHE_FLASH
@@ -40,13 +40,13 @@ CFLAGS		= -Os -Wpointer-arith -Wundef -Werror -Wl,-EL -fno-inline-functions -nos
 LDFLAGS		= -nostdlib -Wl,--no-check-sections -u call_user_start -Wl,-static
 
 ifeq ($(FLAVOR),debug)
-    CFLAGS += -g -O2
-    LDFLAGS += -g -O2
+    CFLAGS += -g -O0
+    LDFLAGS += -g -O0
 endif
 
 ifeq ($(FLAVOR),release)
-    CFLAGS += -g -O0
-    LDFLAGS += -g -O0
+    CFLAGS += -g -O2
+    LDFLAGS += -g -O2
 endif
 
 # linker script used for the above linkier step
@@ -93,6 +93,7 @@ MODULE_INCDIR	:= $(addsuffix /include,$(INCDIR))
 
 FW_FILE_1	:= $(addprefix $(FW_BASE)/,$(FW_FILE_1).bin)
 FW_FILE_2	:= $(addprefix $(FW_BASE)/,$(FW_FILE_2).bin)
+BLANKER	:= $(addprefix $(SDK_BASE)/,bin/blank.bin)
 
 V ?= $(VERBOSE)
 ifeq ("$(V)","1")
@@ -140,7 +141,7 @@ firmware:
 	$(Q) mkdir -p $@
 
 flash: firmware/0x00000.bin firmware/0x40000.bin
-	$(PYTHON) $(ESPTOOL) -p $(ESPPORT) write_flash 0x00000 firmware/0x00000.bin 0x40000 firmware/0x40000.bin
+	$(PYTHON) $(ESPTOOL) -p $(ESPPORT) write_flash 0x00000 firmware/0x00000.bin 0x3C000 $(BLANKER) 0x40000 firmware/0x40000.bin 
 
 test: flash
 	screen $(ESPPORT) 115200
