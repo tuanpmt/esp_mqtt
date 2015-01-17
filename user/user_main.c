@@ -49,10 +49,12 @@ void mqttConnectedCb(uint32_t *args)
 {
 	MQTT_Client* client = (MQTT_Client*)args;
 	INFO("MQTT: Connected\r\n");
-	MQTT_Subscribe(client, "/mqtt/topic/1", 0);
-	MQTT_Subscribe(client, "/mqtt/topic/2", 0);
-	MQTT_Publish(client, "/mqtt/topic/2", "hello2", 6, 0, 0);
-	MQTT_Publish(client, "/mqtt/topic/1", "hello1", 6, 0, 0);
+	MQTT_Subscribe(client, "/mqtt/topic/0", 0);
+	MQTT_Subscribe(client, "/mqtt/topic/1", 1);
+	MQTT_Subscribe(client, "/mqtt/topic/2", 2);
+	MQTT_Publish(client, "/mqtt/topic/0", "hello0", 6, 0, 0);
+	MQTT_Publish(client, "/mqtt/topic/1", "hello1", 6, 1, 0);
+	MQTT_Publish(client, "/mqtt/topic/2", "hello2", 6, 2, 0);
 }
 
 void mqttDisconnectedCb(uint32_t *args)
