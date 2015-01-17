@@ -167,7 +167,7 @@ const char* mqtt_get_publish_topic(uint8_t* buffer, uint16_t* length)
   topiclen = buffer[i++] << 8;
   topiclen |= buffer[i++];
 
-  if(i + topiclen >= *length)
+  if(i + topiclen > *length)
     return NULL;
 
   *length = topiclen;
@@ -196,8 +196,10 @@ const char* mqtt_get_publish_data(uint8_t* buffer, uint16_t* length)
   topiclen = buffer[i++] << 8;
   topiclen |= buffer[i++];
 
-  if(i + topiclen >= *length)
+  if(i + topiclen >= *length){
+	*length = 0;
     return NULL;
+  }
   i += topiclen;
 
   if(mqtt_get_qos(buffer) > 0)

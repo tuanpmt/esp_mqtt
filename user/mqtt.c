@@ -102,7 +102,6 @@ deliver_publish(MQTT_Client* client, uint8_t* message, int length)
 
 	event_data.topic_length = length;
 	event_data.topic = mqtt_get_publish_topic(message, &event_data.topic_length);
-
 	event_data.data_length = length;
 	event_data.data = mqtt_get_publish_data(message, &event_data.data_length);
 
