@@ -124,13 +124,13 @@ mqtt_tcpclient_recv(void *arg, char *pdata, unsigned short len)
 {
 	uint8_t msg_type;
 	uint8_t msg_qos;
-
 	uint16_t msg_id;
 
 	struct espconn *pCon = (struct espconn*)arg;
 	MQTT_Client *client = (MQTT_Client *)pCon->reverse;
 
-	INFO("TCP: data received\r\n");
+READPACKET:
+	INFO("TCP: data received %d bytes\r\n", len);
 	if(len < MQTT_BUF_SIZE && len > 0){
 		os_memcpy(client->mqtt_state.in_buffer, pdata, len);
 
@@ -141,7 +141,7 @@ mqtt_tcpclient_recv(void *arg, char *pdata, unsigned short len)
 			msg_type = mqtt_get_type(client->mqtt_state.in_buffer);
 			msg_qos = mqtt_get_qos(client->mqtt_state.in_buffer);
 			msg_id = mqtt_get_id(client->mqtt_state.in_buffer, client->mqtt_state.in_buffer_length);
-			INFO("MQTT: type: %d, qos: %d, id: %04X\r\n", msg_type, msg_qos, msg_id);
+
 			switch(msg_type)
 			{
 			  case MQTT_MSG_TYPE_CONNACK:
@@ -219,24 +219,17 @@ mqtt_tcpclient_recv(void *arg, char *pdata, unsigned short len)
 			// statement due to the way protothreads resume.
 			if(msg_type == MQTT_MSG_TYPE_PUBLISH)
 			{
-			  uint16_t len;
-
-			  // adjust message_length and message_length_read so that
-			  // they only account for the publish data and not the rest of the
-			  // message, this is done so that the offset passed with the
-			  // continuation event is the offset within the publish data and
-			  // not the offset within the message as a whole.
 			  len = client->mqtt_state.message_length_read;
-			  mqtt_get_publish_data(client->mqtt_state.in_buffer, &len);
-			  len = client->mqtt_state.message_length_read - len;
-			  client->mqtt_state.message_length -= len;
-			  client->mqtt_state.message_length_read -= len;
 
-			  if(client->mqtt_state.message_length_read < client->mqtt_state.message_length)
+			  if(client->mqtt_state.message_length < client->mqtt_state.message_length_read)
 			  {
 				  //client->connState = MQTT_PUBLISH_RECV;
 				  //Not Implement yet
-				  INFO("We have more data, read: %d, total: %d\r\n", client->mqtt_state.message_length_read, client->mqtt_state.message_length);
+				  len -= client->mqtt_state.message_length;
+				  pdata += client->mqtt_state.message_length;
+
+				  INFO("Get another published message\r\n");
+				  goto READPACKET;
 			  }
 
 			}
