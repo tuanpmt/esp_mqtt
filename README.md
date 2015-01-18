@@ -188,7 +188,9 @@ function setup() {
 
 **Be careful:** This library is not fully supported  for too long messages.
 
-**Status:** *Alpha release.*
+**Status:** *Pre release.*
+
+[https://github.com/tuanpmt/esp_mqtt/releases](https://github.com/tuanpmt/esp_mqtt/releases)
 
 [MQTT Broker for test](https://github.com/mcollina/mosca)
 
