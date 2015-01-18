@@ -84,11 +84,11 @@ typedef struct mqtt_connection
 
 typedef struct mqtt_connect_info
 {
-  const char* client_id;
-  const char* username;
-  const char* password;
-  const char* will_topic;
-  const char* will_message;
+  char* client_id;
+  char* username;
+  char* password;
+  char* will_topic;
+  char* will_message;
   int keepalive;
   int will_qos;
   int will_retain;

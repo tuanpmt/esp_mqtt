@@ -36,6 +36,7 @@
 #include "debug.h"
 #include "gpio.h"
 #include "user_interface.h"
+#include "mem.h"
 
 MQTT_Client mqttClient;
 
@@ -52,9 +53,11 @@ void mqttConnectedCb(uint32_t *args)
 	MQTT_Subscribe(client, "/mqtt/topic/0", 0);
 	MQTT_Subscribe(client, "/mqtt/topic/1", 1);
 	MQTT_Subscribe(client, "/mqtt/topic/2", 2);
+
 	MQTT_Publish(client, "/mqtt/topic/0", "hello0", 6, 0, 0);
 	MQTT_Publish(client, "/mqtt/topic/1", "hello1", 6, 1, 0);
 	MQTT_Publish(client, "/mqtt/topic/2", "hello2", 6, 2, 0);
+
 }
 
 void mqttDisconnectedCb(uint32_t *args)
@@ -71,7 +74,9 @@ void mqttPublishedCb(uint32_t *args)
 
 void mqttDataCb(uint32_t *args, const char* topic, uint32_t topic_len, const char *data, uint32_t data_len)
 {
-	char topicBuf[64], dataBuf[64];
+	char *topicBuf = (char*)os_zalloc(topic_len+1),
+			*dataBuf = (char*)os_zalloc(data_len+1);
+
 	MQTT_Client* client = (MQTT_Client*)args;
 
 	os_memcpy(topicBuf, topic, topic_len);
@@ -80,7 +85,9 @@ void mqttDataCb(uint32_t *args, const char* topic, uint32_t topic_len, const cha
 	os_memcpy(dataBuf, data, data_len);
 	dataBuf[data_len] = 0;
 
-	INFO("MQTT topic: %s, data: %s \r\n", topicBuf, dataBuf);
+	INFO("Receive topic: %s, data: %s \r\n", topicBuf, dataBuf);
+	os_free(topicBuf);
+	os_free(dataBuf);
 }
 
 
@@ -92,7 +99,12 @@ void user_init(void)
 	CFG_Load();
 
 	MQTT_InitConnection(&mqttClient, sysCfg.mqtt_host, sysCfg.mqtt_port, sysCfg.security);
-	MQTT_InitClient(&mqttClient, sysCfg.device_id, sysCfg.mqtt_user, sysCfg.mqtt_pass, sysCfg.mqtt_keepalive);
+	//MQTT_InitConnection(&mqttClient, "192.168.11.122", 1880, 0);
+
+	MQTT_InitClient(&mqttClient, sysCfg.device_id, sysCfg.mqtt_user, sysCfg.mqtt_pass, sysCfg.mqtt_keepalive, 1);
+	//MQTT_InitClient(&mqttClient, "client_id", "user", "pass", 120, 1);
+
+	MQTT_InitLWT(&mqttClient, "/lwt", "offline", 0, 0);
 	MQTT_OnConnected(&mqttClient, mqttConnectedCb);
 	MQTT_OnDisconnected(&mqttClient, mqttDisconnectedCb);
 	MQTT_OnPublished(&mqttClient, mqttPublishedCb);

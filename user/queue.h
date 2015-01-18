@@ -40,5 +40,5 @@ typedef struct {
 void QUEUE_Init(QUEUE *queue, int bufferSize);
 int32_t QUEUE_Puts(QUEUE *queue, uint8_t* buffer, uint16_t len);
 int32_t QUEUE_Gets(QUEUE *queue, uint8_t* buffer, uint16_t* len, uint16_t maxLen);
-int32_t QUEUE_IsEmpty(QUEUE *queue);
+BOOL QUEUE_IsEmpty(QUEUE *queue);
 #endif /* USER_QUEUE_H_ */

@@ -100,6 +100,7 @@ typedef struct  {
 	ETSTimer mqttTimer;
 	uint32_t keepAliveTick;
 	uint32_t reconnectTick;
+	uint32_t sendTimeout;
 	tConnState connState;
 	QUEUE msgQueue;
 } MQTT_Client;
@@ -122,7 +123,8 @@ typedef struct  {
 #define MQTT_EVENT_TYPE_PUBLISH_CONTINUATION 8
 
 void MQTT_InitConnection(MQTT_Client *mqttClient, uint8_t* host, uint32 port, uint8_t security);
-void MQTT_InitClient(MQTT_Client *mqttClient, uint8_t* client_id, uint8_t* client_user, uint8_t* client_pass, uint32_t keepAliveTime);
+void MQTT_InitClient(MQTT_Client *mqttClient, uint8_t* client_id, uint8_t* client_user, uint8_t* client_pass, uint32_t keepAliveTime, uint8_t cleanSession);
+void MQTT_InitLWT(MQTT_Client *mqttClient, uint8_t* will_topic, uint8_t* will_msg, uint8_t will_qos, uint8_t will_retain);
 void MQTT_OnConnected(MQTT_Client *mqttClient, MqttCallback connectedCb);
 void MQTT_OnDisconnected(MQTT_Client *mqttClient, MqttCallback disconnectedCb);
 void MQTT_OnPublished(MQTT_Client *mqttClient, MqttCallback publishedCb);
