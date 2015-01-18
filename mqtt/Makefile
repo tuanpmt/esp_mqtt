@@ -12,7 +12,7 @@
 #     a generated lib/image xxx.a ()
 #
 ifndef PDIR
-GEN_LIBS = libdriver.a
+GEN_LIBS = libmqtt.a
 endif
 
 
