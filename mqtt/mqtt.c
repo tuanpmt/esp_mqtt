@@ -38,7 +38,6 @@
 #include "debug.h"
 #include "user_config.h"
 #include "config.h"
-#include "driver/uart.h"
 #include "mqtt.h"
 #include "queue.h"
 
