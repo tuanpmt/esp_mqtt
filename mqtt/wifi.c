@@ -14,7 +14,6 @@
 #include "debug.h"
 #include "user_config.h"
 #include "config.h"
-#include "driver/uart.h"
 
 static ETSTimer WiFiLinker;
 WifiCallback wifiCb = NULL;
