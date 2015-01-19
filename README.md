@@ -136,11 +136,13 @@ flash: firmware/0x00000.bin firmware/0x40000.bin
 ```
 
 **Create SSL Self sign**
+
 ```
 openssl req -x509 -newkey rsa:1024 -keyout key.pem -out cert.pem -days XXX
 ```
 
 **SSL Mqtt broker for test**
+
 ```javascript
 var mosca = require('mosca')
 var SECURE_KEY = __dirname + '/key.pem';
@@ -186,7 +188,11 @@ function setup() {
 }
 ```
 
-**Be careful:** This library is not fully supported  for too long messages.
+**Example projects using esp_mqtt:**<br/>
+- [https://github.com/eadf/esp_mqtt_lcd](https://github.com/eadf/esp_mqtt_lcd)
+
+**Limited:**<br/>
+- Not fully supported retransmit for QoS1 and QoS2
 
 **Status:** *Pre release.*
 
