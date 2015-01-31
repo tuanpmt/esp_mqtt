@@ -480,7 +480,8 @@ MQTT_Task(os_event_t *e)
   * @param  security:		1 for ssl, 0 for none
   * @retval None
   */
-void MQTT_InitConnection(MQTT_Client *mqttClient, uint8_t* host, uint32 port, uint8_t security)
+void ICACHE_FLASH_ATTR
+MQTT_InitConnection(MQTT_Client *mqttClient, uint8_t* host, uint32 port, uint8_t security)
 {
 	uint32_t temp;
 	INFO("MQTT_InitConnection\r\n");
@@ -512,7 +513,8 @@ void MQTT_InitConnection(MQTT_Client *mqttClient, uint8_t* host, uint32 port, ui
   * @param  client_pass:MQTT keep alive timer, in second
   * @retval None
   */
-void MQTT_InitClient(MQTT_Client *mqttClient, uint8_t* client_id, uint8_t* client_user, uint8_t* client_pass, uint32_t keepAliveTime, uint8_t cleanSession)
+void ICACHE_FLASH_ATTR
+MQTT_InitClient(MQTT_Client *mqttClient, uint8_t* client_id, uint8_t* client_user, uint8_t* client_pass, uint32_t keepAliveTime, uint8_t cleanSession)
 {
 	uint32_t temp;
 	INFO("MQTT_InitClient\r\n");
@@ -556,7 +558,8 @@ void MQTT_InitClient(MQTT_Client *mqttClient, uint8_t* client_id, uint8_t* clien
 	system_os_task(MQTT_Task, MQTT_TASK_PRIO, mqtt_procTaskQueue, MQTT_TASK_QUEUE_SIZE);
 	system_os_post(MQTT_TASK_PRIO, 0, (os_param_t)mqttClient);
 }
-void MQTT_InitLWT(MQTT_Client *mqttClient, uint8_t* will_topic, uint8_t* will_msg, uint8_t will_qos, uint8_t will_retain)
+void ICACHE_FLASH_ATTR
+MQTT_InitLWT(MQTT_Client *mqttClient, uint8_t* will_topic, uint8_t* will_msg, uint8_t will_qos, uint8_t will_retain)
 {
 	uint32_t temp;
 	temp = os_strlen(will_topic);
@@ -578,7 +581,8 @@ void MQTT_InitLWT(MQTT_Client *mqttClient, uint8_t* will_topic, uint8_t* will_ms
   * @param  client: MQTT_Client reference
   * @retval None
   */
-void MQTT_Connect(MQTT_Client *mqttClient)
+void ICACHE_FLASH_ATTR
+MQTT_Connect(MQTT_Client *mqttClient)
 {
 	if(UTILS_StrToIP(mqttClient->host, &mqttClient->pCon->proto.tcp->remote_ip)) {
 		INFO("TCP: Connect to ip  %s:%d\r\n", mqttClient->host, mqttClient->port);
@@ -596,22 +600,26 @@ void MQTT_Connect(MQTT_Client *mqttClient)
 	mqttClient->connState = TCP_CONNECTING;
 }
 
-void MQTT_OnConnected(MQTT_Client *mqttClient, MqttCallback connectedCb)
+void ICACHE_FLASH_ATTR
+MQTT_OnConnected(MQTT_Client *mqttClient, MqttCallback connectedCb)
 {
 	mqttClient->connectedCb = connectedCb;
 }
 
-void MQTT_OnDisconnected(MQTT_Client *mqttClient, MqttCallback disconnectedCb)
+void ICACHE_FLASH_ATTR
+MQTT_OnDisconnected(MQTT_Client *mqttClient, MqttCallback disconnectedCb)
 {
 	mqttClient->disconnectedCb = disconnectedCb;
 }
 
-void MQTT_OnData(MQTT_Client *mqttClient, MqttDataCallback dataCb)
+void ICACHE_FLASH_ATTR
+MQTT_OnData(MQTT_Client *mqttClient, MqttDataCallback dataCb)
 {
 	mqttClient->dataCb = dataCb;
 }
 
-void MQTT_OnPublished(MQTT_Client *mqttClient, MqttCallback publishedCb)
+void ICACHE_FLASH_ATTR
+MQTT_OnPublished(MQTT_Client *mqttClient, MqttCallback publishedCb)
 {
 	mqttClient->publishedCb = publishedCb;
 }

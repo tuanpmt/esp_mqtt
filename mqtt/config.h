@@ -53,8 +53,8 @@ typedef struct {
     uint8 pad[3];
 } SAVE_FLAG;
 
-void CFG_Save();
-void CFG_Load();
+void ICACHE_FLASH_ATTR CFG_Save();
+void ICACHE_FLASH_ATTR CFG_Load();
 
 extern SYSCFG sysCfg;
 
