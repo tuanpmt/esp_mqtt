@@ -486,22 +486,13 @@ MQTT_InitConnection(MQTT_Client *mqttClient, uint8_t* host, uint32 port, uint8_t
 	uint32_t temp;
 	INFO("MQTT_InitConnection\r\n");
 	os_memset(mqttClient, 0, sizeof(MQTT_Client));
-
-	mqttClient->pCon = (struct espconn *)os_zalloc(sizeof(struct espconn));
-	mqttClient->pCon->type = ESPCONN_TCP;
-	mqttClient->pCon->state = ESPCONN_NONE;
-	mqttClient->pCon->proto.tcp = (esp_tcp *)os_zalloc(sizeof(esp_tcp));
-	mqttClient->pCon->proto.tcp->local_port = espconn_port();
-	mqttClient->pCon->proto.tcp->remote_port = port;
 	temp = os_strlen(host);
 	mqttClient->host = (uint8_t*)os_zalloc(temp + 1);
 	os_strcpy(mqttClient->host, host);
 	mqttClient->host[temp] = 0;
 	mqttClient->port = port;
 	mqttClient->security = security;
-	mqttClient->pCon->reverse = mqttClient;
-	espconn_regist_connectcb(mqttClient->pCon, mqtt_tcpclient_connect_cb);
-	espconn_regist_reconcb(mqttClient->pCon, mqtt_tcpclient_recon_cb);
+
 }
 
 /**
@@ -545,13 +536,8 @@ MQTT_InitClient(MQTT_Client *mqttClient, uint8_t* client_id, uint8_t* client_use
 	mqttClient->mqtt_state.out_buffer =  (uint8_t *)os_zalloc(MQTT_BUF_SIZE);
 	mqttClient->mqtt_state.out_buffer_length = MQTT_BUF_SIZE;
 	mqttClient->mqtt_state.connect_info = &mqttClient->connect_info;
-	mqttClient->keepAliveTick = 0;
-	mqttClient->reconnectTick = 0;
-	mqtt_msg_init(&mqttClient->mqtt_state.mqtt_connection, mqttClient->mqtt_state.out_buffer, mqttClient->mqtt_state.out_buffer_length);
 
-	os_timer_disarm(&mqttClient->mqttTimer);
-	os_timer_setfn(&mqttClient->mqttTimer, (os_timer_func_t *)mqtt_timer, mqttClient);
-	os_timer_arm(&mqttClient->mqttTimer, 1000, 1);
+	mqtt_msg_init(&mqttClient->mqtt_state.mqtt_connection, mqttClient->mqtt_state.out_buffer, mqttClient->mqtt_state.out_buffer_length);
 
 	QUEUE_Init(&mqttClient->msgQueue, QUEUE_BUFFER_SIZE);
 
@@ -584,6 +570,25 @@ MQTT_InitLWT(MQTT_Client *mqttClient, uint8_t* will_topic, uint8_t* will_msg, ui
 void ICACHE_FLASH_ATTR
 MQTT_Connect(MQTT_Client *mqttClient)
 {
+	MQTT_Disconnect(mqttClient);
+	mqttClient->pCon = (struct espconn *)os_zalloc(sizeof(struct espconn));
+	mqttClient->pCon->type = ESPCONN_TCP;
+	mqttClient->pCon->state = ESPCONN_NONE;
+	mqttClient->pCon->proto.tcp = (esp_tcp *)os_zalloc(sizeof(esp_tcp));
+	mqttClient->pCon->proto.tcp->local_port = espconn_port();
+	mqttClient->pCon->proto.tcp->remote_port = mqttClient->port;
+	mqttClient->pCon->reverse = mqttClient;
+	espconn_regist_connectcb(mqttClient->pCon, mqtt_tcpclient_connect_cb);
+	espconn_regist_reconcb(mqttClient->pCon, mqtt_tcpclient_recon_cb);
+
+	mqttClient->keepAliveTick = 0;
+	mqttClient->reconnectTick = 0;
+
+
+	os_timer_disarm(&mqttClient->mqttTimer);
+	os_timer_setfn(&mqttClient->mqttTimer, (os_timer_func_t *)mqtt_timer, mqttClient);
+	os_timer_arm(&mqttClient->mqttTimer, 1000, 1);
+
 	if(UTILS_StrToIP(mqttClient->host, &mqttClient->pCon->proto.tcp->remote_ip)) {
 		INFO("TCP: Connect to ip  %s:%d\r\n", mqttClient->host, mqttClient->port);
 		if(mqttClient->security){
@@ -600,6 +605,19 @@ MQTT_Connect(MQTT_Client *mqttClient)
 	mqttClient->connState = TCP_CONNECTING;
 }
 
+void ICACHE_FLASH_ATTR
+MQTT_Disconnect(MQTT_Client *mqttClient)
+{
+	if(mqttClient->pCon){
+		INFO("Free memory\r\n");
+		if(mqttClient->pCon->proto.tcp)
+			os_free(mqttClient->pCon->proto.tcp);
+		os_free(mqttClient->pCon);
+		mqttClient->pCon = NULL;
+	}
+
+	os_timer_disarm(&mqttClient->mqttTimer);
+}
 void ICACHE_FLASH_ATTR
 MQTT_OnConnected(MQTT_Client *mqttClient, MqttCallback connectedCb)
 {

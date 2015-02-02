@@ -44,6 +44,8 @@ void wifiConnectCb(uint8_t status)
 {
 	if(status == STATION_GOT_IP){
 		MQTT_Connect(&mqttClient);
+	} else {
+		MQTT_Disconnect(&mqttClient);
 	}
 }
 void mqttConnectedCb(uint32_t *args)
