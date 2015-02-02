@@ -180,7 +180,7 @@ READPACKET:
 				if(msg_qos == 1 || msg_qos == 2){
 					INFO("MQTT: Queue response QoS: %d\r\n", msg_qos);
 					if(QUEUE_Puts(&client->msgQueue, client->mqtt_state.outbound_message->data, client->mqtt_state.outbound_message->length) == -1){
-						INFO("MQTT: Exceed the amount of queues\r\n");
+						INFO("MQTT: Queue full\r\n");
 					}
 				}
 
@@ -195,13 +195,13 @@ READPACKET:
 			  case MQTT_MSG_TYPE_PUBREC:
 				  client->mqtt_state.outbound_message = mqtt_msg_pubrel(&client->mqtt_state.mqtt_connection, msg_id);
 				  if(QUEUE_Puts(&client->msgQueue, client->mqtt_state.outbound_message->data, client->mqtt_state.outbound_message->length) == -1){
-				  	INFO("MQTT: Exceed the amount of queues\r\n");
+				  	INFO("MQTT: Queue full\r\n");
 				  }
 				break;
 			  case MQTT_MSG_TYPE_PUBREL:
 				  client->mqtt_state.outbound_message = mqtt_msg_pubcomp(&client->mqtt_state.mqtt_connection, msg_id);
 				  if(QUEUE_Puts(&client->msgQueue, client->mqtt_state.outbound_message->data, client->mqtt_state.outbound_message->length) == -1){
-					INFO("MQTT: Exceed the amount of queues\r\n");
+					INFO("MQTT: Queue full\r\n");
 				  }
 				break;
 			  case MQTT_MSG_TYPE_PUBCOMP:
@@ -212,7 +212,7 @@ READPACKET:
 			  case MQTT_MSG_TYPE_PINGREQ:
 				  client->mqtt_state.outbound_message = mqtt_msg_pingresp(&client->mqtt_state.mqtt_connection);
 				  if(QUEUE_Puts(&client->msgQueue, client->mqtt_state.outbound_message->data, client->mqtt_state.outbound_message->length) == -1){
-					INFO("MQTT: Exceed the amount of queues\r\n");
+					INFO("MQTT: Queue full\r\n");
 				  }
 				break;
 			  case MQTT_MSG_TYPE_PINGRESP:
@@ -241,7 +241,7 @@ READPACKET:
 			break;
 		}
 	} else {
-		INFO("ERROR: Too long message\r\n");
+		INFO("ERROR: Message too long\r\n");
 	}
 	system_os_post(MQTT_TASK_PRIO, 0, (os_param_t)client);
 }
@@ -403,7 +403,7 @@ MQTT_Publish(MQTT_Client *client, const char* topic, const char* data, int data_
 	}
 	INFO("MQTT: queuing publish, length: %d, queue size(%d/%d)\r\n", client->mqtt_state.outbound_message->length, client->msgQueue.rb.fill_cnt, client->msgQueue.rb.size);
 	while(QUEUE_Puts(&client->msgQueue, client->mqtt_state.outbound_message->data, client->mqtt_state.outbound_message->length) == -1){
-		INFO("MQTT: Exceed the amount of queues\r\n");
+		INFO("MQTT: Queue full\r\n");
 		if(QUEUE_Gets(&client->msgQueue, dataBuffer, &dataLen, MQTT_BUF_SIZE) == -1) {
 			INFO("MQTT: Serious buffer error\r\n");
 			return FALSE;
@@ -431,7 +431,7 @@ MQTT_Subscribe(MQTT_Client *client, char* topic, uint8_t qos)
 											&client->mqtt_state.pending_msg_id);
 	INFO("MQTT: queue subscribe, topic\"%s\", id: %d\r\n",topic, client->mqtt_state.pending_msg_id);
 	while(QUEUE_Puts(&client->msgQueue, client->mqtt_state.outbound_message->data, client->mqtt_state.outbound_message->length) == -1){
-		INFO("MQTT: Exceed the amount of queues\r\n");
+		INFO("MQTT: Queue full\r\n");
 		if(QUEUE_Gets(&client->msgQueue, dataBuffer, &dataLen, MQTT_BUF_SIZE) == -1) {
 			INFO("MQTT: Serious buffer error\r\n");
 			return FALSE;
@@ -453,7 +453,7 @@ MQTT_Task(os_event_t *e)
 		break;
 	case TCP_RECONNECT:
 		MQTT_Connect(client);
-		INFO("TCP:Reconect to: %s:%d\r\n", client->host, client->port);
+		INFO("TCP: Reconnect to: %s:%d\r\n", client->host, client->port);
 		client->connState = TCP_CONNECTING;
 		break;
 	case MQTT_DATA:

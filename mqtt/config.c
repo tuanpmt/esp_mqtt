@@ -101,7 +101,7 @@ CFG_Load()
 
 		sysCfg.mqtt_keepalive = MQTT_KEEPALIVE;
 
-		INFO(" default configurations\r\n");
+		INFO(" default configuration\r\n");
 
 		CFG_Save();
 	}
