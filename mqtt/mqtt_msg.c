@@ -31,7 +31,7 @@
 
 #include <string.h>
 #include "mqtt_msg.h"
-
+#include "user_config.h"
 #define MQTT_MAX_FIXED_HEADER_SIZE 3
 
 enum mqtt_connect_flag
@@ -47,7 +47,13 @@ struct __attribute((__packed__)) mqtt_connect_variable_header
 {
   uint8_t lengthMsb;
   uint8_t lengthLsb;
+#if defined(PROTOCOL_NAMEv31)
+  uint8_t magic[6];
+#elif defined(PROTOCOL_NAMEv311)
   uint8_t magic[4];
+#else
+#error "Please define protocol name"
+#endif
   uint8_t version;
   uint8_t flags;
   uint8_t keepaliveMsb;
@@ -293,9 +299,18 @@ mqtt_message_t* ICACHE_FLASH_ATTR mqtt_msg_connect(mqtt_connection_t* connection
   connection->message.length += sizeof(*variable_header);
 
   variable_header->lengthMsb = 0;
+#if defined(PROTOCOL_NAMEv31)
+  variable_header->lengthLsb = 6;
+  memcpy(variable_header->magic, "MQIsdp", 6);
+  variable_header->version = 3;
+#elif defined(PROTOCOL_NAMEv311)
   variable_header->lengthLsb = 4;
   memcpy(variable_header->magic, "MQTT", 4);
   variable_header->version = 4;
+#else
+#error "Please define protocol name"
+#endif
+
   variable_header->flags = 0;
   variable_header->keepaliveMsb = info->keepalive >> 8;
   variable_header->keepaliveLsb = info->keepalive & 0xff;
