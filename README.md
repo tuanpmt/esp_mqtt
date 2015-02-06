@@ -143,6 +143,7 @@ In the Makefile, it will erase section hold the user configuration at 0x3C000
 flash: firmware/0x00000.bin firmware/0x40000.bin
 	$(PYTHON) $(ESPTOOL) -p $(ESPPORT) write_flash 0x00000 firmware/0x00000.bin 0x3C000 $(BLANKER) 0x40000 firmware/0x40000.bin 
 ```
+The BLANKER is the blank.bin file you find in your SDKs bin folder.
 
 **Create SSL Self sign**
 
