@@ -2,6 +2,35 @@
 ==========
 This is MQTT client library for ESP8266, port from: [MQTT client library for Contiki](https://github.com/esar/contiki-mqtt) (thanks)
 
+**Compile:**
+
+Make sure to add PYTHON PATH and compile PATH to Eclipse environment variable if using Eclipse
+
+for Windows:
+
+```bash
+git clone https://github.com/tuanpmt/esp_mqtt
+cd esp_mqtt
+#clean
+mingw32-make clean
+#make
+mingw32-make SDK_BASE="c:/Espressif/ESP8266_SDK" FLAVOR="release" all
+#flash
+mingw32-make COMPORT="COM1" flash
+```
+for Mac or Linux:
+
+```bash
+git clone https://github.com/tuanpmt/esp_mqtt
+cd esp_mqtt
+#clean
+make clean
+#make
+make SDK_BASE="c:/Espressif/ESP8266_SDK" FLAVOR="release" all
+#flash
+make COMPORT="COM1" flash
+```
+
 **Features:**
 
  * Support subscribing, publishing, authentication, will messages, keep alive pings and all 3 QoS levels (it should be a fully functional client).
