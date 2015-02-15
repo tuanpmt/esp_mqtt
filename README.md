@@ -2,6 +2,15 @@
 ==========
 This is MQTT client library for ESP8266, port from: [MQTT client library for Contiki](https://github.com/esar/contiki-mqtt) (thanks)
 
+
+
+**Features:**
+
+ * Support subscribing, publishing, authentication, will messages, keep alive pings and all 3 QoS levels (it should be a fully functional client).
+ * Support multiple connection (to multiple hosts).
+ * Support SSL connection (max 1024 bit key size)
+ * Easy to setup and use
+
 **Compile:**
 
 Make sure to add PYTHON PATH and compile PATH to Eclipse environment variable if using Eclipse
@@ -16,8 +25,9 @@ mingw32-make clean
 #make
 mingw32-make SDK_BASE="c:/Espressif/ESP8266_SDK" FLAVOR="release" all
 #flash
-mingw32-make COMPORT="COM1" flash
+mingw32-make ESPPORT="COM1" flash
 ```
+
 for Mac or Linux:
 
 ```bash
@@ -28,17 +38,8 @@ make clean
 #make
 make SDK_BASE="c:/Espressif/ESP8266_SDK" FLAVOR="release" all
 #flash
-make COMPORT="COM1" flash
+make ESPPORT="COM1" flash
 ```
-
-**Features:**
-
- * Support subscribing, publishing, authentication, will messages, keep alive pings and all 3 QoS levels (it should be a fully functional client).
- * Support multiple connection (to multiple hosts).
- * Support SSL connection (max 1024 bit key size)
- * Easy to setup and use
-
-
 
 **Usage**
 ```c
@@ -247,7 +248,7 @@ function setup() {
 
 **Requried:**
 
-esp_iot_sdk_v0.9.4_14_12_19
+SDK esp_iot_sdk_v0.9.4_14_12_19 or higher
 
 **Authors:**
 [Tuan PM](https://twitter.com/TuanPMT)
