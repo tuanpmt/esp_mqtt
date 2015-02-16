@@ -36,9 +36,9 @@ cd esp_mqtt
 #clean
 make clean
 #make
-make SDK_BASE="c:/Espressif/ESP8266_SDK" FLAVOR="release" all
+make SDK_BASE="/opt/Espressif/ESP8266_SDK" FLAVOR="release" all
 #flash
-make ESPPORT="COM1" flash
+make ESPPORT="/dev/ttyUSB0" flash
 ```
 
 **Usage**
