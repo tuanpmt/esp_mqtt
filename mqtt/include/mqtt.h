@@ -103,6 +103,7 @@ typedef struct  {
 	uint32_t sendTimeout;
 	tConnState connState;
 	QUEUE msgQueue;
+	void* user_data;
 } MQTT_Client;
 
 #define SEC_NONSSL 0
