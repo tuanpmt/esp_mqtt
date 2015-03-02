@@ -446,6 +446,8 @@ MQTT_Task(os_event_t *e)
 	MQTT_Client* client = (MQTT_Client*)e->par;
 	uint8_t dataBuffer[MQTT_BUF_SIZE];
 	uint16_t dataLen;
+	if(e->par == NULL)
+		return;
 	switch(client->connState){
 
 	case TCP_RECONNECT_REQ:
