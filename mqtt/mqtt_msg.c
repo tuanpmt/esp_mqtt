@@ -450,7 +450,7 @@ mqtt_message_t* ICACHE_FLASH_ATTR mqtt_msg_unsubscribe(mqtt_connection_t* connec
   if(append_string(connection, topic, strlen(topic)) < 0)
     return fail_message(connection);
 
-  return fini_message(connection, MQTT_MSG_TYPE_SUBSCRIBE, 0, 1, 0);
+  return fini_message(connection, MQTT_MSG_TYPE_UNSUBSCRIBE, 0, 1, 0);
 }
 
 mqtt_message_t* ICACHE_FLASH_ATTR mqtt_msg_pingreq(mqtt_connection_t* connection)
