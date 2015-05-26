@@ -92,6 +92,9 @@ void mqttDataCb(uint32_t *args, const char* topic, uint32_t topic_len, const cha
 	os_free(dataBuf);
 }
 
+void user_rf_pre_init(void)
+{
+}
 
 void user_init(void)
 {
