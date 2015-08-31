@@ -9,7 +9,7 @@
 # relative to the project directory
 BUILD_BASE	= build
 FW_BASE = firmware
-ESPTOOL = tools/esptool.py
+ESPTOOL = tools/esptool/esptool.py
 
 
 # name for the target project
@@ -54,7 +54,7 @@ ifeq ($(OS),Windows_NT)
 		OBJCOPY = xtensa-lx106-elf-objcopy
 	endif
 	ESPPORT 	?= com1
-	SDK_BASE	?= c:/Espressif/ESP8266_SDK
+	SDK_BASE	?= C:\Espressif\esp_iot_sdk_v1.3.0
     ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
 # ->AMD64
     endif
