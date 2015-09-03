@@ -34,7 +34,7 @@ mingw32-make ESPPORT="COM1" flash
 for Mac or Linux:
 
 ```bash
-git clone https://github.com/tuanpmt/esp_mqtt
+git clone --recursive https://github.com/tuanpmt/esp_mqtt
 cd esp_mqtt
 #clean
 make clean
