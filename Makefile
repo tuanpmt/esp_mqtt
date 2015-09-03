@@ -65,7 +65,7 @@ else
 # We are under other system, may be Linux. Assume using gcc.
 	# Can we use -fdata-sections?
 	ESPPORT ?= /dev/ttyUSB0
-	SDK_BASE	?= /esptools/esp-open-sdk/sdk
+	SDK_BASE	?= /esptools/esp_iot_sdk_v1.3.0
 
 	CCFLAGS += -Os -ffunction-sections -fno-jump-tables
 	AR = xtensa-lx106-elf-ar
