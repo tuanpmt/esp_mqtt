@@ -9,8 +9,8 @@ install:
 - wget http://bbs.espressif.com/download/file.php?id=838 -O tools/esp_iot_sdk_v1.4.0_15_09_18.zip
 - unzip tools/esp_iot_sdk_v1.4.0_15_09_18.zip
 script:
-- make SDK_BASE="$PWD/esp_iot_sdk_v1.4.0_15_09_18" COMPILE=gcc
-- cd "$PWD/esp_iot_sdk_v1.4.0_15_09_18/bin"
+- make SDK_BASE="$PWD/esp_iot_sdk_v1.4.0" COMPILE=gcc
+- cd "$PWD/esp_iot_sdk_v1.4.0/bin"
 - ls
 - file_name="esp_mqtt_v${TRAVIS_TAG}.${TRAVIS_BUILD_NUMBER}.bin"
 - srec_cat -output ${file_name} -binary eagle.flash.bin -binary -fill 0xff 0x00000 0x40000 eagle.irom0text.bin -binary -offset 0x40000
