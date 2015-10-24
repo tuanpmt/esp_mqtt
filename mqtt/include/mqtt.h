@@ -35,75 +35,75 @@
 #include "queue.h"
 typedef struct mqtt_event_data_t
 {
-  uint8_t type;
-  const char* topic;
-  const char* data;
-  uint16_t topic_length;
-  uint16_t data_length;
-  uint16_t data_offset;
+    uint8_t type;
+    const char* topic;
+    const char* data;
+    uint16_t topic_length;
+    uint16_t data_length;
+    uint16_t data_offset;
 } mqtt_event_data_t;
 
 typedef struct mqtt_state_t
 {
-  uint16_t port;
-  int auto_reconnect;
-  mqtt_connect_info_t* connect_info;
-  uint8_t* in_buffer;
-  uint8_t* out_buffer;
-  int in_buffer_length;
-  int out_buffer_length;
-  uint16_t message_length;
-  uint16_t message_length_read;
-  mqtt_message_t* outbound_message;
-  mqtt_connection_t mqtt_connection;
-  uint16_t pending_msg_id;
-  int pending_msg_type;
-  int pending_publish_qos;
+    uint16_t port;
+    int auto_reconnect;
+    mqtt_connect_info_t* connect_info;
+    uint8_t* in_buffer;
+    uint8_t* out_buffer;
+    int in_buffer_length;
+    int out_buffer_length;
+    uint16_t message_length;
+    uint16_t message_length_read;
+    mqtt_message_t* outbound_message;
+    mqtt_connection_t mqtt_connection;
+    uint16_t pending_msg_id;
+    int pending_msg_type;
+    int pending_publish_qos;
 } mqtt_state_t;
 
 typedef enum {
-	WIFI_INIT,
-	WIFI_CONNECTING,
-	WIFI_CONNECTING_ERROR,
-	WIFI_CONNECTED,
-	DNS_RESOLVE,
-	TCP_DISCONNECTED,
-	TCP_RECONNECT_REQ,
-	TCP_RECONNECT,
-	TCP_CONNECTING,
-	TCP_CONNECTING_ERROR,
-	TCP_CONNECTED,
-	MQTT_CONNECT_SEND,
-	MQTT_CONNECT_SENDING,
-	MQTT_SUBSCIBE_SEND,
-	MQTT_SUBSCIBE_SENDING,
-	MQTT_DATA,
-	MQTT_PUBLISH_RECV,
-	MQTT_PUBLISHING
+    WIFI_INIT,
+    WIFI_CONNECTING,
+    WIFI_CONNECTING_ERROR,
+    WIFI_CONNECTED,
+    DNS_RESOLVE,
+    TCP_DISCONNECTED,
+    TCP_RECONNECT_REQ,
+    TCP_RECONNECT,
+    TCP_CONNECTING,
+    TCP_CONNECTING_ERROR,
+    TCP_CONNECTED,
+    MQTT_CONNECT_SEND,
+    MQTT_CONNECT_SENDING,
+    MQTT_SUBSCIBE_SEND,
+    MQTT_SUBSCIBE_SENDING,
+    MQTT_DATA,
+    MQTT_PUBLISH_RECV,
+    MQTT_PUBLISHING
 } tConnState;
 
 typedef void (*MqttCallback)(uint32_t *args);
 typedef void (*MqttDataCallback)(uint32_t *args, const char* topic, uint32_t topic_len, const char *data, uint32_t lengh);
 
 typedef struct  {
-	struct espconn *pCon;
-	uint8_t security;
-	uint8_t* host;
-	uint32_t port;
-	ip_addr_t ip;
-	mqtt_state_t  mqtt_state;
-	mqtt_connect_info_t connect_info;
-	MqttCallback connectedCb;
-	MqttCallback disconnectedCb;
-	MqttCallback publishedCb;
-	MqttDataCallback dataCb;
-	ETSTimer mqttTimer;
-	uint32_t keepAliveTick;
-	uint32_t reconnectTick;
-	uint32_t sendTimeout;
-	tConnState connState;
-	QUEUE msgQueue;
-	void* user_data;
+    struct espconn *pCon;
+    uint8_t security;
+    uint8_t* host;
+    uint32_t port;
+    ip_addr_t ip;
+    mqtt_state_t  mqtt_state;
+    mqtt_connect_info_t connect_info;
+    MqttCallback connectedCb;
+    MqttCallback disconnectedCb;
+    MqttCallback publishedCb;
+    MqttDataCallback dataCb;
+    ETSTimer mqttTimer;
+    uint32_t keepAliveTick;
+    uint32_t reconnectTick;
+    uint32_t sendTimeout;
+    tConnState connState;
+    QUEUE msgQueue;
+    void* user_data;
 } MQTT_Client;
 
 #define SEC_NONSSL 0
