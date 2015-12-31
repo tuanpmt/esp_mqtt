@@ -442,7 +442,7 @@ MQTT_Subscribe(MQTT_Client *client, char* topic, uint8_t qos)
 	uint16_t dataLen;
 
 	client->mqtt_state.outbound_message = mqtt_msg_subscribe(&client->mqtt_state.mqtt_connection,
-	                                      topic, 0,
+	                                      topic, qos,
 	                                      &client->mqtt_state.pending_msg_id);
 	INFO("MQTT: queue subscribe, topic\"%s\", id: %d\r\n", topic, client->mqtt_state.pending_msg_id);
 	while (QUEUE_Puts(&client->msgQueue, client->mqtt_state.outbound_message->data, client->mqtt_state.outbound_message->length) == -1) {
