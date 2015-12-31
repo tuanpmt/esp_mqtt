@@ -113,6 +113,26 @@ deliver_publish(MQTT_Client* client, uint8_t* message, int length)
 
 }
 
+/**
+  * @brief  Delete tcp client and free all memory
+  * @param  mqttClient: The mqtt client
+  * @retval None
+  */
+void ICACHE_FLASH_ATTR
+mqtt_tcpclient_delete(MQTT_Client *mqttClient)
+{
+	if (mqttClient->pCon) {
+		INFO("Free memory\r\n");
+		espconn_disconnect(mqttClient->pCon);
+		if (mqttClient->pCon->proto.tcp)
+			os_free(mqttClient->pCon->proto.tcp);
+		os_free(mqttClient->pCon);
+		mqttClient->pCon = NULL;
+	}
+
+	os_timer_disarm(&mqttClient->mqttTimer);
+}
+
 
 /**
   * @brief  Client received callback function.
@@ -325,7 +345,12 @@ mqtt_tcpclient_discon_cb(void *arg)
 	struct espconn *pespconn = (struct espconn *)arg;
 	MQTT_Client* client = (MQTT_Client *)pespconn->reverse;
 	INFO("TCP: Disconnected callback\r\n");
-	client->connState = TCP_RECONNECT_REQ;
+	if(TCP_DISCONNECTING == client->connState) {
+		client->connState = TCP_DISCONNECTED;
+	}
+	else {
+		client->connState = TCP_RECONNECT_REQ;
+	}
 	if (client->disconnectedCb)
 		client->disconnectedCb((uint32_t*)client);
 
@@ -500,6 +525,29 @@ MQTT_Task(os_event_t *e)
 		INFO("TCP: Reconnect to: %s:%d\r\n", client->host, client->port);
 		client->connState = TCP_CONNECTING;
 		break;
+	case TCP_DISCONNECTING:
+		if (client->security) {
+#ifdef MQTT_SSL_ENABLE
+			espconn_secure_connect(client->pCon);
+#else
+			INFO("TCP: Do not support SSL\r\n");
+#endif
+		}
+		else {
+			espconn_disconnect(client->pCon);
+		}		
+		break;
+	case TCP_DISCONNECTED:
+		INFO("MQTT: Disconnected\r\n");
+		if (client->pCon != NULL) {
+			INFO("Free memory\r\n");	
+			espconn_delete(client->pCon);
+			if (client->pCon->proto.tcp)
+				os_free(client->pCon->proto.tcp);
+			os_free(client->pCon);
+			client->pCon = NULL;
+		}
+		break;
 	case MQTT_DATA:
 		if (QUEUE_IsEmpty(&client->msgQueue) || client->sendTimeout != 0) {
 			break;
@@ -671,14 +719,8 @@ MQTT_Connect(MQTT_Client *mqttClient)
 void ICACHE_FLASH_ATTR
 MQTT_Disconnect(MQTT_Client *mqttClient)
 {
-	if (mqttClient->pCon) {
-		INFO("Free memory\r\n");
-		if (mqttClient->pCon->proto.tcp)
-			os_free(mqttClient->pCon->proto.tcp);
-		os_free(mqttClient->pCon);
-		mqttClient->pCon = NULL;
-	}
-
+	mqttClient->connState = TCP_DISCONNECTING;
+	system_os_post(MQTT_TASK_PRIO, 0, (os_param_t)mqttClient);
 	os_timer_disarm(&mqttClient->mqttTimer);
 }
 void ICACHE_FLASH_ATTR
