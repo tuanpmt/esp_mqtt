@@ -115,22 +115,75 @@ deliver_publish(MQTT_Client* client, uint8_t* message, int length)
 
 /**
   * @brief  Delete tcp client and free all memory
-  * @param  mqttClient: The mqtt client
+  * @param  mqttClient: The mqtt client which contain TCP client
   * @retval None
   */
 void ICACHE_FLASH_ATTR
 mqtt_tcpclient_delete(MQTT_Client *mqttClient)
 {
-	if (mqttClient->pCon) {
-		INFO("Free memory\r\n");
-		espconn_disconnect(mqttClient->pCon);
+	if (mqttClient->pCon != NULL) {
+		INFO("Free memory\r\n");	
+		espconn_delete(mqttClient->pCon);
 		if (mqttClient->pCon->proto.tcp)
 			os_free(mqttClient->pCon->proto.tcp);
 		os_free(mqttClient->pCon);
 		mqttClient->pCon = NULL;
 	}
+}
 
-	os_timer_disarm(&mqttClient->mqttTimer);
+/**
+  * @brief  Delete MQTT client and free all memory
+  * @param  mqttClient: The mqtt client
+  * @retval None
+  */
+void ICACHE_FLASH_ATTR
+mqtt_client_delete(MQTT_Client *mqttClient)
+{
+	mqtt_tcpclient_delete(mqttClient);
+	if (mqttClient->host != NULL) {
+		os_free(mqttClient->host);
+		mqttClient->host = NULL;
+	}
+
+	if (mqttClient->user_data != NULL) {
+		os_free(mqttClient->user_data);
+		mqttClient->user_data = NULL;
+	}
+
+	if(mqttClient->connect_info.client_id != NULL) {
+		os_free(mqttClient->connect_info.client_id);
+		mqttClient->connect_info.client_id = NULL;
+	}
+
+	if(mqttClient->connect_info.username != NULL) {
+		os_free(mqttClient->connect_info.username);
+		mqttClient->connect_info.username = NULL;
+	}
+
+	if(mqttClient->connect_info.password != NULL) {
+		os_free(mqttClient->connect_info.password);
+		mqttClient->connect_info.password = NULL;
+	}
+
+	if(mqttClient->connect_info.will_topic != NULL) {
+		os_free(mqttClient->connect_info.will_topic);
+		mqttClient->connect_info.will_topic = NULL;
+	}
+
+	if(mqttClient->connect_info.will_message != NULL) {
+		os_free(mqttClient->connect_info.will_message);
+		mqttClient->connect_info.will_message = NULL;
+	}
+
+	if(mqttClient->mqtt_state.in_buffer != NULL) {
+		os_free(mqttClient->mqtt_state.in_buffer);
+		mqttClient->mqtt_state.in_buffer = NULL;
+	}
+
+	if(mqttClient->mqtt_state.out_buffer != NULL) {
+		os_free(mqttClient->mqtt_state.out_buffer);
+		mqttClient->mqtt_state.out_buffer = NULL;
+	}
 }
 
 
@@ -348,6 +401,9 @@ mqtt_tcpclient_discon_cb(void *arg)
 	if(TCP_DISCONNECTING == client->connState) {
 		client->connState = TCP_DISCONNECTED;
 	}
+	else if(MQTT_DELETING == client->connState) {
+		client->connState = MQTT_DELETED;
+	}
 	else {
 		client->connState = TCP_RECONNECT_REQ;
 	}
@@ -525,6 +581,7 @@ MQTT_Task(os_event_t *e)
 		INFO("TCP: Reconnect to: %s:%d\r\n", client->host, client->port);
 		client->connState = TCP_CONNECTING;
 		break;
+	case MQTT_DELETING:
 	case TCP_DISCONNECTING:
 		if (client->security) {
 #ifdef MQTT_SSL_ENABLE
@@ -539,14 +596,11 @@ MQTT_Task(os_event_t *e)
 		break;
 	case TCP_DISCONNECTED:
 		INFO("MQTT: Disconnected\r\n");
-		if (client->pCon != NULL) {
-			INFO("Free memory\r\n");	
-			espconn_delete(client->pCon);
-			if (client->pCon->proto.tcp)
-				os_free(client->pCon->proto.tcp);
-			os_free(client->pCon);
-			client->pCon = NULL;
-		}
+		mqtt_tcpclient_delete(client);
+		break;
+	case MQTT_DELETED:
+		INFO("MQTT: Deleted client\r\n");		
+		mqtt_client_delete(client);
 		break;
 	case MQTT_DATA:
 		if (QUEUE_IsEmpty(&client->msgQueue) || client->sendTimeout != 0) {
@@ -723,6 +777,15 @@ MQTT_Disconnect(MQTT_Client *mqttClient)
 	system_os_post(MQTT_TASK_PRIO, 0, (os_param_t)mqttClient);
 	os_timer_disarm(&mqttClient->mqttTimer);
 }
+
+void ICACHE_FLASH_ATTR
+MQTT_DeleteClient(MQTT_Client *mqttClient)
+{
+	mqttClient->connState = MQTT_DELETING;
+	system_os_post(MQTT_TASK_PRIO, 0, (os_param_t)mqttClient);
+	os_timer_disarm(&mqttClient->mqttTimer);
+}
+
 void ICACHE_FLASH_ATTR
 MQTT_OnConnected(MQTT_Client *mqttClient, MqttCallback connectedCb)
 {
