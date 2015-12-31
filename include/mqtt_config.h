@@ -3,7 +3,7 @@
 
 #define CFG_HOLDER	0x00FF55A4	/* Change this value to load default configurations */
 #define CFG_LOCATION	0x3C	/* Please don't change or if you know what you doing */
-// #define MQTT_SSL_ENABLE
+#define MQTT_SSL_ENABLE
 
 /*DEFAULT CONFIGURATIONS*/
 
