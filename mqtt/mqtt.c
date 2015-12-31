@@ -362,21 +362,27 @@ void ICACHE_FLASH_ATTR mqtt_timer(void *arg)
 
 			client->sendTimeout = MQTT_SEND_TIMOUT;
 			INFO("MQTT: Sending, type: %d, id: %04X\r\n", client->mqtt_state.pending_msg_type, client->mqtt_state.pending_msg_id);
+			err_t result = ESPCONN_OK;
 			if (client->security) {
 #ifdef MQTT_SSL_ENABLE
-				espconn_secure_send(client->pCon, client->mqtt_state.outbound_message->data, client->mqtt_state.outbound_message->length);
+				result = espconn_secure_send(client->pCon, client->mqtt_state.outbound_message->data, client->mqtt_state.outbound_message->length);
 #else
 				INFO("TCP: Do not support SSL\r\n");
 #endif
 			}
 			else {
-				espconn_send(client->pCon, client->mqtt_state.outbound_message->data, client->mqtt_state.outbound_message->length);
+				result = espconn_send(client->pCon, client->mqtt_state.outbound_message->data, client->mqtt_state.outbound_message->length);
 			}
 
 			client->mqtt_state.outbound_message = NULL;
 
-			client->keepAliveTick = 0;
-			system_os_post(MQTT_TASK_PRIO, 0, (os_param_t)client);
+			if(ESPCONN_OK == result) {
+				client->keepAliveTick = 0;
+				system_os_post(MQTT_TASK_PRIO, 0, (os_param_t)client);
+			} 
+			else {
+				client->connState = TCP_RECONNECT_REQ;
+			}
 		}
 
 	} else if (client->connState == TCP_RECONNECT_REQ) {
