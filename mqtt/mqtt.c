@@ -543,7 +543,7 @@ MQTT_Subscribe(MQTT_Client *client, char* topic, uint8_t qos)
   * @retval TRUE if success queue
   */
 BOOL ICACHE_FLASH_ATTR
-MQTT_ping(MQTT_Client *client)
+MQTT_Ping(MQTT_Client *client)
 {
 	uint8_t dataBuffer[MQTT_BUF_SIZE];
 	uint16_t dataLen;
