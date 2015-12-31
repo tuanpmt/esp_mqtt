@@ -1,14 +1,14 @@
-#ifndef _USER_CONFIG_H_
-#define _USER_CONFIG_H_
+#ifndef __MQTT_CONFIG_H__
+#define __MQTT_CONFIG_H__
 
 #define CFG_HOLDER	0x00FF55A4	/* Change this value to load default configurations */
 #define CFG_LOCATION	0x3C	/* Please don't change or if you know what you doing */
-#define CLIENT_SSL_ENABLE
+// #define MQTT_SSL_ENABLE
 
 /*DEFAULT CONFIGURATIONS*/
 
-#define MQTT_HOST			"192.168.11.122" //or "mqtt.yourdomain.com"
-#define MQTT_PORT			1880
+#define MQTT_HOST			"192.168.1.100" //or "mqtt.yourdomain.com"
+#define MQTT_PORT			1883
 #define MQTT_BUF_SIZE		1024
 #define MQTT_KEEPALIVE		120	 /*second*/
 
@@ -27,4 +27,5 @@
 
 #define PROTOCOL_NAMEv31	/*MQTT version 3.1 compatible with Mosquitto v0.15*/
 //PROTOCOL_NAMEv311			/*MQTT version 3.11 compatible with https://eclipse.org/paho/clients/testing/*/
-#endif
+
+#endif // __MQTT_CONFIG_H__
