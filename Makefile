@@ -101,7 +101,7 @@ MODULES		= driver mqtt user modules
 EXTRA_INCDIR    = include $(SDK_BASE)/../include
 
 # libraries used in this project, mainly provided by the SDK
-LIBS		= c gcc hal phy pp net80211 lwip wpa main ssl
+LIBS		= c gcc hal phy pp net80211 lwip wpa main ssl crypto
 
 # compiler flags using during compilation of source files
 CFLAGS		= -Os -Wpointer-arith -Wundef -Werror -Wl,-EL -fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DICACHE_FLASH
