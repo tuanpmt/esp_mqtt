@@ -144,7 +144,8 @@ mqtt_send_keepalive(MQTT_Client *client)
 		system_os_post(MQTT_TASK_PRIO, 0, (os_param_t)client);
 	} 
 	else {
-		client->connState = TCP_RECONNECT_REQ;
+		client->connState = TCP_RECONNECT_DISCONNECTING;
+		system_os_post(MQTT_TASK_PRIO, 0, (os_param_t)client);
 	}
 }
 
@@ -593,12 +594,14 @@ MQTT_Task(os_event_t *e)
 	case TCP_RECONNECT_REQ:
 		break;
 	case TCP_RECONNECT:
+		mqtt_tcpclient_delete(client);
 		MQTT_Connect(client);
 		INFO("TCP: Reconnect to: %s:%d\r\n", client->host, client->port);
 		client->connState = TCP_CONNECTING;
 		break;
 	case MQTT_DELETING:
 	case TCP_DISCONNECTING:
+	case TCP_RECONNECT_DISCONNECTING:
 		if (client->security) {
 #ifdef MQTT_SSL_ENABLE
 			espconn_secure_connect(client->pCon);
@@ -748,7 +751,11 @@ MQTT_InitLWT(MQTT_Client *mqttClient, uint8_t* will_topic, uint8_t* will_msg, ui
 void ICACHE_FLASH_ATTR
 MQTT_Connect(MQTT_Client *mqttClient)
 {
-	MQTT_Disconnect(mqttClient);
+	// Do not connect if this client is already connected otherwise the
+	// two espconn connections may interfere causing unexpected behaviour.
+	if (mqttClient->pCon) {
+		return;
+	}
 	mqttClient->pCon = (struct espconn *)os_zalloc(sizeof(struct espconn));
 	mqttClient->pCon->type = ESPCONN_TCP;
 	mqttClient->pCon->state = ESPCONN_NONE;
