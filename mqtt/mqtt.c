@@ -751,10 +751,11 @@ MQTT_InitLWT(MQTT_Client *mqttClient, uint8_t* will_topic, uint8_t* will_msg, ui
 void ICACHE_FLASH_ATTR
 MQTT_Connect(MQTT_Client *mqttClient)
 {
-	// Do not connect if this client is already connected otherwise the
-	// two espconn connections may interfere causing unexpected behaviour.
 	if (mqttClient->pCon) {
-		return;
+		// Clean up the old connection forcefully - using MQTT_Disconnect
+		// does not actually release the old connection until the
+		// disconnection callback is invoked.
+		mqtt_tcpclient_delete(mqttClient);
 	}
 	mqttClient->pCon = (struct espconn *)os_zalloc(sizeof(struct espconn));
 	mqttClient->pCon->type = ESPCONN_TCP;
