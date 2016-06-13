@@ -724,15 +724,21 @@ MQTT_InitClient(MQTT_Client *mqttClient, uint8_t* client_id, uint8_t* client_use
 	os_strcpy(mqttClient->connect_info.client_id, client_id);
 	mqttClient->connect_info.client_id[temp] = 0;
 
-	temp = os_strlen(client_user);
-	mqttClient->connect_info.username = (uint8_t*)os_zalloc(temp + 1);
-	os_strcpy(mqttClient->connect_info.username, client_user);
-	mqttClient->connect_info.username[temp] = 0;
+	if (client_user)
+	{
+		temp = os_strlen(client_user);
+		mqttClient->connect_info.username = (uint8_t*)os_zalloc(temp + 1);
+		os_strcpy(mqttClient->connect_info.username, client_user);
+		mqttClient->connect_info.username[temp] = 0;
+	}
 
-	temp = os_strlen(client_pass);
-	mqttClient->connect_info.password = (uint8_t*)os_zalloc(temp + 1);
-	os_strcpy(mqttClient->connect_info.password, client_pass);
-	mqttClient->connect_info.password[temp] = 0;
+	if (client_pass)
+	{
+		temp = os_strlen(client_pass);
+		mqttClient->connect_info.password = (uint8_t*)os_zalloc(temp + 1);
+		os_strcpy(mqttClient->connect_info.password, client_pass);
+		mqttClient->connect_info.password[temp] = 0;
+	}
 
 
 	mqttClient->connect_info.keepalive = keepAliveTime;
