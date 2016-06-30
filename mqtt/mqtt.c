@@ -240,6 +240,7 @@ mqtt_tcpclient_recv(void *arg, char *pdata, unsigned short len)
 	struct espconn *pCon = (struct espconn*)arg;
 	MQTT_Client *client = (MQTT_Client *)pCon->reverse;
 
+	client->keepAliveTick = 0;
 READPACKET:
 	INFO("TCP: data received %d bytes\r\n", len);
 	if (len < MQTT_BUF_SIZE && len > 0) {
@@ -375,6 +376,8 @@ mqtt_tcpclient_sent_cb(void *arg)
 	MQTT_Client* client = (MQTT_Client *)pCon->reverse;
 	INFO("TCP: Sent\r\n");
 	client->sendTimeout = 0;
+	client->keepAliveTick =0;
+
 	if ((client->connState == MQTT_DATA || client->connState == MQTT_KEEPALIVE_SEND)
 				&& client->mqtt_state.pending_msg_type == MQTT_MSG_TYPE_PUBLISH) {
 		if (client->publishedCb)
