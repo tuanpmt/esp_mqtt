@@ -159,9 +159,15 @@ mqtt_tcpclient_delete(MQTT_Client *mqttClient)
 {
 	if (mqttClient->pCon != NULL) {
 		INFO("Free memory\r\n");
+		// Force abort connections
+		espconn_abort(mqttClient->pCon);
+		// Delete connections
 		espconn_delete(mqttClient->pCon);
-		if (mqttClient->pCon->proto.tcp)
+
+		if (mqttClient->pCon->proto.tcp) {
 			os_free(mqttClient->pCon->proto.tcp);
+			mqttClient->pCon->proto.tcp = NULL;
+		}
 		os_free(mqttClient->pCon);
 		mqttClient->pCon = NULL;
 	}
@@ -175,7 +181,13 @@ mqtt_tcpclient_delete(MQTT_Client *mqttClient)
 void ICACHE_FLASH_ATTR
 mqtt_client_delete(MQTT_Client *mqttClient)
 {
-	mqtt_tcpclient_delete(mqttClient);
+	if(mqttClient == NULL)
+		return;
+
+	if (mqttClient->pCon != NULL){
+		mqtt_tcpclient_delete(mqttClient);
+	}
+
 	if (mqttClient->host != NULL) {
 		os_free(mqttClient->host);
 		mqttClient->host = NULL;
@@ -184,6 +196,29 @@ mqtt_client_delete(MQTT_Client *mqttClient)
 	if (mqttClient->user_data != NULL) {
 		os_free(mqttClient->user_data);
 		mqttClient->user_data = NULL;
+	}
+
+	if(mqttClient->mqtt_state.in_buffer != NULL) {
+		os_free(mqttClient->mqtt_state.in_buffer);
+		mqttClient->mqtt_state.in_buffer = NULL;
+	}
+
+	if(mqttClient->mqtt_state.out_buffer != NULL) {
+		os_free(mqttClient->mqtt_state.out_buffer);
+		mqttClient->mqtt_state.out_buffer = NULL;
+	}
+
+	if(mqttClient->mqtt_state.outbound_message != NULL) {
+		if(mqttClient->mqtt_state.outbound_message->data != NULL)
+		{
+			os_free(mqttClient->mqtt_state.outbound_message->data);
+			mqttClient->mqtt_state.outbound_message->data = NULL;
+		}
+	}
+
+	if(mqttClient->mqtt_state.mqtt_connection.buffer != NULL) {
+		// Already freed but not NULL
+		mqttClient->mqtt_state.mqtt_connection.buffer = NULL;
 	}
 
 	if(mqttClient->connect_info.client_id != NULL) {
@@ -211,15 +246,12 @@ mqtt_client_delete(MQTT_Client *mqttClient)
 		mqttClient->connect_info.will_message = NULL;
 	}
 
-	if(mqttClient->mqtt_state.in_buffer != NULL) {
-		os_free(mqttClient->mqtt_state.in_buffer);
-		mqttClient->mqtt_state.in_buffer = NULL;
+	if (mqttClient->msgQueue.buf != NULL) {
+		os_free(mqttClient->msgQueue.buf);
+		mqttClient->msgQueue.buf = NULL;
 	}
 
-	if(mqttClient->mqtt_state.out_buffer != NULL) {
-		os_free(mqttClient->mqtt_state.out_buffer);
-		mqttClient->mqtt_state.out_buffer = NULL;
-	}
+	mqttClient->connState = WIFI_INIT;
 }
 
 
@@ -843,7 +875,16 @@ MQTT_Disconnect(MQTT_Client *mqttClient)
 void ICACHE_FLASH_ATTR
 MQTT_DeleteClient(MQTT_Client *mqttClient)
 {
-	mqttClient->connState = MQTT_DELETING;
+	if(NULL == mqttClient)
+		return;
+
+	mqttClient->connState = MQTT_DELETED;
+	// if(TCP_DISCONNECTED == mqttClient->connState) {
+	// 	mqttClient->connState = MQTT_DELETED;
+	// } else if(MQTT_DELETED != mqttClient->connState) {
+	// 	mqttClient->connState = MQTT_DELETING;	
+	// }
+
 	system_os_post(MQTT_TASK_PRIO, 0, (os_param_t)mqttClient);
 	os_timer_disarm(&mqttClient->mqttTimer);
 }
