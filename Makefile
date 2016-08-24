@@ -96,6 +96,13 @@ else
 endif
 #############################################################
 
+XTENSA_TOOLS_ROOT 	?= 
+AR					:= $(addprefix $(XTENSA_TOOLS_ROOT),$(AR))
+CC					:= $(addprefix $(XTENSA_TOOLS_ROOT),$(CC))
+LD					:= $(addprefix $(XTENSA_TOOLS_ROOT),$(LD))
+NM					:= $(addprefix $(XTENSA_TOOLS_ROOT),$(NM))
+CPP					:= $(addprefix $(XTENSA_TOOLS_ROOT),$(CPP))
+OBJCOPY				:= $(addprefix $(XTENSA_TOOLS_ROOT),$(OBJCOPY))
 
 # which modules (subdirectories) of the project to include in compiling
 MODULES		= driver mqtt user modules
@@ -112,12 +119,12 @@ CFLAGS		= -Os -Wpointer-arith -Wundef -Werror -Wl,-EL -fno-inline-functions -nos
 LDFLAGS		= -nostdlib -Wl,--no-check-sections -u call_user_start -Wl,-static
 
 ifeq ($(FLAVOR),debug)
-    CFLAGS += -g -O0
+    CFLAGS += -g -O0 -Wno-implicit-function-declaration
     LDFLAGS += -g -O0
 endif
 
 ifeq ($(FLAVOR),release)
-    CFLAGS += -g -O2
+    CFLAGS += -g -O2 -Wno-implicit-function-declaration
     LDFLAGS += -g -O2
 endif
 
