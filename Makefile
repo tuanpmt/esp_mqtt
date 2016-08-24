@@ -14,6 +14,7 @@ ESPTOOL = tools/esptool/esptool.py
 
 # name for the target project
 TARGET		= app
+TARGET_LIB	= libmqtt.a
 
 # linker script used for the above linkier step
 LD_SCRIPT	= eagle.app.v6.ld
@@ -98,6 +99,7 @@ endif
 
 # which modules (subdirectories) of the project to include in compiling
 MODULES		= driver mqtt user modules
+MODULES_LIB	= mqtt
 EXTRA_INCDIR    = include $(SDK_BASE)/../include
 
 # libraries used in this project, mainly provided by the SDK
@@ -131,13 +133,16 @@ SDK_INCDIR	= include include/json
 ####
 FW_TOOL		?= $(ESPTOOL)
 SRC_DIR		:= $(MODULES)
+SRC_DIR_LIB	:= $(MODULES_LIB)
 BUILD_DIR	:= $(addprefix $(BUILD_BASE)/,$(MODULES))
 
 SDK_LIBDIR	:= $(addprefix $(SDK_BASE)/,$(SDK_LIBDIR))
 SDK_INCDIR	:= $(addprefix -I$(SDK_BASE)/,$(SDK_INCDIR))
 
 SRC		:= $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.c))
+SRC_LIB		:= $(foreach sdir,$(SRC_DIR_LIB),$(wildcard $(sdir)/*.c))
 OBJ		:= $(patsubst %.c,$(BUILD_BASE)/%.o,$(SRC))
+OBJ_LIB		:= $(patsubst %.c,$(BUILD_BASE)/%.o,$(SRC_LIB))
 LIBS		:= $(addprefix -l,$(LIBS))
 APP_AR		:= $(addprefix $(BUILD_BASE)/,$(TARGET)_app.a)
 TARGET_OUT	:= $(addprefix $(BUILD_BASE)/,$(TARGET).out)
@@ -168,9 +173,11 @@ $1/%.o: %.c
 	$(Q) $(CC) $(INCDIR) $(MODULE_INCDIR) $(EXTRA_INCDIR) $(SDK_INCDIR) $(CFLAGS)  -c $$< -o $$@
 endef
 
-.PHONY: all checkdirs clean
+.PHONY: all lib checkdirs clean
 
 all: checkdirs $(TARGET_OUT) $(FW_FILE_1) $(FW_FILE_2)
+
+lib: checkdirs $(TARGET_LIB)
 
 $(FW_FILE_1): $(TARGET_OUT)
 	$(vecho) "FW $@"
@@ -185,6 +192,10 @@ $(TARGET_OUT): $(APP_AR)
 	$(Q) $(LD) -L$(SDK_LIBDIR) $(LD_SCRIPT) $(LDFLAGS) -Wl,--start-group $(LIBS) $(APP_AR) -Wl,--end-group -o $@
 
 $(APP_AR): $(OBJ)
+	$(vecho) "AR $@"
+	$(Q) $(AR) cru $@ $^
+
+$(TARGET_LIB): $(OBJ_LIB)
 	$(vecho) "AR $@"
 	$(Q) $(AR) cru $@ $^
 
@@ -207,6 +218,7 @@ rebuild: clean all
 clean:
 	$(Q) rm -f $(APP_AR)
 	$(Q) rm -f $(TARGET_OUT)
+	$(Q) rm -f $(TARGET_LIB)
 	$(Q) rm -rf $(BUILD_DIR)
 	$(Q) rm -rf $(BUILD_BASE)
 	$(Q) rm -f $(FW_FILE_1)
