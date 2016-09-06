@@ -434,7 +434,7 @@ void ICACHE_FLASH_ATTR mqtt_timer(void *arg)
 
 	if (client->connState == MQTT_DATA) {
 		client->keepAliveTick ++;
-		if (client->keepAliveTick > client->mqtt_state.connect_info->keepalive) {
+		if (client->keepAliveTick > (client->mqtt_state.connect_info->keepalive / 2)) {
 			client->connState = MQTT_KEEPALIVE_SEND;
 			system_os_post(MQTT_TASK_PRIO, 0, (os_param_t)client);
 		}
