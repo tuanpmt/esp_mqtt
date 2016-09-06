@@ -158,7 +158,7 @@ void ICACHE_FLASH_ATTR
 mqtt_tcpclient_delete(MQTT_Client *mqttClient)
 {
 	if (mqttClient->pCon != NULL) {
-		INFO("Free memory\r\n");
+		INFO("TCP: Free memory\r\n");
 		// Force abort connections
 		espconn_abort(mqttClient->pCon);
 		// Delete connections
@@ -251,7 +251,16 @@ mqtt_client_delete(MQTT_Client *mqttClient)
 		mqttClient->msgQueue.buf = NULL;
 	}
 
+	// Initialize state
 	mqttClient->connState = WIFI_INIT;
+	// Clear callback functions to avoid abnormal callback
+	mqttClient->connectedCb = NULL;
+	mqttClient->disconnectedCb = NULL;
+	mqttClient->publishedCb = NULL;
+	mqttClient->timeoutCb = NULL;
+	mqttClient->dataCb = NULL;
+
+	INFO("MQTT: client already deleted\r\n");
 }
 
 
@@ -275,6 +284,7 @@ mqtt_tcpclient_recv(void *arg, char *pdata, unsigned short len)
 	client->keepAliveTick = 0;
 READPACKET:
 	INFO("TCP: data received %d bytes\r\n", len);
+	// INFO("STATE: %d\r\n", client->connState);
 	if (len < MQTT_BUF_SIZE && len > 0) {
 		os_memcpy(client->mqtt_state.in_buffer, pdata, len);
 
@@ -424,7 +434,7 @@ void ICACHE_FLASH_ATTR mqtt_timer(void *arg)
 
 	if (client->connState == MQTT_DATA) {
 		client->keepAliveTick ++;
-		if (client->keepAliveTick > client->mqtt_state.connect_info->keepalive) {
+		if (client->keepAliveTick > (client->mqtt_state.connect_info->keepalive / 2)) {
 			client->connState = MQTT_KEEPALIVE_SEND;
 			system_os_post(MQTT_TASK_PRIO, 0, (os_param_t)client);
 		}
@@ -726,7 +736,7 @@ void ICACHE_FLASH_ATTR
 MQTT_InitConnection(MQTT_Client *mqttClient, uint8_t* host, uint32_t port, uint8_t security)
 {
 	uint32_t temp;
-	INFO("MQTT_InitConnection\r\n");
+	INFO("MQTT:InitConnection\r\n");
 	os_memset(mqttClient, 0, sizeof(MQTT_Client));
 	temp = os_strlen(host);
 	mqttClient->host = (uint8_t*)os_zalloc(temp + 1);
@@ -750,7 +760,7 @@ void ICACHE_FLASH_ATTR
 MQTT_InitClient(MQTT_Client *mqttClient, uint8_t* client_id, uint8_t* client_user, uint8_t* client_pass, uint32_t keepAliveTime, uint8_t cleanSession)
 {
 	uint32_t temp;
-	INFO("MQTT_InitClient\r\n");
+	INFO("MQTT:InitClient\r\n");
 
 	os_memset(&mqttClient->connect_info, 0, sizeof(mqtt_connect_info_t));
 
