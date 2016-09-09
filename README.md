@@ -1,6 +1,6 @@
 **esp_mqtt**
 ==========
-![](https://travis-ci.org/tuanpmt/esp_mqtt.svg?branch=master)
+[![](https://travis-ci.org/tuanpmt/esp_mqtt.svg?branch=master)](https://travis-ci.org/tuanpmt/esp_mqtt)
 
 This is MQTT client library for ESP8266, port from: [MQTT client library for Contiki](https://github.com/esar/contiki-mqtt) (thanks)
 
