@@ -9,7 +9,6 @@ install:
 - export PATH=$PATH:$PWD/esp-open-sdk/sdk:$PWD/esp-open-sdk/xtensa-lx106-elf/bin
 - wget http://bbs.espressif.com/download/file.php?id=1613 -O tools/ESP8266_NONOS_SDK_V2.0.0_16_07_19.zip
 - unzip tools/ESP8266_NONOS_SDK_V2.0.0_16_07_19.zip
-- mv tools/ESP8266_NONOS_SDK_V2.0.0_16_07_19/ESP8266_NONOS_SDK tools/ESP8266_NONOS_SDK
 script:
 - make all SDK_BASE="$PWD/ESP8266_NONOS_SDK"
 - cd firmware/
