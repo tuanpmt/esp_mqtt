@@ -19,8 +19,7 @@ script:
 - cp include/user_config.sample.h include/user_config.local.h
 - make
 - cd firmware/
-- file_name="esp_mqtt_v${TRAVIS_TAG}.${TRAVIS_BUILD_NUMBER}.bin"
-- srec_cat -output ${file_name} -binary 0x00000.bin -binary -fill 0xff 0x00000 0x10000 0x10000.bin -binary -offset 0x10000
+- srec_cat -output ${file_name} -binary esp_mqtt0x00000.bin -binary -fill 0xff 0x00000 0x10000 esp_mqtt0x10000.bin -binary -offset 0x10000
 deploy:
 provider: releases
 api_key:
