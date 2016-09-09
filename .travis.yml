@@ -8,11 +8,12 @@ install:
 - wget https://github.com/nodemcu/nodemcu-firmware/raw/master/tools/esp-open-sdk.tar.gz
 - tar -zxvf esp-open-sdk.tar.gz
 - export PATH=$PATH:$PWD/esp-open-sdk/xtensa-lx106-elf/bin
-- chmod +x $PWD/tools/esptool/esptool.py
-- export ESPTOOL=$PWD/tools/esptool/esptool.py
+- chmod +x $PWD/esptool/esptool.py
+- export ESPTOOL=$PWD/esptool/esptool.py
 - wget http://bbs.espressif.com/download/file.php?id=1613 -O ESP8266_NONOS_SDK_V2.0.0_16_07_19.zip
 - unzip ESP8266_NONOS_SDK_V2.0.0_16_07_19.zip
 - export SDK_BASE=$PWD/ESP8266_NONOS_SDK
+- cd ..
 script:
 - ls
 - cp include/user_config.sample.h include/user_config.local.h
