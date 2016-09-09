@@ -10,28 +10,24 @@ This is MQTT client library for ESP8266, port from: [MQTT client library for Con
 
  * Support subscribing, publishing, authentication, will messages, keep alive pings and all 3 QoS levels (it should be a fully functional client).
  * Support multiple connection (to multiple hosts).
- * Support SSL connection (sdk 1.3 with path)
+ * Support SSL connection
  * Easy to setup and use
- * Update support SDK 1.3
+
+***Prerequire:***
+
+- ESPTOOL.PY: https://github.com/themadinventor/esptool
+- SDK 2.0 or higher: http://bbs.espressif.com/viewtopic.php?f=46&t=2451
+- ESP8266 compiler: 
+    + OSX or Linux: http://tuanpm.net/esp8266-development-kit-on-mac-os-yosemite-and-eclipse-ide/
+    + Windows: http://programs74.ru/udkew-en.html 
 
 **Compile:**
 
+- Copy file `include/user_config.sample.h` to `include/user_config.local.h` and change settings, included: SSID, PASS, MQTT configurations ...
+- When you change settings from  `include/user_config.local.h`, you must change value of `CFG_HOLDER` (any value difference last value), new configurations will take effect
+
 Make sure to add PYTHON PATH and compile PATH to Eclipse environment variable if using Eclipse
 
-for Windows:
-
-```bash
-git clone --recursive https://github.com/tuanpmt/esp_mqtt
-cd esp_mqtt
-#clean
-mingw32-make clean
-#make
-mingw32-make SDK_BASE="c:/Espressif/ESP8266_SDK" FLAVOR="release" all
-#flash
-mingw32-make ESPPORT="COM1" flash
-```
-
-for Mac or Linux:
 
 ```bash
 git clone --recursive https://github.com/tuanpmt/esp_mqtt
@@ -39,9 +35,9 @@ cd esp_mqtt
 #clean
 make clean
 #make
-make SDK_BASE="/opt/Espressif/ESP8266_SDK" FLAVOR="release" all
+make SDK_BASE=/tools/esp8266/sdk/ESP8266_NONOS_SDK ESPTOOL=tools/esp8266/esptool/esptool.py all
 #flash
-make ESPPORT="/dev/ttyUSB0" flash
+make ESPPORT=/dev/ttyUSB0 flash
 ```
 
 **Usage**
@@ -159,7 +155,7 @@ MQTT_InitLWT(&mqttClient, "/lwt", "offline", 0, 0);
 
 #Default configuration
 
-See: **include/user_config.h**
+See: **include/user_config.sample.h**
 
 If you want to load new default configurations, just change the value of CFG_HOLDER in **include/user_config.h**
 
@@ -170,13 +166,6 @@ If you want to load new default configurations, just change the value of CFG_HOL
 //PROTOCOL_NAMEv311			/*MQTT version 3.11 compatible with https://eclipse.org/paho/clients/testing/*/
 ```
 
-In the Makefile, it will erase section hold the user configuration at 0x3C000
-
-```bash
-flash: firmware/0x00000.bin firmware/0x40000.bin
-	$(PYTHON) $(ESPTOOL) -p $(ESPPORT) write_flash 0x00000 firmware/0x00000.bin 0x3C000 $(BLANKER) 0x40000 firmware/0x40000.bin 
-```
-The BLANKER is the blank.bin file you find in your SDKs bin folder.
 
 **Create SSL Self sign**
 
@@ -231,15 +220,10 @@ function setup() {
 }
 ```
 
-**Example projects using esp_mqtt:**<br/>
+**Example projects using esp_mqtt:**
 - [https://github.com/eadf/esp_mqtt_lcd](https://github.com/eadf/esp_mqtt_lcd)
 
-**Limited:**<br/>
-- Not fully supported retransmit for QoS1 and QoS2
 
-**Status:** *Pre release.*
-
-[https://github.com/tuanpmt/esp_mqtt/releases](https://github.com/tuanpmt/esp_mqtt/releases)
 
 [MQTT Broker for test](https://github.com/mcollina/mosca)
 
@@ -249,21 +233,9 @@ function setup() {
 
 ***Feel free to contribute to the project in any way you like!***
 
-**Requried:**
-
-SDK esp_iot_sdk_v0.9.4_14_12_19 or higher
 
 **Authors:**
 [Tuan PM](https://twitter.com/TuanPMT)
 
 
-
 **LICENSE - "MIT License"**
-
-Copyright (c) 2014-2015 Tuan PM, https://twitter.com/TuanPMT
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
