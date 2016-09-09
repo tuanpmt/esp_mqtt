@@ -32,15 +32,15 @@
 #include "osapi.h"
 #include "mqtt.h"
 #include "wifi.h"
-#include "config.h"
 #include "debug.h"
 #include "gpio.h"
 #include "user_interface.h"
 #include "mem.h"
+#include "config.h"
 
 MQTT_Client mqttClient;
 
-void wifiConnectCb(uint8_t status)
+static void ICACHE_FLASH_ATTR wifiConnectCb(uint8_t status)
 {
 	if(status == STATION_GOT_IP){
 		MQTT_Connect(&mqttClient);
@@ -48,7 +48,7 @@ void wifiConnectCb(uint8_t status)
 		MQTT_Disconnect(&mqttClient);
 	}
 }
-void mqttConnectedCb(uint32_t *args)
+static void ICACHE_FLASH_ATTR mqttConnectedCb(uint32_t *args)
 {
 	MQTT_Client* client = (MQTT_Client*)args;
 	INFO("MQTT: Connected\r\n");
@@ -62,19 +62,19 @@ void mqttConnectedCb(uint32_t *args)
 
 }
 
-void mqttDisconnectedCb(uint32_t *args)
+static void ICACHE_FLASH_ATTR mqttDisconnectedCb(uint32_t *args)
 {
 	MQTT_Client* client = (MQTT_Client*)args;
 	INFO("MQTT: Disconnected\r\n");
 }
 
-void mqttPublishedCb(uint32_t *args)
+static void ICACHE_FLASH_ATTR mqttPublishedCb(uint32_t *args)
 {
 	MQTT_Client* client = (MQTT_Client*)args;
 	INFO("MQTT: Published\r\n");
 }
 
-void mqttDataCb(uint32_t *args, const char* topic, uint32_t topic_len, const char *data, uint32_t data_len)
+static void ICACHE_FLASH_ATTR mqttDataCb(uint32_t *args, const char* topic, uint32_t topic_len, const char *data, uint32_t data_len)
 {
 	char *topicBuf = (char*)os_zalloc(topic_len+1),
 			*dataBuf = (char*)os_zalloc(data_len+1);
@@ -93,10 +93,10 @@ void mqttDataCb(uint32_t *args, const char* topic, uint32_t topic_len, const cha
 }
 
 
-void user_init(void)
+static void ICACHE_FLASH_ATTR app_init(void)
 {
 	uart_init(BIT_RATE_115200, BIT_RATE_115200);
-	os_delay_us(1000000);
+	// os_delay_us(1000000);
 
 	CFG_Load();
 
@@ -115,4 +115,8 @@ void user_init(void)
 	WIFI_Connect(sysCfg.sta_ssid, sysCfg.sta_pwd, wifiConnectCb);
 
 	INFO("\r\nSystem started ...\r\n");
+}
+void user_init(void)
+{
+	system_init_done_cb(app_init);
 }

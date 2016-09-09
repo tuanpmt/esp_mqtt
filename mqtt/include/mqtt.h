@@ -29,7 +29,7 @@
 */
 #ifndef USER_AT_MQTT_H_
 #define USER_AT_MQTT_H_
-#include "mqtt_config.h"
+#include "user_config.h"
 #include "mqtt_msg.h"
 #include "user_interface.h"
 
