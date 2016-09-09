@@ -3,6 +3,7 @@ before_install:
 - sudo apt-get -qq update
 - sudo apt-get install -y python-serial srecord
 install:
+- mkdir tools
 - wget https://github.com/nodemcu/nodemcu-firmware/raw/master/tools/esp-open-sdk.tar.gz -O tools/esp-open-sdk.tar.gz
 - tar -zxvf tools/esp-open-sdk.tar.gz
 - export PATH=$PATH:$PWD/esp-open-sdk/sdk:$PWD/esp-open-sdk/xtensa-lx106-elf/bin
