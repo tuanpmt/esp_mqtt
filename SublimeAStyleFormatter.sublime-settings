@@ -1,0 +1,381 @@
+{
+    // NOTE: You should always edit options in user file, not this file.
+
+    // Print debug message
+    "debug": false,
+
+    // Auto format on file save
+    "autoformat_on_save": false,
+
+    // The mapping key is `syntax name`, and the value is `formatting mode`.
+    // Note that the value for each mapping should be "c", "java" or "cs".
+    "user_defined_syntax_mode_mapping": {
+        // For example:
+
+        /*
+        "arduino": "c",
+        "pde": "java",
+        "apex": "java"
+        */
+    },
+
+    // Please visit http://astyle.sourceforge.net/astyle.html for more information
+    "options_default": {
+        // Default bracket style
+        // Can be one of "allman", "bsd", "break", "java", "attach", "kr", "k&r",
+        // "k/r" "stroustrup", "whitesmith", "banner", "gnu", "linux", "horstmann",
+        // "1tbs", "otbs ", "google", "pico", "lisp", "python", "vtk", or null
+        // for default.
+        "style": "k&r",
+
+        // Tab options
+        // "indent": Can be one of "spaces", "tab" "force-tab", "force-tab-x", or null
+        // "indent-spaces": Can be either null or numbers
+        //
+        // While both "indent" or "indent-spaces" are null (default), the indentation options
+        // will be retrieved from Sublime Text view settings: `tab_size`, `translate_tabs_to_spaces`:
+        //   1. If `translate_tabs_to_spaces` is true, "indent" will be "spaces", otherwise, "tab";
+        //   2. "indent-spaces" will equal to `tab_size`.
+        "indent": null,
+        "indent-spaces": null,
+
+        // === Bracket Modify Options ===
+        // Attach brackets to a namespace statement. This is done regardless of
+        // the bracket style being used.
+        "attach-namespaces": false,
+
+        // Attach brackets to a class statement. This is done regardless of the
+        // bracket style being used.
+        "attach-classes": false,
+
+        // Attach brackets to class and struct inline function definitions. This
+        // is not done for run-in type brackets (Horstmann and Pico styles). This
+        // option is effective for C++ files only.
+        "attach-inlines": false,
+
+        // Attach brackets to a bracketed extern "C" statement. This is done
+        // regardless of the bracket style being used. This option is effective
+        // for C++ files only.
+        //
+        // An extern "C" statement that is part of a function definition is
+        // formatted according to the requested bracket style. Bracketed extern
+        // "C" statements are unaffected by the bracket style and this option is
+        // the only way to change them.
+        "attach-extern-c": false,
+
+        // === Indentation Options ===
+
+        // Indent 'class' and 'struct' blocks so that the blocks 'public:',
+        // 'protected:' and 'private:' are indented. The struct blocks are
+        // indented only if an access modifier is declared somewhere in the
+        // struct. The entire block is indented. This option is effective for C++ files only.
+        "indent-classes": false,
+
+        // Indent 'class' and 'struct' access modifiers, 'public:', 'protected:'
+        // and 'private:', one half indent. The rest of the class is not indented.
+        // This option is effective for C++ files only. If used with indent‑classes
+        // this option will be ignored.
+        "indent-modifiers": false,
+
+        // Indent 'switch' blocks so that the 'case X:' statements are indented
+        // in the switch block. The entire case block is indented.
+        "indent-switches": true,
+
+        // Indent 'case X:' blocks from the 'case X:' headers. Case statements
+        // not enclosed in blocks are NOT indented.
+        "indent-cases": true,
+
+        // Add extra indentation to namespace blocks. This option has
+        // no effect on Java files.
+        "indent-namespaces": false,
+
+        // Add extra indentation to labels so they appear 1 indent less than the
+        // current indentation, rather than being flushed to the left (the default).
+        "indent-labels": false,
+
+        // Indent preprocessor blocks at bracket level zero, and immediately within
+        // a namespace. There are restrictions on what will be indented. Blocks
+        // within methods, classes, arrays, etc, will not be indented. Blocks
+        // containing brackets or multi-line define statements will not be indented.
+        // Without this option the preprocessor block is not indented.
+        "indent-preproc-block": false,
+
+        // Indent multi-line preprocessor definitions ending with a backslash.
+        // Should be used with `convert-tabs` for proper results. Does a pretty
+        // good job, but cannot perform miracles in obfuscated preprocessor
+        // definitions. Without this option the preprocessor statements remain unchanged.
+        "indent-preproc-define": false,
+
+        // Indent preprocessor conditional statements to the same level as the
+        // source code.
+        "indent-preproc-cond": false,
+
+        // Indent C++ comments beginning in column one. By default C++ comments
+        // beginning in column one are not indented. This option will allow the
+        // comments to be indented with the code.
+        "indent-col1-comments": false,
+
+        // Set the minimal indent that is added when a header is built of multiple
+        // lines. This indent helps to easily separate the header from the command
+        // statements that follow. The value for # indicates a number of indents
+        // and is a minimum value. The indent may be greater to align with the data
+        // on the previous line.
+        // The valid values are:
+        // 0 - no minimal indent. The lines will be aligned with the paren on the
+        //      preceding line.
+        // 1 - indent at least one additional indent.
+        // 2 - indent at least two additional indents.
+        // 3 - indent at least one-half an additional indent. This is intended for
+        //      large indents (e.g. 8).
+        // The default value is 2, two additional indents.
+        "min-conditional-indent": 2,
+
+        // Set the maximum spaces to indent a continuation line.
+        // The maximum spaces indicate a number of columns and
+        // must not be greater than 120. A maximum of less
+        // than two indent lengths will be ignored. This option
+        // will prevent continuation lines from extending too
+        // far to the right. Setting a larger value will allow
+        // the code to be extended further to the right.
+        //
+        // range: [40, 120]
+        "max-instatement-indent": 40,
+
+        // === Padding Options ===
+
+        // null      - Do nothing
+        // "default" - Pad empty lines around header blocks (e.g. 'if',
+        //              'for', 'while'...).
+        // "all"     - Pad empty lines around header blocks (e.g. 'if',
+        //              'for', 'while'...). Treat closing header blocks
+        //              (e.g. 'else', 'catch') as stand-alone blocks.
+        "break-blocks": null,
+
+        // Insert space padding around operators. Any end of line comments
+        // will remain in the original column, if possible. Note that there
+        // is no option to unpad. Once padded, they stay padded.
+        "pad-oper": true,
+
+        // Insert space padding around parenthesis on both the outside and
+        // the inside. Any end of line comments will remain in the original
+        // column, if possible.
+        "pad-paren": false,
+
+        // Insert space padding around parenthesis on the outside only. Any
+        // end of line comments will remain in the original column, if possible.
+        // This can be used with `unpad-paren` below to remove unwanted spaces.
+        "pad-paren-out": false,
+
+        // Insert space padding around the first parenthesis in a series on the
+        // outside only. Any end of line comments will remain in the original
+        // column, if possible. This can be used with unpad-paren below to remove
+        // unwanted spaces. If used with pad-paren or pad-paren-out, this
+        // option will be ignored. If used with pad-paren-in, the result will
+        // be the same as pad-paren.
+        "pad-first-paren-out": false,
+
+        // Insert space padding around parenthesis on the inside only. Any
+        // end of line comments will remain in the original column, if possible.
+        // This can be used with `unpad-paren` below to remove unwanted spaces.
+        "pad-paren-in": false,
+
+        // Insert space padding after paren headers only (e.g. 'if', 'for',
+        //'while'...). Any end of line comments will remain in the original
+        // column, if possible. This can be used with unpad-paren to remove
+        // unwanted spaces.
+        "pad-header": true,
+
+        // Remove extra space padding around parenthesis on the inside and outside.
+        // Any end of line comments will remain in the original column, if possible.
+        // This option can be used in combination with the paren padding options
+        // `pad-paren`, `pad-paren-out`, `pad-paren-in`, and `pad-header` above.
+        // Only padding that has not been requested by other options will be removed.
+        // For example, if a source has parens padded on both the inside and outside,
+        // and you want inside only. You need to use unpad-paren to remove the outside
+        // padding, and pad-paren-in to retain the inside padding. Using only `pad-paren-in`
+        // would not remove the outside padding.
+        "unpad-paren": false,
+
+        // Delete empty lines within a function or method. Empty lines outside of functions
+        // or methods are NOT deleted. If used with break-blocks or break-blocks=all it will
+        // delete all lines EXCEPT the lines added by the `break-blocks` options.
+        "delete-empty-lines": false,
+
+        // Fill empty lines with the white space of the previous line.
+        "fill-empty-lines": false,
+
+        // Attach a pointer or reference operator (* or &) to either the variable type (left)
+        // or variable name (right), or place it between the type and name (middle).
+        // The spacing between the type and name will be preserved, if possible. To format
+        // references separately use the following `align-reference` option.
+        // can be one of null, "type", "middle" or "name"
+        "align-pointer": null,
+
+        // This option will align references separate from pointers. Pointers are not changed
+        // by this option. If pointers and references are to be aligned the same, use the
+        //  previous `align-pointer` option. The option align-reference=none will not change
+        // the reference alignment. The other options are the same as for `align-pointer`.
+        // In the case of a reference to a pointer (*&) with conflicting alignments, the
+        // `align-pointer` value will be used.
+        // can be one of "none", "type", "middle", "name", or null for default.
+        "align-reference": null,
+
+        // === Formatting Options ===
+
+        // When `style` is "attach", "linux" or "stroustrup", this breaks closing headers
+        // (e.g. 'else', 'catch', ...) from their immediately preceding closing brackets.
+        // Closing header brackets are always broken with broken brackets, horstmann
+        // rackets, indented blocks, and indented brackets.
+        "break-closing-brackets": false,
+
+        // Break "else if" header combinations into separate lines. This option has no effect
+        // if keep-one-line-statements is used, the "else if" statements will remain as they are.
+        // If this option is NOT used, "else if" header combinations will be placed on a single line.
+        "break-elseifs": false,
+
+        // Add brackets to unbracketed one line conditional statements (e.g. 'if', 'for', 'while'...).
+        // The statement must be on a single line. The brackets will be added according to the
+        // currently requested predefined style or bracket type. If no style or bracket type is
+        // requested the brackets will be attached. If `add-one-line-brackets` is also used the
+        // result will be one line brackets.
+        "add-brackets": false,
+
+        // Add one line brackets to unbracketed one line conditional statements
+        // (e.g. 'if', 'for', 'while'...). The statement must be on a single line.
+        // The option implies `keep-one-line-blocks` and will not break the one line blocks.
+        "add-one-line-brackets": false,
+
+        // Remove brackets from conditional statements (e.g. 'if', 'for', 'while'...).
+        // The statement must be a single statement on a single line. If
+        // --add-brackets or --add-one-line-brackets is also used the result will
+        // be to add brackets. Brackets will not be removed from
+        // "One True Brace Style", --style=1tbs.
+        "remove-brackets": false,
+
+        // Don't break one-line blocks.
+        "keep-one-line-blocks": true,
+
+        // Don't break complex statements and multiple statements residing on a single line.
+        "keep-one-line-statements": true,
+
+        // Closes whitespace in the angle brackets of template definitions. Closing
+        // the ending angle brackets is now allowed by the C++11 standard.
+        // Be sure your compiler supports this before making the changes.
+        "close-templates": false,
+
+        // Remove the preceding '*' in a multi-line comment that begins a line.
+        // A trailing '*', if present, is also removed. Text that is less than one
+        // is indent is indented to one indent. Text greater than one indent is
+        // not changed. Multi-line comments that begin a line but without the
+        // preceding '*' are indented to one indent for consistency. This can
+        // slightly modify the indentation of commented out blocks of code.
+        // Lines containing all '*' are left unchanged. Extra spacing is removed
+        // from the comment close '*/'.
+        "remove-comment-prefix": false,
+
+        // The option max-code-length will break a line if the code exceeds # characters.
+        // The valid values are 50 thru 200. Lines without logical conditionals will
+        // break on a logical conditional (||, &&, ...), comma, paren, semicolon, or space.
+        //
+        // Some code will not be broken, such as comments, quotes, and arrays.
+        // If used with keep-one-line-blocks or add-one-line-brackets the blocks
+        // will NOT be broken. If used with keep-one-line-statements the statements
+        // will be broken at a semicolon if the line goes over the maximum length.
+        // If there is no available break point within the max code length, the
+        // line will be broken at the first available break point after the max code length.
+        //
+        // By default logical conditionals will be placed first on the new line.
+        // The option break-after-logical will cause the logical conditionals to be
+        // placed last on the previous line. This option has no effect without max-code-length.
+        "max-code-length": -1,
+        "break-after-logical": false,
+
+        // == Objective-C Options ==
+        // Because of the longer indents sometimes needed for Objective-C, the option
+        // "max-instatement-indent" may need to be increased. If you are not getting
+        // the paren and square bracket alignment you want, try increasing this value.
+
+        // Align the colons in Objective-C method declarations. This option is effective
+        // for Objective-C files only.
+        "align-method-colon": false,
+
+        // Insert space padding after the '-' or '+' Objective-C method prefix. This will
+        // add exactly one space. Any additional spaces will be deleted. This option is
+        // effective for Objective-C files only.
+        "pad-method-prefix": false,
+
+        // Remove all space padding after the '-' or '+' Objective-C method prefix.
+        // If used with pad-method-prefix, this option will be ignored. This option
+        // is effective for Objective-C files only.
+        "unpad-method-prefix": false,
+
+        // Add or remove space padding before or after the colons in an Objective-C
+        // method call. These options will pad exactly one space. Any additional
+        // spaces will be deleted. Colons immediarely preceeding a paren will not
+        // be padded. This option is effective for Objective-C files only.
+        //
+        // Can be one of "none", "all", "after" or "before", or null for default.
+        "pad-method-colon": null
+    },
+
+    //
+    // Language Specific Options
+    //
+    // You can override default options in language-specific options here.
+    // Addtional options are also provided:
+    //
+    // "additional_options": Addtional options following astyle options file style
+    //                       (http://astyle.sourceforge.net/astyle.html).
+    //                       e.g.: "additional_options": ["--indent=spaces=2", "--convert-tabs"]
+    //
+    // "additional_options_file": Addtional options file for astyle (aka astylerc), you must specify
+    //                            a full path for that file, environment variable may be included.
+    //                            e.g.: "additional_options_file": "%USERPROFILE%/astylerc" // (Windows)
+    //                            e.g.: "additional_options_file": "$HOME/.astylerc" // (Linux)
+    //                            === Additional variables that you may use ===
+    //                            $file_path  The directory of the current file, e.g., C:\Files.
+    //                            $file   The full path to the current file, e.g., C:\Files\Chapter1.txt.
+    //                            $file_name  The name portion of the current file, e.g., Chapter1.txt.
+    //                            $file_extension The extension portion of the current file, e.g., txt.
+    //                            $file_base_name The name-only portion of the current file, e.g., Document.
+    //                            $packages   The full path to the Packages folder.
+    //                            The following requires "Sublime Text 3"
+    //                            $project    The full path to the current project file.
+    //                            $project_path   The directory of the current project file.
+    //                            $project_name   The name portion of the current project file.
+    //                            $project_extension  The extension portion of the current project file.
+    //                            $project_base_name  The name-only portion of the current project file.
+    //
+    // "use_only_additional_options": While true, SublimeAStyleFormatter will *only* process
+    //                                options in *both* "additional_options" and "additional_options_file".
+
+
+    // Language-specific options for C
+    "options_c": {
+        "use_only_additional_options": false,
+        "additional_options_file": "",
+        "additional_options": []
+    },
+
+    // Language-specific for C++
+    "options_c++": {
+        "use_only_additional_options": false,
+        "additional_options_file": "",
+        "additional_options": []
+    },
+
+    // Language-specific for Java
+    "options_java": {
+        "style": "java",
+        "use_only_additional_options": false,
+        "additional_options_file": "",
+        "additional_options": []
+    },
+
+    // Language-specific for C#
+    "options_cs": {
+        "use_only_additional_options": false,
+        "additional_options_file": "",
+        "additional_options": []
+    }
+}

@@ -28,8 +28,8 @@ ESP_MODE = dio
 ESP_SIZE = 32m
 
 
-VERBOSE = no
-FLAVOR = release
+VERBOSE = yes
+FLAVOR = debug
 # name for the target project
 TARGET		?= esp_mqtt
 
@@ -110,6 +110,7 @@ LDFLAGS		= -nostdlib -Wl,--no-check-sections -u call_user_start -Wl,-static
 
 ifeq ($(FLAVOR),debug)
     LDFLAGS += -g -O2
+    CFLAGS += -DMQTT_DEBUG_ON -DDEBUG_ON
 endif
 
 ifeq ($(FLAVOR),release)
@@ -212,7 +213,7 @@ flash:
 	$(ESPTOOL) $(ESPTOOL_OPTS) $(ESPTOOL_WRITE)
 
 fast: all flash openport
-	
+
 openport:
 	$(vecho) "After flash, terminal will enter serial port screen"
 	$(vecho) "Please exit with command:"

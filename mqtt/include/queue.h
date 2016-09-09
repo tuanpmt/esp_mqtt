@@ -33,8 +33,8 @@
 #include "os_type.h"
 #include "ringbuf.h"
 typedef struct {
-	uint8_t *buf;
-	RINGBUF rb;
+  uint8_t *buf;
+  RINGBUF rb;
 } QUEUE;
 
 void ICACHE_FLASH_ATTR QUEUE_Init(QUEUE *queue, int bufferSize);

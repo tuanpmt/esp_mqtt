@@ -1,6 +1,6 @@
 /**
 * \file
-*		Standard Types definition
+*   Standard Types definition
 */
 
 #ifndef _TYPE_DEF_H_

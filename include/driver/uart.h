@@ -82,10 +82,10 @@ typedef enum {
 } RcvMsgState;
 
 typedef struct {
-    UartBautRate 	     baut_rate;
+    UartBautRate       baut_rate;
     UartBitsNum4Char  data_bits;
     UartExistParity      exist_parity;
-    UartParityMode 	    parity;    // chip size in byte
+    UartParityMode      parity;    // chip size in byte
     UartStopBitsNum   stop_bits;
     UartFlowCtrl         flow_ctrl;
     RcvMsgBuff          rcv_buff;
