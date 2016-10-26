@@ -44,6 +44,10 @@
 #define MQTT_TASK_QUEUE_SIZE      1
 #define MQTT_SEND_TIMOUT      5
 
+#ifndef MQTT_SSL_SIZE
+#define MQTT_SSL_SIZE         5120
+#endif
+
 #ifndef QUEUE_BUFFER_SIZE
 #define QUEUE_BUFFER_SIZE     2048
 #endif
@@ -80,6 +84,7 @@ mqtt_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
     os_memcpy(client->pCon->proto.tcp->remote_ip, &ipaddr->addr, 4);
     if (client->security) {
 #ifdef MQTT_SSL_ENABLE
+      espconn_secure_set_size(ESPCONN_CLIENT, MQTT_SSL_SIZE);
       espconn_secure_connect(client->pCon);
 #else
       MQTT_INFO("TCP: Do not support SSL\r\n");
@@ -882,6 +887,7 @@ MQTT_Connect(MQTT_Client *mqttClient)
     if (mqttClient->security)
     {
 #ifdef MQTT_SSL_ENABLE
+      espconn_secure_set_size(ESPCONN_CLIENT, MQTT_SSL_SIZE);
       espconn_secure_connect(mqttClient->pCon);
 #else
       MQTT_INFO("TCP: Do not support SSL\r\n");
