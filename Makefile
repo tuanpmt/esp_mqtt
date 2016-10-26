@@ -32,12 +32,16 @@ VERBOSE = yes
 FLAVOR = debug
 # name for the target project
 TARGET		?= esp_mqtt
+# name for the target when compiling as library
+TARGET_LIB ?= libmqtt.a
 
 # which modules (subdirectories) of the project to include in compiling
 USER_MODULES		= user driver mqtt modules
 USER_INC				= include
 USER_LIB				=
 
+# which modules (subdirectories) of the project to include when compiling as library
+LIB_MODULES			= mqtt
 
 SDK_LIBDIR = lib
 SDK_LIBS = c gcc phy pp net80211 wpa main lwip crypto ssl json driver
@@ -68,6 +72,7 @@ OBJCOPY	:= $(XTENSA_TOOLS_ROOT)xtensa-lx106-elf-objcopy
 #### no user configurable options below here
 ####
 SRC_DIR				:= $(USER_MODULES)
+SRC_DIR_LIB		:= $(LIB_MODULES)
 BUILD_DIR			:= $(addprefix $(BUILD_BASE)/,$(USER_MODULES))
 
 INCDIR	:= $(addprefix -I,$(SRC_DIR))
@@ -80,10 +85,14 @@ SDK_LIBS 		:= $(addprefix -l,$(SDK_LIBS))
 SDK_INCDIR	:= $(addprefix -I$(SDK_BASE)/,$(SDK_INC))
 
 SRC		:= $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.c))
+SRC_LIB	:= $(foreach sdir,$(SRC_DIR_LIB),$(wildcard $(sdir)/*.c))
 ASMSRC		= $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.S))
+ASMSRC_LIB = $(foreach sdir,$(SRC_DIR_LIB),$(wildcard $(sdir)/*.S))
 
 OBJ		= $(patsubst %.c,$(BUILD_BASE)/%.o,$(SRC))
+OBJ_LIB	= $(patsubst %.c,$(BUILD_BASE)/%.o,$(SRC_LIB))
 OBJ		+= $(patsubst %.S,$(BUILD_BASE)/%.o,$(ASMSRC))
+OBJ_LIB	+= $(patsubst %.c,$(BUILD_BASE)/%.o,$(ASMSRC_LIB))
 
 APP_AR		:= $(addprefix $(BUILD_BASE)/,$(TARGET).a)
 TARGET_OUT	:= $(addprefix $(BUILD_BASE)/,$(TARGET).out)
@@ -168,6 +177,7 @@ else
 	ESPTOOL_FLASHDEF=
 	LD_SCRIPT	= -T$(SDK_BASE)/ld/eagle.app.v6.ld
 endif
+OUTPUT_LIB := $(addprefix $(FIRMWARE_BASE)/,$(TARGET_LIB))
 
 
 vpath %.c $(SRC_DIR)
@@ -180,9 +190,11 @@ endef
 
 
 
-.PHONY: all checkdirs clean
+.PHONY: all lib checkdirs clean
 
 all: touch checkdirs $(OUTPUT)
+
+lib: checkdirs $(OUTPUT_LIB)
 
 touch:
 	$(vecho) "-------------------------------------------\n"
@@ -195,6 +207,10 @@ checkdirs: $(BUILD_DIR) $(FIRMWARE_BASE)
 $(OUTPUT): $(TARGET_OUT)
 	$(vecho) "FW $@"
 	$(Q) $(ESPTOOL) elf2image $(ESPTOOL_FLASHDEF) $< -o $(OUTPUT)
+
+$(OUTPUT_LIB): $(OBJ_LIB)
+	$(vecho) "AR $@"
+	$(Q) $(AR) cru $@ $^
 
 $(BUILD_DIR):
 	$(Q) mkdir -p $@
