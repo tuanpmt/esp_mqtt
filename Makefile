@@ -95,6 +95,7 @@ CFLAGS		= -g			\
 						-Wpointer-arith		\
 						-Wundef			\
 						-Wl,-EL			\
+						-Wno-implicit-function-declaration \
 						-fno-inline-functions	\
 						-nostdlib       \
 						-mlongcalls	\
