@@ -319,13 +319,27 @@ mqtt_message_t* ICACHE_FLASH_ATTR mqtt_msg_connect(mqtt_connection_t* connection
   if (info->clean_session)
     variable_header->flags |= MQTT_CONNECT_FLAG_CLEAN_SESSION;
 
-  if (info->client_id != NULL && info->client_id[0] != '\0')
+  if (info->client_id == NULL)
   {
-    if (append_string(connection, info->client_id, strlen(info->client_id)) < 0)
-      return fail_message(connection);
+    /* Never allowed */
+    return fail_message(connection);
+  }
+  else if (info->client_id[0] == '\0')
+  {
+#ifdef PROTOCOL_NAMEv311
+    /* Allowed. Format 0 Length ID */
+    append_string(connection, info->client_id, 2) ;
+#else
+    /* 0 Length not allowed */
+    return fail_message(connection);
+#endif
   }
   else
-    return fail_message(connection);
+  {
+    /* No 0 data and at least 1 long. Good to go. */
+    if(append_string(connection, info->client_id, strlen(info->client_id)) < 0)
+      return fail_message(connection);
+  }
 
   if (info->will_topic != NULL && info->will_topic[0] != '\0')
   {
