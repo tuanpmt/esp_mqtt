@@ -101,11 +101,39 @@ void ICACHE_FLASH_ATTR print_info()
 
 }
 
+/* Tim's custom code starts here */
+static os_timer_t start_timer; /* declare a variable which will be used to control the timer */
+
+static void ICACHE_FLASH_ATTR start_timer_cb(void *arg) {
+  INFO("HELLO == we are looping!\n");
+  static int on = 0;
+  if (!on) {
+    INFO("Turing on PIN\n");
+    gpio_output_set(BIT2, 0, BIT2, 0);
+    on = 1;
+  } else {
+    INFO("Turing off PIN\n");
+    gpio_output_set(0, BIT2, BIT2, 0);
+    on = 0;
+  }
+}
 
 static void ICACHE_FLASH_ATTR app_init(void)
 {
   uart_init(BIT_RATE_115200, BIT_RATE_115200);
   print_info();
+
+  // initialize gpio subsystem
+  gpio_init();
+  // set pin 2 to output mode
+  PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO2_U, FUNC_GPIO2);
+  //Set GPIO2 low
+  gpio_output_set(0, BIT2, BIT2, 0);
+
+  os_timer_disarm(&start_timer);
+  os_timer_setfn(&start_timer, start_timer_cb, NULL); /* Set callback for timer */
+  os_timer_arm(&start_timer, 5000 /* call every 5 second */, 1 /* repeat */);
+
   MQTT_InitConnection(&mqttClient, MQTT_HOST, MQTT_PORT, DEFAULT_SECURITY);
   //MQTT_InitConnection(&mqttClient, "192.168.11.122", 1880, 0);
 
@@ -123,6 +151,7 @@ static void ICACHE_FLASH_ATTR app_init(void)
 
   WIFI_Connect(STA_SSID, STA_PASS, wifiConnectCb);
 }
+
 void user_init(void)
 {
   system_init_done_cb(app_init);
