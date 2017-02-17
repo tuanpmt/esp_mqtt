@@ -36,6 +36,7 @@
 #include "gpio.h"
 #include "user_interface.h"
 #include "mem.h"
+#include "os_type.h"
 
 MQTT_Client mqttClient;
 static void ICACHE_FLASH_ATTR wifiConnectCb(uint8_t status)
@@ -50,13 +51,13 @@ static void ICACHE_FLASH_ATTR mqttConnectedCb(uint32_t *args)
 {
   MQTT_Client* client = (MQTT_Client*)args;
   INFO("MQTT: Connected\r\n");
-  MQTT_Subscribe(client, "/mqtt/topic/0", 0);
-  MQTT_Subscribe(client, "/mqtt/topic/1", 1);
-  MQTT_Subscribe(client, "/mqtt/topic/2", 2);
-
-  MQTT_Publish(client, "/mqtt/topic/0", "hello0", 6, 0, 0);
-  MQTT_Publish(client, "/mqtt/topic/1", "hello1", 6, 1, 0);
-  MQTT_Publish(client, "/mqtt/topic/2", "hello2", 6, 2, 0);
+  // MQTT_Subscribe(client, "/mqtt/topic/0", 0);
+  // MQTT_Subscribe(client, "/mqtt/topic/1", 1);
+  // MQTT_Subscribe(client, "/mqtt/topic/2", 2);
+  //
+  // MQTT_Publish(client, "/mqtt/topic/0", "hello0", 6, 0, 0);
+  // MQTT_Publish(client, "/mqtt/topic/1", "hello1", 6, 1, 0);
+  // MQTT_Publish(client, "/mqtt/topic/2", "hello2", 6, 2, 0);
 
 }
 
@@ -101,20 +102,29 @@ void ICACHE_FLASH_ATTR print_info()
 
 }
 
-/* Tim's custom code starts here */
-static os_timer_t start_timer; /* declare a variable which will be used to control the timer */
+// Handler to handle interupts of GPIO pins
+LOCAL void gpio_intr_handler(uint32_t *args)
+{
 
-static void ICACHE_FLASH_ATTR start_timer_cb(void *arg) {
-  INFO("HELLO == we are looping!\n");
-  static int on = 0;
-  if (!on) {
-    INFO("Turing on PIN\n");
-    gpio_output_set(BIT2, 0, BIT2, 0);
-    on = 1;
-  } else {
-    INFO("Turing off PIN\n");
-    gpio_output_set(0, BIT2, BIT2, 0);
-    on = 0;
+  uint32 gpio_status = GPIO_REG_READ(GPIO_STATUS_ADDRESS);
+
+  // if the interrupt was by GPIO2
+  if (gpio_status & BIT2)
+  {
+    // disable interrupt for GPIO2
+    gpio_pin_intr_state_set(GPIO_ID_PIN(2), GPIO_PIN_INTR_DISABLE);
+
+    // Do something, for example, increment whatyouwant indirectly
+    INFO("GPIO2 pin detected change == %d\n", gpio_status);
+
+    MQTT_Client* client = (MQTT_Client*)args;
+    MQTT_Publish(client, MOTION_TOPIC, MOTION_PAYLOAD, strlen(MOTION_PAYLOAD), 0, 0);
+
+    //clear interrupt status for GPIO2
+    GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, gpio_status & BIT2);
+
+    // Reactivate interrupts for GPIO2
+    gpio_pin_intr_state_set(GPIO_ID_PIN(2), GPIO_PIN_INTR_ANYEDGE);
   }
 }
 
@@ -127,12 +137,25 @@ static void ICACHE_FLASH_ATTR app_init(void)
   gpio_init();
   // set pin 2 to output mode
   PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO2_U, FUNC_GPIO2);
-  //Set GPIO2 low
-  gpio_output_set(0, BIT2, BIT2, 0);
+  // set pin2 to pullup.
+  PIN_PULLUP_EN(PERIPHS_IO_MUX_GPIO2_U);
+  //Set GPIO2 as input
+  gpio_output_set(0, 0, 0, BIT2);
 
-  os_timer_disarm(&start_timer);
-  os_timer_setfn(&start_timer, start_timer_cb, NULL); /* Set callback for timer */
-  os_timer_arm(&start_timer, 5000 /* call every 5 second */, 1 /* repeat */);
+  // Disable interrupts by GPIO
+  ETS_GPIO_INTR_DISABLE();
+  // attach a handler
+  // static int someVal;
+  ETS_GPIO_INTR_ATTACH(gpio_intr_handler, &mqttClient);
+  gpio_register_set(GPIO_PIN_ADDR(2),
+    GPIO_PIN_INT_TYPE_SET(GPIO_PIN_INTR_DISABLE)  |
+    GPIO_PIN_PAD_DRIVER_SET(GPIO_PAD_DRIVER_DISABLE) |
+    GPIO_PIN_SOURCE_SET(GPIO_AS_PIN_SOURCE));
+
+  GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, BIT(2));
+  gpio_pin_intr_state_set(GPIO_ID_PIN(2), GPIO_PIN_INTR_ANYEDGE);
+  // renable interrupts
+  ETS_GPIO_INTR_ENABLE();
 
   MQTT_InitConnection(&mqttClient, MQTT_HOST, MQTT_PORT, DEFAULT_SECURITY);
   //MQTT_InitConnection(&mqttClient, "192.168.11.122", 1880, 0);
