@@ -124,7 +124,7 @@ LOCAL void gpio_intr_handler(uint32_t *args)
     GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, gpio_status & BIT2);
 
     // Reactivate interrupts for GPIO2
-    gpio_pin_intr_state_set(GPIO_ID_PIN(2), GPIO_PIN_INTR_ANYEDGE);
+    gpio_pin_intr_state_set(GPIO_ID_PIN(2), GPIO_PIN_INTR_POSEDGE);
   }
 }
 
@@ -153,7 +153,7 @@ static void ICACHE_FLASH_ATTR app_init(void)
     GPIO_PIN_SOURCE_SET(GPIO_AS_PIN_SOURCE));
 
   GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, BIT(2));
-  gpio_pin_intr_state_set(GPIO_ID_PIN(2), GPIO_PIN_INTR_ANYEDGE);
+  gpio_pin_intr_state_set(GPIO_ID_PIN(2), GPIO_PIN_INTR_POSEDGE);
   // renable interrupts
   ETS_GPIO_INTR_ENABLE();
 
