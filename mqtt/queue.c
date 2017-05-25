@@ -34,6 +34,11 @@
 #include "os_type.h"
 #include "mem.h"
 #include "proto.h"
+
+uint8_t *last_rb_p_r;
+uint8_t *last_rb_p_w;
+uint32_t last_fill_cnt;
+
 void ICACHE_FLASH_ATTR QUEUE_Init(QUEUE *queue, int bufferSize)
 {
   queue->buf = (uint8_t*)os_zalloc(bufferSize);
@@ -41,7 +46,20 @@ void ICACHE_FLASH_ATTR QUEUE_Init(QUEUE *queue, int bufferSize)
 }
 int32_t ICACHE_FLASH_ATTR QUEUE_Puts(QUEUE *queue, uint8_t* buffer, uint16_t len)
 {
-  return PROTO_AddRb(&queue->rb, buffer, len);
+  uint32_t ret;
+  
+  last_rb_p_r = queue->rb.p_r;
+  last_rb_p_w = queue->rb.p_w;
+  last_fill_cnt = queue->rb.fill_cnt;
+
+  ret = PROTO_AddRb(&queue->rb, buffer, len);
+  if (ret == -1) {
+    // rolling ring buffer back
+    queue->rb.p_r = last_rb_p_r;
+    queue->rb.p_w = last_rb_p_w;
+    queue->rb.fill_cnt = last_fill_cnt;
+  }
+  return ret;
 }
 int32_t ICACHE_FLASH_ATTR QUEUE_Gets(QUEUE *queue, uint8_t* buffer, uint16_t* len, uint16_t maxLen)
 {
