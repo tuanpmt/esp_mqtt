@@ -36,6 +36,7 @@
 #include "gpio.h"
 #include "user_interface.h"
 #include "mem.h"
+#include "os_type.h"
 
 MQTT_Client mqttClient;
 static void ICACHE_FLASH_ATTR wifiConnectCb(uint8_t status)
@@ -50,13 +51,13 @@ static void ICACHE_FLASH_ATTR mqttConnectedCb(uint32_t *args)
 {
   MQTT_Client* client = (MQTT_Client*)args;
   INFO("MQTT: Connected\r\n");
-  MQTT_Subscribe(client, "/mqtt/topic/0", 0);
-  MQTT_Subscribe(client, "/mqtt/topic/1", 1);
-  MQTT_Subscribe(client, "/mqtt/topic/2", 2);
-
-  MQTT_Publish(client, "/mqtt/topic/0", "hello0", 6, 0, 0);
-  MQTT_Publish(client, "/mqtt/topic/1", "hello1", 6, 1, 0);
-  MQTT_Publish(client, "/mqtt/topic/2", "hello2", 6, 2, 0);
+  // MQTT_Subscribe(client, "/mqtt/topic/0", 0);
+  // MQTT_Subscribe(client, "/mqtt/topic/1", 1);
+  // MQTT_Subscribe(client, "/mqtt/topic/2", 2);
+  //
+  // MQTT_Publish(client, "/mqtt/topic/0", "hello0", 6, 0, 0);
+  // MQTT_Publish(client, "/mqtt/topic/1", "hello1", 6, 1, 0);
+  // MQTT_Publish(client, "/mqtt/topic/2", "hello2", 6, 2, 0);
 
 }
 
@@ -101,11 +102,61 @@ void ICACHE_FLASH_ATTR print_info()
 
 }
 
+// Handler to handle interupts of GPIO pins
+LOCAL void gpio_intr_handler(uint32_t *args)
+{
+
+  uint32 gpio_status = GPIO_REG_READ(GPIO_STATUS_ADDRESS);
+
+  // if the interrupt was by GPIO2
+  if (gpio_status & BIT2)
+  {
+    // disable interrupt for GPIO2
+    gpio_pin_intr_state_set(GPIO_ID_PIN(2), GPIO_PIN_INTR_DISABLE);
+
+    // Do something, for example, increment whatyouwant indirectly
+    INFO("GPIO2 pin detected change == %d\n", gpio_status);
+
+    MQTT_Client* client = (MQTT_Client*)args;
+    MQTT_Publish(client, MOTION_TOPIC, MOTION_PAYLOAD, strlen(MOTION_PAYLOAD), 0, 0);
+
+    //clear interrupt status for GPIO2
+    GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, gpio_status & BIT2);
+
+    // Reactivate interrupts for GPIO2
+    gpio_pin_intr_state_set(GPIO_ID_PIN(2), GPIO_PIN_INTR_POSEDGE);
+  }
+}
 
 static void ICACHE_FLASH_ATTR app_init(void)
 {
   uart_init(BIT_RATE_115200, BIT_RATE_115200);
   print_info();
+
+  // initialize gpio subsystem
+  gpio_init();
+  // set pin 2 to output mode
+  PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO2_U, FUNC_GPIO2);
+  // set pin2 to pullup.
+  PIN_PULLUP_EN(PERIPHS_IO_MUX_GPIO2_U);
+  //Set GPIO2 as input
+  gpio_output_set(0, 0, 0, BIT2);
+
+  // Disable interrupts by GPIO
+  ETS_GPIO_INTR_DISABLE();
+  // attach a handler
+  // static int someVal;
+  ETS_GPIO_INTR_ATTACH(gpio_intr_handler, &mqttClient);
+  gpio_register_set(GPIO_PIN_ADDR(2),
+    GPIO_PIN_INT_TYPE_SET(GPIO_PIN_INTR_DISABLE)  |
+    GPIO_PIN_PAD_DRIVER_SET(GPIO_PAD_DRIVER_DISABLE) |
+    GPIO_PIN_SOURCE_SET(GPIO_AS_PIN_SOURCE));
+
+  GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, BIT(2));
+  gpio_pin_intr_state_set(GPIO_ID_PIN(2), GPIO_PIN_INTR_POSEDGE);
+  // renable interrupts
+  ETS_GPIO_INTR_ENABLE();
+
   MQTT_InitConnection(&mqttClient, MQTT_HOST, MQTT_PORT, DEFAULT_SECURITY);
   //MQTT_InitConnection(&mqttClient, "192.168.11.122", 1880, 0);
 
@@ -123,6 +174,7 @@ static void ICACHE_FLASH_ATTR app_init(void)
 
   WIFI_Connect(STA_SSID, STA_PASS, wifiConnectCb);
 }
+
 void user_init(void)
 {
   system_init_done_cb(app_init);

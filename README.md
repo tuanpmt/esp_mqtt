@@ -1,10 +1,10 @@
 **esp_mqtt**
 ==========
-[![](https://travis-ci.org/tuanpmt/esp_mqtt.svg?branch=master)](https://travis-ci.org/tuanpmt/esp_mqtt)
+[![](https://travis-ci.org/timhodson/esp_mqtt.svg?branch=master)](https://travis-ci.org/timhodson/esp_mqtt)
+
+This is a fork of https://github.com/tuanpmt/esp_mqtt and adds some simple code for detecting changes in edges on GPIO2. This code is being used to send messages from an ESP-01 connected to a PIR. or in the case of one of my sensors 2 PIRs connected to the same pin so that there is improved coverage.
 
 This is MQTT client library for ESP8266, port from: [MQTT client library for Contiki](https://github.com/esar/contiki-mqtt) (thanks)
-
-
 
 **Features:**
 
@@ -17,9 +17,9 @@ This is MQTT client library for ESP8266, port from: [MQTT client library for Con
 
 - ESPTOOL.PY: https://github.com/themadinventor/esptool
 - SDK 2.0 or higher: http://bbs.espressif.com/viewtopic.php?f=46&t=2451
-- ESP8266 compiler: 
+- ESP8266 compiler:
     + OSX or Linux: http://tuanpm.net/esp8266-development-kit-on-mac-os-yosemite-and-eclipse-ide/
-    + Windows: http://programs74.ru/udkew-en.html 
+    + Windows: http://programs74.ru/udkew-en.html
 
 **Compile:**
 
@@ -30,7 +30,7 @@ Make sure to add PYTHON PATH and compile PATH to Eclipse environment variable if
 
 
 ```bash
-git clone --recursive https://github.com/tuanpmt/esp_mqtt
+git clone --recursive https://github.com/timhodson/esp_mqtt
 cd esp_mqtt
 #clean
 make clean

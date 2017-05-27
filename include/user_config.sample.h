@@ -16,6 +16,10 @@
 #define MQTT_CLEAN_SESSION 1
 #define MQTT_KEEPALIVE 120
 
+// make sure that JSON payloads use escaped quotes.
+#define MOTION_TOPIC  "/sensors/motion/1"
+#define MOTION_PAYLOAD  "{\"motion\": 1}"
+
 #define STA_SSID "SSID"
 #define STA_PASS "PASS"
 
