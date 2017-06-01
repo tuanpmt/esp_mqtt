@@ -1,4 +1,4 @@
-**esp_uMQTT_broker**
+# esp_uMQTT_broker
 A basic MQTT Broker on the ESP8266
 
 Thanks to Tuan PM for sharing his MQTT client library https://github.com/tuanpmt/esp_mqtt as a basis with us.
@@ -26,7 +26,18 @@ The complete functionality is included in the mqtt directory. The broker is star
 bool MQTT_server_start(uint16_t portno, uint16_t max_subscriptions, uint16_t max_retained_topics);
 ```
 
-in the user_init() function. The code can be used in any project that is compiled using the NONOS_SDK or the esp-open-sdk. 
+in the user_init() function. 
+
+# Building and Flashing
+The code can be used in any project that is compiled using the NONOS_SDK or the esp-open-sdk. Also the sample code in the user directory can be build using the standard SDKs after adapting the variables in the Makefile.
+
+Build the esp_uMQTT_broker firmware with "make". "make flash" flashes it onto an esp8266.
+
+If you want to use the precompiled binaries from the firmware directory you can flash them on an ESP12 with 
+
+```bash
+esptool.py --port /dev/ttyUSB0 write_flash -fs 32m 0x00000 firmware/0x00000.bin 0x10000 firmware/0x10000.bin
+```
 
 # Usage
 In the user directory there is a demo program that serves as a stand-alone MQTT broker. The program starts with the following default configuration:
