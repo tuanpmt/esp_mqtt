@@ -47,7 +47,6 @@ extern "C" {
 /*|      --- Message Type----     |  DUP Flag |    QoS Level    | Retain  |
 /*                    Remaining Length                 */
 
-
 enum mqtt_message_type
 {
   MQTT_MSG_TYPE_CONNECT = 1,
