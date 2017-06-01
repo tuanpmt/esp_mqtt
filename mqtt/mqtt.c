@@ -256,9 +256,9 @@ mqtt_client_delete(MQTT_Client *mqttClient)
     mqttClient->connect_info.will_topic = NULL;
   }
 
-  if (mqttClient->connect_info.will_message != NULL) {
-    os_free(mqttClient->connect_info.will_message);
-    mqttClient->connect_info.will_message = NULL;
+  if (mqttClient->connect_info.will_data != NULL) {
+    os_free(mqttClient->connect_info.will_data);
+    mqttClient->connect_info.will_data = NULL;
   }
 
   if (mqttClient->msgQueue.buf != NULL) {
@@ -876,9 +876,9 @@ MQTT_InitLWT(MQTT_Client *mqttClient, uint8_t* will_topic, uint8_t* will_msg, ui
   mqttClient->connect_info.will_topic[temp] = 0;
 
   temp = os_strlen(will_msg);
-  mqttClient->connect_info.will_message = (uint8_t*)os_zalloc(temp + 1);
-  os_strcpy(mqttClient->connect_info.will_message, will_msg);
-  mqttClient->connect_info.will_message[temp] = 0;
+  mqttClient->connect_info.will_data = (uint8_t*)os_zalloc(temp + 1);
+  os_strcpy(mqttClient->connect_info.will_data, will_msg);
+  mqttClient->connect_info.will_data[temp] = 0;
 
 
   mqttClient->connect_info.will_qos = will_qos;

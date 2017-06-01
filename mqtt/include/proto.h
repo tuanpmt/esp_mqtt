@@ -9,7 +9,7 @@
 #define _PROTO_H_
 #include <stdlib.h>
 #include "typedef.h"
-#include "ringbuf.h"
+#include "ringbuf_mqtt.h"
 
 typedef void(PROTO_PARSE_CALLBACK)();
 

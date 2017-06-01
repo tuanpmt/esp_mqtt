@@ -9,11 +9,11 @@ THISDIR:=$(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 XTENSA_TOOLS_ROOT ?=
 
 # base directory of the ESP8266 SDK package, absolute
-SDK_BASE	?= /tools/esp8266/sdk/ESP8266_NONOS_SDK
+SDK_BASE	?= /home/martin/github/esp-open-sdk/sdk/
 
 #Esptool.py path and port
-ESPTOOL		?= /tools/esp8266/esptool/esptool.py
-ESPPORT		?= /dev/tty.SLAB_USBtoUART
+ESPTOOL		?= /home/martin/github/esp-open-sdk/esptool/esptool.py
+ESPPORT		?= /dev/ttyUSB0
 #ESPPORT		?= /dev/tty.wchusbserial1410
 #ESPDELAY indicates seconds to wait between flashing the two binary images
 ESPDELAY	?= 3
@@ -56,7 +56,7 @@ FIRMWARE_BASE		= firmware
 
 # Opensdk patches stdint.h when compiled with an internal SDK. If you run into compile problems pertaining to
 # redefinition of int types, try setting this to 'yes'.
-USE_OPENSDK ?= no
+USE_OPENSDK ?= yes
 
 DATETIME := $(shell date "+%Y-%b-%d_%H:%M:%S_%Z")
 
