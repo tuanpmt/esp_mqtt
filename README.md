@@ -1,149 +1,94 @@
-**esp_mqtt**
-==========
-[![](https://travis-ci.org/tuanpmt/esp_mqtt.svg?branch=master)](https://travis-ci.org/tuanpmt/esp_mqtt)
+**esp_uMQTT_broker**
+A basic MQTT Broker on the ESP8266
 
-This is MQTT client library for ESP8266, port from: [MQTT client library for Contiki](https://github.com/esar/contiki-mqtt) (thanks)
+Thanks to Tuan PM for sharing his MQTT client library https://github.com/tuanpmt/esp_mqtt as a basis with us.
 
+The broker does support:
+- a subset of MQTT (CONNECT, DISCONNECT, SUBSCRIBE, UNSUBSCRIBE, PUBLISH, PING)
+- MQTT protocoll versions v3.1 and v3.1.1 simultaniously
+- a smaller number of clients (at least 6 have been tested, memory is the issue)
+- retained messages
+- LWT
+- QoS level 0
 
+The broker does not yet support:
+- username, password authentication
+- QoS levels other than 0
+- many TCP(=MQTT) clients
+- non-clear sessions
+- TLS
 
-**Features:**
-
- * Support subscribing, publishing, authentication, will messages, keep alive pings and all 3 QoS levels (it should be a fully functional client).
- * Support multiple connection (to multiple hosts).
- * Support SSL connection
- * Easy to setup and use
-
-***Prerequire:***
-
-- ESPTOOL.PY: https://github.com/themadinventor/esptool
-- SDK 2.0 or higher: http://bbs.espressif.com/viewtopic.php?f=46&t=2451
-- ESP8266 compiler: 
-    + OSX or Linux: http://tuanpm.net/esp8266-development-kit-on-mac-os-yosemite-and-eclipse-ide/
-    + Windows: http://programs74.ru/udkew-en.html 
-
-**Compile:**
-
-- Copy file `include/user_config.sample.h` to `include/user_config.local.h` and change settings, included: SSID, PASS, MQTT configurations ...
-
-
-Make sure to add PYTHON PATH and compile PATH to Eclipse environment variable if using Eclipse
-
-
-```bash
-git clone --recursive https://github.com/tuanpmt/esp_mqtt
-cd esp_mqtt
-#clean
-make clean
-#make
-make SDK_BASE=/tools/esp8266/sdk/ESP8266_NONOS_SDK ESPTOOL=tools/esp8266/esptool/esptool.py all
-#flash
-make ESPPORT=/dev/ttyUSB0 flash
-```
-
-**Usage**
-
-See file: `user/user_main.c`
-
-
-**Publish message and Subscribe**
+The complete functionality is included in the mqtt directory. The broker is started by simply including:
 
 ```c
-/* TRUE if success */
-BOOL MQTT_Subscribe(MQTT_Client *client, char* topic, uint8_t qos);
+#include "mqtt_server.h"
 
-BOOL MQTT_Publish(MQTT_Client *client, const char* topic, const char* data, int data_length, int qos, int retain);
-
+bool MQTT_server_start(uint16_t portno, uint16_t max_subscriptions, uint16_t max_retained_topics);
 ```
 
-**Already support LWT: (Last Will and Testament)**
+in the user_init() function. The code can be used in any project that is compiled using the NONOS_SDK or the esp-open-sdk. 
+
+# Usage
+In the user directory there is a demo program that serves as a stand-alone MQTT broker. The program starts with the following default configuration:
+- ssid: ssid, password: password
+- ap_ssid: MyAP, ap_password: none, ap_on: 1, ap_open: 1
+- network: 192.168.4.0/24
+
+This means it connects to the internet via AP ssid,password and offers an open AP with ap_ssid MyAP. This default can be changed in the file user_config.h. The default can be overwritten and persistenly saved to flash by using a console interface. This console is available either via the serial port at 115200 baud or via tcp port 7777 (e.g. "telnet 192.168.4.1 7777" from a connected STA).
+
+Use the following commands for an initial setup:
+- set ssid your_home_router's_SSID
+- set password your_home_router's_password
+- set ap_ssid ESP's_ssid
+- set ap_password ESP's_password
+- show (to check the parameters)
+- save
+- reset
+
+After reboot it will connect to your home router and itself is ready for stations to connect.
+
+The console understands the following commands:
+
+Basic commands (enough to get it working in nearly all environments):
+- help: prints a short help message
+- set [ssid|password] _value_: changes the settings for the uplink AP (WiFi config of your home-router)
+- set [ap_ssid|ap_password] _value_: changes the settings for the soft-AP of the ESP (for your stations)
+- show [config|stats]: prints the current config or some status information and statistics
+- show mqtt_broker: shows the current status of the uMQTT broker 
+- save [dhcp]: saves the current config parameters [+ the current DHCP leases] to flash
+- reset [factory]: resets the esp, optionally resets WiFi params to default values
+- lock: locks the current config, changes are not allowed
+- unlock _password_: unlocks the config, requires password of the network AP
+- quit: terminates a remote session
+
+Advanced commands:
+(Most of the set-commands are effective only after save and reset)
+- set network _ip-addr_: sets the IP address of the internal network, network is always /24, router is always x.x.x.1
+- set dns _dns-addr_: sets a static DNS address
+- set dns dhcp: configures use of the dynamic DNS address from DHCP, default
+- set ip _ip-addr_: sets a static IP address for the ESP in the uplink network
+- set ip dhcp: configures dynamic IP address for the ESP in the uplink network, default
+- set netmask _netmask_: sets a static netmask for the uplink network
+- set gw _gw-addr_: sets a static gateway address in the uplink network
+- scan: does a scan for APs
+- set ap_on [0|1]: selects, whether the soft-AP is disabled (ap_on=0) or enabled (ap_on=1, default)
+- set ap_open [0|1]: selects, whether the soft-AP uses WPA2 security (ap_open=0,  automatic, if an ap_password is set) or open (ap_open=1)
+- set speed [80|160]: sets the CPU clock frequency (default 80 Mhz)
+
+While the user interface looks similar to my esp_wifi_repeater at https://github.com/martin-ger/esp_wifi_repeater this does NO NAT routing. AP and STA network are stricly separated and there is no routing in between. The only possible connection via both networks is the uMQTT broker that listens on both interfaces.
+
+# LOCAL client
+The broker comes with a "LOCAL client", which means, the broker itself can publish and subscribe topics (without the need of an additional TCP connection). You can test this with the commands:
+
+- publish [topic] [data]: this publishes a topic
+- subscribe [topic]: subscribes to a topic, received topic will be printed to serial output
+- unsubscribe [topic]: unsubscribes from a topic
+
+This feature is meant to provide the basis for a local rule engine that can react on MQTT events, e.g. to switch GPIOs or send other messages (MQTT, HTTP,...). You can use this with the functions:
 
 ```c
-
-/* Broker will publish a message with qos = 0, retain = 0, data = "offline" to topic "/lwt" if client don't send keepalive packet */
-MQTT_InitLWT(&mqttClient, "/lwt", "offline", 0, 0);
-
+bool MQTT_local_publish(uint8_t* topic, uint8_t* data, uint16_t data_length, uint8_t qos, uint8_t retain);
+bool MQTT_local_subscribe(uint8_t* topic, uint8_t qos);
+bool MQTT_local_unsubscribe(uint8_t* topic);
+void MQTT_local_onData(MqttDataCallback dataCb);
 ```
-
-#Default configuration
-
-See: **include/user_config.sample.h**
-
-**Define protocol name in include/user_config.local.h**
-
-```c
-#define PROTOCOL_NAMEv31	/*MQTT version 3.1 compatible with Mosquitto v0.15*/
-//PROTOCOL_NAMEv311			/*MQTT version 3.11 compatible with https://eclipse.org/paho/clients/testing/*/
-```
-
-
-**Create SSL Self sign**
-
-```
-openssl req -x509 -newkey rsa:1024 -keyout key.pem -out cert.pem -days XXX
-```
-
-**SSL Mqtt broker for test**
-
-```javascript
-var mosca = require('mosca')
-var SECURE_KEY = __dirname + '/key.pem';
-var SECURE_CERT = __dirname + '/cert.pem';
-var ascoltatore = {
-  //using ascoltatore
-  type: 'mongo',
-  url: 'mongodb://localhost:27017/mqtt',
-  pubsubCollection: 'ascoltatori',
-  mongo: {}
-};
-
-var moscaSettings = {
-  port: 1880,
-  stats: false,
-  backend: ascoltatore,
-  persistence: {
-    factory: mosca.persistence.Mongo,
-    url: 'mongodb://localhost:27017/mqtt'
-  },
-  secure : {
-    keyPath: SECURE_KEY,
-    certPath: SECURE_CERT,
-    port: 1883
-  }
-};
-
-var server = new mosca.Server(moscaSettings);
-server.on('ready', setup);
-
-server.on('clientConnected', function(client) {
-    console.log('client connected', client.id);
-});
-
-// fired when a message is received
-server.on('published', function(packet, client) {
-  console.log('Published', packet.payload);
-});
-
-// fired when the mqtt server is ready
-function setup() {
-  console.log('Mosca server is up and running')
-}
-```
-
-**Example projects using esp_mqtt:**
-
-- [https://github.com/eadf/esp_mqtt_lcd](https://github.com/eadf/esp_mqtt_lcd)
-
-[MQTT Broker for test](https://github.com/mcollina/mosca)
-
-[MQTT Client for test](https://chrome.google.com/webstore/detail/mqttlens/hemojaaeigabkbcookmlgmdigohjobjm?hl=en)
-
-**Contributing:**
-
-Feel free to contribute to the project in any way you like!
-
-
-**Authors:**
-[Tuan PM](https://twitter.com/TuanPMT)
-
-
-**LICENSE - "MIT License"**
