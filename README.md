@@ -1,15 +1,15 @@
 # esp_uMQTT_broker
 A basic MQTT Broker on the ESP8266
 
-Thanks to Tuan PM for sharing his MQTT client library https://github.com/tuanpmt/esp_mqtt as a basis with us.
+Thanks to Tuan PM for sharing his MQTT client library https://github.com/tuanpmt/esp_mqtt as a basis with us. The modified code still contains the complete client functionality from the original esp_mqtt lib, but it has been extended by the basic broker service.
 
 The broker does support:
-- a subset of MQTT (CONNECT, DISCONNECT, SUBSCRIBE, UNSUBSCRIBE, PUBLISH, PING)
 - MQTT protocoll versions v3.1 and v3.1.1 simultaniously
-- a smaller number of clients (at least 6 have been tested, memory is the issue)
+- a smaller number of clients (at least 8 have been tested, memory is the issue)
 - retained messages
 - LWT
 - QoS level 0
+- a subset of MQTT (CONNECT, DISCONNECT, SUBSCRIBE, UNSUBSCRIBE, PUBLISH, PING)
 
 The broker does not yet support:
 - username, password authentication
