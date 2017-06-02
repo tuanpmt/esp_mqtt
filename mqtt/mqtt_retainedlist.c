@@ -46,7 +46,7 @@ uint16_t i;
       // list full
       return false;
     }
-    retained_list[i].topic = (uint8_t *)os_malloc(os_strlen(topic));
+    retained_list[i].topic = (uint8_t *)os_malloc(os_strlen(topic)+1);
     if (retained_list[i].topic == NULL) {
         // out of mem
         return false;
@@ -60,19 +60,26 @@ uint16_t i;
     retained_list[i].topic = NULL;
     os_free(retained_list[i].data);
     retained_list[i].data = NULL;
+    retained_list[i].data_len = 0;
     return true;   
   }
 
-  // not same size as before, new memory allocation
-  if (data_len != retained_list[i].data_len) {
-    os_free(retained_list[i].data);
+  if (retained_list[i].data == NULL) {
+    // no data till now, new memory allocation
     retained_list[i].data = (uint8_t *)os_malloc(data_len);
-    if (retained_list[i].data == NULL) {
-      // out of mem
-      os_free(retained_list[i].topic);
-      retained_list[i].topic = NULL;
-      return false;
+  } else {
+    if (data_len != retained_list[i].data_len) {
+      // not same size as before, new memory allocation
+      os_free(retained_list[i].data);
+      retained_list[i].data = (uint8_t *)os_malloc(data_len);
     }
+  }
+  if (retained_list[i].data == NULL) {
+    // out of mem
+    os_free(retained_list[i].topic);
+    retained_list[i].topic = NULL;
+    retained_list[i].data_len = 0;
+    return false;
   }
 
   os_memcpy(retained_list[i].data, data, data_len);

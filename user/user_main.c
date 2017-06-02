@@ -27,8 +27,6 @@ static void user_procTask(os_event_t *events);
 static os_timer_t ptimer;	
 
 /* Some stats */
-uint64_t Bytes_in, Bytes_out, Bytes_in_last, Bytes_out_last;
-uint32_t Packets_in, Packets_out, Packets_in_last, Packets_out_last;
 uint64_t t_old;
 
 /* Hold the system wide configuration */
@@ -240,9 +238,6 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn)
 	      time/3600, (time%3600)/60, time%60);
 	   ringbuf_memcpy_into(console_tx_buffer, response, os_strlen(response));
 
-	   os_sprintf(response, "%d KiB in (%d packets)\r\n%d KiB out (%d packets)\r\n", 
-			(uint32_t)(Bytes_in/1024), Packets_in, 
-			(uint32_t)(Bytes_out/1024), Packets_out);
            ringbuf_memcpy_into(console_tx_buffer, response, os_strlen(response));
 	   if (connected) {
 		os_sprintf(response, "External IP-address: " IPSTR "\r\n", IP2STR(&my_ip));
@@ -774,8 +769,6 @@ struct ip_info info;
     connected = false;
     do_ip_config = false;
     my_ip.addr = 0;
-    Bytes_in = Bytes_out = Bytes_in_last = Bytes_out_last = 0,
-    Packets_in = Packets_out = Packets_in_last = Packets_out_last = 0;
     t_old = 0;
 
     console_rx_buffer = ringbuf_new(MAX_CON_CMD_SIZE);
