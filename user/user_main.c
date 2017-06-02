@@ -190,7 +190,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn)
 
     if (strcmp(tokens[0], "help") == 0)
     {
-        os_sprintf(response, "show [config|stats|mqtt_broker]\r\n|set [ssid|password|auto_connect|ap_ssid|ap_password|network|dns|ip|netmask|gw|ap_on|ap_open|speed|config_port] <val>\r\n|quit|save [config]|reset [factory]|lock|unlock <password>|publish <topic> <data>|subscribe <topic>|unsubscribe <topic>");
+        os_sprintf(response, "show [config|stats|mqtt|mqtt_broker]\r\n|set [ssid|password|auto_connect|ap_ssid|ap_password|network|dns|ip|netmask|gw|ap_on|ap_open|speed|config_port] <val>\r\n|quit|save [config]|reset [factory]|lock|unlock <password>|publish <topic> <data>|subscribe <topic>|unsubscribe <topic>");
         ringbuf_memcpy_into(console_tx_buffer, response, os_strlen(response));
 #ifdef ALLOW_SCANNING
         os_sprintf(response, "|scan");
@@ -258,8 +258,8 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn)
 	   goto command_handled_2;
       }
 
-      if (nTokens == 2 && strcmp(tokens[1], "mqtt_broker") == 0) {
-	   MQTT_ClientCon *clientcon = clientcon_list;
+      if (nTokens == 2 && (strcmp(tokens[1], "mqtt_broker")==0 || strcmp(tokens[1], "mqtt")==0)) {
+	   MQTT_ClientCon *clientcon;
 
            os_sprintf(response, "Current clients:\r\n");
 	   ringbuf_memcpy_into(console_tx_buffer, response, os_strlen(response));

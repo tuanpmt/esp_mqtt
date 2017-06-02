@@ -83,7 +83,7 @@ uint16_t message_id = 0;
   MQTT_INFO("MQTT: Client: %s Topic: \"%s\" QoS: %d\r\n", clientcon->connect_info.client_id, entry->topic, entry->qos);
 
   clientcon->mqtt_state.outbound_message = 
-       mqtt_msg_publish(&clientcon->mqtt_state.mqtt_connection, entry->topic, entry->data, entry->data_len, entry->qos, 0, &message_id);
+       mqtt_msg_publish(&clientcon->mqtt_state.mqtt_connection, entry->topic, entry->data, entry->data_len, entry->qos, 1, &message_id);
   if (QUEUE_Puts(&clientcon->msgQueue, clientcon->mqtt_state.outbound_message->data, clientcon->mqtt_state.outbound_message->length) == -1) {
     MQTT_ERROR("MQTT: Queue full\r\n");
     return false;
