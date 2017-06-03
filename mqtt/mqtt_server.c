@@ -18,6 +18,7 @@ return _v;
 #include "mqtt_topics.h"
 #include "mqtt_topiclist.h"
 #include "mqtt_retainedlist.h"
+#include "debug.h"
 
 #ifndef QUEUE_BUFFER_SIZE
 #define QUEUE_BUFFER_SIZE     2048
@@ -25,7 +26,7 @@ return _v;
 
 #define MAX_SUBS_PER_REQ      16
 
-#define MQTT_TASK_PRIO        2
+#define MQTT_SERVER_TASK_PRIO        1
 #define MQTT_TASK_QUEUE_SIZE  1
 #define MQTT_SEND_TIMOUT      5
 
@@ -36,7 +37,7 @@ LOCAL uint8_t zero_len_id[2] = { 0, 0 };
 MQTT_ClientCon *clientcon_list;
 LOCAL MqttDataCallback local_data_cb = NULL;
 
-#define MQTT_INFO //
+//#define MQTT_INFO os_printf
 #define MQTT_WARNING os_printf
 #define MQTT_ERROR os_printf
 
@@ -99,7 +100,7 @@ MQTT_ClientCon *clientcon = clientcon_list;
   for (clientcon = clientcon_list; clientcon != NULL; clientcon = clientcon->next) {
     if (!QUEUE_IsEmpty(&clientcon->msgQueue)) {
       MQTT_INFO("MQTT: Next message to client: %s\r\n", clientcon->connect_info.client_id);
-      system_os_post(MQTT_TASK_PRIO, 0, (os_param_t)clientcon);  
+      system_os_post(MQTT_SERVER_TASK_PRIO, 0, (os_param_t)clientcon);  
       return true;
      }
   }
@@ -243,7 +244,7 @@ MQTT_ServerDisconnect(MQTT_ClientCon *mqttClientCon)
 
   mqttClientCon->mqtt_state.message_length_read = 0;
   mqttClientCon->connState = TCP_DISCONNECTED;
-  system_os_post(MQTT_TASK_PRIO, 0, (os_param_t)mqttClientCon);
+  system_os_post(MQTT_SERVER_TASK_PRIO, 0, (os_param_t)mqttClientCon);
   os_timer_disarm(&mqttClientCon->mqttTimer);
 }
 
@@ -668,7 +669,7 @@ READPACKET:
   clientcon->mqtt_state.message_length_read = 0;
 
   if (msg_type != MQTT_MSG_TYPE_PUBLISH) {
-    system_os_post(MQTT_TASK_PRIO, 0, (os_param_t)clientcon);
+    system_os_post(MQTT_SERVER_TASK_PRIO, 0, (os_param_t)clientcon);
   } else {
     activate_next_client();
   }
@@ -741,7 +742,7 @@ MQTT_ServerTask(os_event_t *e)
   if (e->par == 0)
     return;
 
-  MQTT_INFO("MQTT Task: State %d \r\n", clientcon->connState);
+  MQTT_INFO("MQTT: Server task activated - state %d\r\n", clientcon->connState);
 
   switch (clientcon->connState) {
 
@@ -800,7 +801,7 @@ bool ICACHE_FLASH_ATTR MQTT_server_start(uint16_t portno, uint16_t max_subscript
     /* Put the connection in accept mode */
     espconn_accept(pCon);
 
-    system_os_task(MQTT_ServerTask, MQTT_TASK_PRIO, mqtt_procTaskQueue, MQTT_TASK_QUEUE_SIZE);
+    system_os_task(MQTT_ServerTask, MQTT_SERVER_TASK_PRIO, mqtt_procTaskQueue, MQTT_TASK_QUEUE_SIZE);
     return true;
 }
 

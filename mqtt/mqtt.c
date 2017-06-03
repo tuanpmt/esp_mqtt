@@ -470,7 +470,6 @@ mqtt_tcpclient_sent_cb(void *arg)
 void ICACHE_FLASH_ATTR mqtt_timer(void *arg)
 {
   MQTT_Client* client = (MQTT_Client*)arg;
-
   if (client->connState == MQTT_DATA) {
     client->keepAliveTick ++;
     if (client->keepAliveTick > (client->mqtt_state.connect_info->keepalive / 2)) {
@@ -700,6 +699,7 @@ MQTT_Task(os_event_t *e)
   uint16_t dataLen;
   if (e->par == 0)
     return;
+  MQTT_INFO("MQTT: Client task activated - state %d\r\n", client->connState);
   switch (client->connState) {
 
     case TCP_RECONNECT_REQ:

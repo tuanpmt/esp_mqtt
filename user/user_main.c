@@ -45,6 +45,49 @@ uint8_t remote_console_disconnect;
 void ICACHE_FLASH_ATTR user_set_softap_wifi_config(void);
 void ICACHE_FLASH_ATTR user_set_softap_ip_config(void);
 
+#ifdef MQTT_CLIENT
+
+MQTT_Client mqttClient;
+bool mqtt_enabled, mqtt_connected;
+
+static void ICACHE_FLASH_ATTR mqttConnectedCb(uint32_t *args)
+{
+uint8_t ip_str[16];
+
+  MQTT_Client* client = (MQTT_Client*)args;
+  mqtt_connected = true;
+  os_printf("MQTT client connected\r\n");
+}
+
+static void ICACHE_FLASH_ATTR mqttDisconnectedCb(uint32_t *args)
+{
+  MQTT_Client* client = (MQTT_Client*)args;
+  mqtt_connected = false;
+  os_printf("MQTT client disconnected\r\n");
+}
+
+static void ICACHE_FLASH_ATTR mqttPublishedCb(uint32_t *args)
+{
+  MQTT_Client* client = (MQTT_Client*)args;
+//  os_printf("MQTT: Published\r\n");
+}
+
+static void ICACHE_FLASH_ATTR mqttDataCb(uint32_t *args, const char* topic, uint32_t topic_len, const char *data, uint32_t data_len)
+{
+  MQTT_Client* client = (MQTT_Client*)args;
+  uint8_t buffer[256];
+  
+  if (topic_len >= sizeof(buffer)) {
+    os_printf("Topic to long for republication");
+    return;
+  }
+
+  strncpy(buffer, topic, topic_len);
+  buffer[topic_len] = 0;
+  MQTT_local_publish(buffer, (uint8_t*)data, data_len, 0, 0);
+}
+#endif /* MQTT_CLIENT */
+
 int parse_str_into_tokens(char *str, char **tokens, int max_tokens)
 {
 char    *p, *q;
@@ -139,7 +182,7 @@ bool ICACHE_FLASH_ATTR printf_topic(topic_entry *topic, void *user_data)
   uint8_t *response = (uint8_t *)user_data;
 
   os_sprintf(response, "%s: \"%s\" (QoS %d)\r\n", 
-    topic->clientcon!=LOCAL_MQTT_CLIENT?topic->clientcon->connect_info.client_id:"LOCAL", topic->topic, topic->qos);
+    topic->clientcon!=LOCAL_MQTT_CLIENT?topic->clientcon->connect_info.client_id:"local", topic->topic, topic->qos);
   ringbuf_memcpy_into(console_tx_buffer, response, os_strlen(response));
   return false;
 }
@@ -155,7 +198,12 @@ bool ICACHE_FLASH_ATTR printf_retainedtopic(retained_entry *entry, void *user_da
 
 void MQTT_local_DataCallback(uint32_t *args, const char* topic, uint32_t topic_len, const char *data, uint32_t length)
 {
-  os_printf("Received: \"%s\" len: %d\r\n", topic, length); 
+  os_printf("Received: \"%s\" len: %d\r\n", topic, length);
+#ifdef MQTT_CLIENT
+  if (mqtt_connected) {
+    MQTT_Publish(&mqttClient, topic, data, length, 0, 0);
+  }
+#endif
 }
 
 static char INVALID_LOCKED[] = "Invalid command. Config locked\r\n";
@@ -164,7 +212,7 @@ static char INVALID_ARG[] = "Invalid argument\r\n";
 
 void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn)
 {
-#define MAX_CMD_TOKENS 9
+#define MAX_CMD_TOKENS 4
 
     char cmd_line[MAX_CON_CMD_SIZE+1];
     char response[256];
@@ -188,10 +236,14 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn)
 
     if (strcmp(tokens[0], "help") == 0)
     {
-        os_sprintf(response, "show [config|stats|mqtt|mqtt_broker]\r\n|set [ssid|password|auto_connect|ap_ssid|ap_password|network|dns|ip|netmask|gw|ap_on|ap_open|speed|config_port] <val>\r\n|quit|save [config]|reset [factory]|lock|unlock <password>|publish <topic> <data>|subscribe <topic>|unsubscribe <topic>");
+        os_sprintf(response, "show [config|stats|mqtt|mqtt_broker]\r\n|set [ssid|password|auto_connect|ap_ssid|ap_password|network|dns|ip|netmask|gw|ap_on|ap_open|speed|config_port] <val>\r\n|quit|save [config]|reset [factory]|lock|unlock <password>|publish <topic> <data>|subscribe [local|remote] <topic>|unsubscribe [local|remote] <topic>");
         ringbuf_memcpy_into(console_tx_buffer, response, os_strlen(response));
 #ifdef ALLOW_SCANNING
         os_sprintf(response, "|scan");
+        ringbuf_memcpy_into(console_tx_buffer, response, os_strlen(response));
+#endif
+#ifdef MQTT_CLIENT
+        os_sprintf(response, "|set [mqtt_host|mqtt_port|mqtt_user|mqtt_password|mqtt_id] <val>\r\n");
         ringbuf_memcpy_into(console_tx_buffer, response, os_strlen(response));
 #endif
 	ringbuf_memcpy_into(console_tx_buffer, "\r\n", 2);
@@ -210,21 +262,32 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn)
                    config.auto_connect?"":" [AutoConnect:0]");
         ringbuf_memcpy_into(console_tx_buffer, response, os_strlen(response));
 
-        os_sprintf(response, "AP:  SSID:%s PW:%s%s%s IP:%d.%d.%d.%d/24",
+        os_sprintf(response, "AP:  SSID:%s PW:%s%s%s IP:%d.%d.%d.%d/24\r\n",
                    config.ap_ssid,
                    config.locked?"***":(char*)config.ap_password,
                    config.ap_open?" [open]":"",
                    config.ap_on?"":" [disabled]",
 		   IP2STR(&config.network_addr));
         ringbuf_memcpy_into(console_tx_buffer, response, os_strlen(response));
-	// if static DNS, add it
-	os_sprintf(response, config.dns_addr.addr?" DNS: %d.%d.%d.%d\r\n":"\r\n", IP2STR(&config.dns_addr));
-        ringbuf_memcpy_into(console_tx_buffer, response, os_strlen(response));
+
 	// if static IP, add it
 	os_sprintf(response, config.my_addr.addr?"Static IP: %d.%d.%d.%d Netmask: %d.%d.%d.%d Gateway: %d.%d.%d.%d\r\n":"", 
 		IP2STR(&config.my_addr), IP2STR(&config.my_netmask), IP2STR(&config.my_gw));
         ringbuf_memcpy_into(console_tx_buffer, response, os_strlen(response));
+	// if static DNS, add it
+	os_sprintf(response, config.dns_addr.addr?"DNS: %d.%d.%d.%d\r\n":"", IP2STR(&config.dns_addr));
+        ringbuf_memcpy_into(console_tx_buffer, response, os_strlen(response));
+#ifdef MQTT_CLIENT
+        os_sprintf(response, "MQTT client %s\r\n", mqtt_enabled?"enabled":"disabled");
+        ringbuf_memcpy_into(console_tx_buffer, response, os_strlen(response));      
 
+	if (os_strcmp(config.mqtt_host, "none") != 0) {
+           os_sprintf(response, "MQTT host: %s\r\nMQTT port: %d\r\nMQTT user: %s\r\nMQTT password: %s\r\nMQTT id: %s\r\n",
+		config.mqtt_host, config.mqtt_port, config.mqtt_user, 
+	        config.locked?"***":(char*)config.mqtt_password, config.mqtt_id);
+	   ringbuf_memcpy_into(console_tx_buffer, response, os_strlen(response));
+	}
+#endif
         os_sprintf(response, "Clock speed: %d\r\n", config.clock_speed);
         ringbuf_memcpy_into(console_tx_buffer, response, os_strlen(response));
 	goto command_handled_2;
@@ -238,7 +301,6 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn)
 	      time/3600, (time%3600)/60, time%60);
 	   ringbuf_memcpy_into(console_tx_buffer, response, os_strlen(response));
 
-           ringbuf_memcpy_into(console_tx_buffer, response, os_strlen(response));
 	   if (connected) {
 		os_sprintf(response, "External IP-address: " IPSTR "\r\n", IP2STR(&my_ip));
 	   } else {
@@ -246,29 +308,34 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn)
 	   }
 	   ringbuf_memcpy_into(console_tx_buffer, response, os_strlen(response));
 	   if (config.ap_on)
-		   os_sprintf(response, "%d Stations connected\r\n", wifi_softap_get_station_num());
+		os_sprintf(response, "%d Station%s connected to AP\r\n", wifi_softap_get_station_num(), 
+		  wifi_softap_get_station_num()==1?"":"s");
 	   else
-		   os_sprintf(response, "AP disabled\r\n");
+		os_sprintf(response, "AP disabled\r\n");
            ringbuf_memcpy_into(console_tx_buffer, response, os_strlen(response));
 	   goto command_handled_2;
       }
 
       if (nTokens == 2 && (strcmp(tokens[1], "mqtt_broker")==0 || strcmp(tokens[1], "mqtt")==0)) {
 	   MQTT_ClientCon *clientcon;
+	   int ccnt = 0;
 
            os_sprintf(response, "Current clients:\r\n");
 	   ringbuf_memcpy_into(console_tx_buffer, response, os_strlen(response));
-	   for (clientcon = clientcon_list; clientcon != NULL; clientcon = clientcon->next) {
+	   for (clientcon = clientcon_list; clientcon != NULL; clientcon = clientcon->next, ccnt++) {
 	       os_sprintf(response, "%s%s", clientcon->connect_info.client_id, clientcon->next != NULL?", ":"");
 	       ringbuf_memcpy_into(console_tx_buffer, response, os_strlen(response));
 	   }
-           os_sprintf(response, "\r\nCurrent subsriptions:\r\n");
+           os_sprintf(response, "%sCurrent subsriptions:\r\n", ccnt?"\r\n":"");
 	   ringbuf_memcpy_into(console_tx_buffer, response, os_strlen(response));
            iterate_topics(printf_topic, response);
            os_sprintf(response, "Retained topics:\r\n");
 	   ringbuf_memcpy_into(console_tx_buffer, response, os_strlen(response));
            iterate_retainedtopics(printf_retainedtopic, response);
-
+#ifdef MQTT_CLIENT
+           os_sprintf(response, "MQTT client %s\r\n", mqtt_connected?"connected":"disconnected");
+           ringbuf_memcpy_into(console_tx_buffer, response, os_strlen(response));      
+#endif
 	   goto command_handled_2;
       }
     }
@@ -321,35 +388,59 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn)
             os_sprintf(response, INVALID_NUMARGS);
             goto command_handled;
 	}
-
-	MQTT_local_publish(tokens[1], tokens[2], os_strlen(tokens[2]), 0, 0);
-
+	if (strcmp(tokens[1], "local") == 0) {
+	  MQTT_local_publish(tokens[1], tokens[2], os_strlen(tokens[2]), 0, 0);
+	}
+#ifdef MQTT_CLIENT
+	else if (strcmp(tokens[1], "remote") == 0 && mqtt_connected) {
+	  MQTT_Publish(&mqttClient, tokens[2], tokens[2], os_strlen(tokens[2]), 0, 0);
+	}
+#endif
 	os_sprintf(response, "Published topic\r\n");
         goto command_handled;
     }
 
     if (strcmp(tokens[0], "subscribe") == 0)
     {
-	if (nTokens != 2) {
+      bool retval = false;
+
+	if (nTokens != 3) {
             os_sprintf(response, INVALID_NUMARGS);
             goto command_handled;
 	}
 
-	MQTT_local_subscribe(tokens[1], 0);
-
-	os_sprintf(response, "subscribed topic\r\n");
+	if (strcmp(tokens[1], "local") == 0) {
+	    retval = MQTT_local_subscribe(tokens[2], 0);
+	}
+#ifdef MQTT_CLIENT
+	else if (strcmp(tokens[1], "remote") == 0 && mqtt_connected) {
+	    retval = MQTT_Subscribe(&mqttClient, tokens[2], 0);
+	}
+#endif
+	if (retval)
+	  os_sprintf(response, "subscribed topic\r\n");
+	else
+	  os_sprintf(response, "subscribe failed\r\n");
         goto command_handled;
     }
 
     if (strcmp(tokens[0], "unsubscribe") == 0)
     {
-	if (nTokens != 2) {
+      bool retval = false;
+
+	if (nTokens != 3) {
             os_sprintf(response, INVALID_NUMARGS);
             goto command_handled;
 	}
 
-	uint8_t retval = MQTT_local_unsubscribe(tokens[1]);
-
+	if (strcmp(tokens[1], "local") == 0) {
+	    retval = MQTT_local_unsubscribe(tokens[2]);
+	}
+#ifdef MQTT_CLIENT
+	else if (strcmp(tokens[1], "remote") == 0 && mqtt_connected) {
+	    retval = MQTT_UnSubscribe(&mqttClient, tokens[2]);
+	}
+#endif
 	if (retval)
 	  os_sprintf(response, "unsubscribed topic\r\n");
 	else
@@ -490,6 +581,22 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn)
                 goto command_handled;
             }
 
+            if (strcmp(tokens[1],"dns") == 0)
+            {
+		if (os_strcmp(tokens[2], "dhcp") == 0) {
+		    config.dns_addr.addr = 0;
+		    os_sprintf(response, "DNS from DHCP\r\n");
+		} else {
+		    config.dns_addr.addr = ipaddr_addr(tokens[2]);
+		    os_sprintf(response, "DNS set to %d.%d.%d.%d\r\n", 
+			IP2STR(&config.dns_addr));
+		    if (config.dns_addr.addr) {
+			dns_ip.addr = config.dns_addr.addr;
+		    }
+		}
+                goto command_handled;
+            }
+
             if (strcmp(tokens[1],"ip") == 0)
             {
 		if (os_strcmp(tokens[2], "dhcp") == 0) {
@@ -519,7 +626,48 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn)
                 goto command_handled;
             }
 
+#ifdef MQTT_CLIENT
+	    if (strcmp(tokens[1], "mqtt_host") == 0)
+	    {
+		os_strncpy(config.mqtt_host, tokens[2], 32);
+		config.mqtt_host[31] = 0;
+		os_sprintf(response, "MQTT host set\r\n");
+        	goto command_handled;
+	    }
+
+	    if (strcmp(tokens[1], "mqtt_port") == 0)
+	    {
+		config.mqtt_port = atoi(tokens[2]);
+		os_sprintf(response, "MQTT port set\r\n");
+        	goto command_handled;
+	    }
+
+	    if (strcmp(tokens[1], "mqtt_user") == 0)
+	    {
+		os_strncpy(config.mqtt_user, tokens[2], 32);
+		config.mqtt_user[31] = 0;
+		os_sprintf(response, "MQTT user set\r\n");
+        	goto command_handled;
+	    }
+
+	    if (strcmp(tokens[1], "mqtt_password") == 0)
+	    {
+		os_strncpy(config.mqtt_password, tokens[2], 32);
+		config.mqtt_password[31] = 0;
+		os_sprintf(response, "MQTT password set\r\n");
+        	goto command_handled;
+	    }
+
+	    if (strcmp(tokens[1], "mqtt_id") == 0)
+	    {
+		os_strncpy(config.mqtt_id, tokens[2], 32);
+		config.mqtt_id[31] = 0;
+		os_sprintf(response, "MQTT id set\r\n");
+        	goto command_handled;
+	    }
+#endif /* MQTT_CLIENT */
         }
+
     }
 
     /* Control comes here only if the tokens[0] command is not handled */
@@ -658,6 +806,11 @@ void wifi_handle_event_cb(System_Event_t *evt)
     case EVENT_STAMODE_DISCONNECTED:
         os_printf("disconnect from ssid %s, reason %d\n", evt->event_info.disconnected.ssid, evt->event_info.disconnected.reason);
 	connected = false;
+
+#ifdef MQTT_CLIENT
+	if (mqtt_enabled) MQTT_Disconnect(&mqttClient);
+#endif /* MQTT_CLIENT */
+
         break;
 
     case EVENT_STAMODE_AUTHMODE_CHANGE:
@@ -665,10 +818,18 @@ void wifi_handle_event_cb(System_Event_t *evt)
         break;
 
     case EVENT_STAMODE_GOT_IP:
+	if (config.dns_addr.addr == 0) {
+	    dns_ip.addr = dns_getserver(0);
+	}
+
         os_printf("ip:" IPSTR ",mask:" IPSTR ",gw:" IPSTR ",dns:" IPSTR "\n", IP2STR(&evt->event_info.got_ip.ip), IP2STR(&evt->event_info.got_ip.mask), IP2STR(&evt->event_info.got_ip.gw), IP2STR(&dns_ip));
 
 	my_ip = evt->event_info.got_ip.ip;
 	connected = true;
+
+#ifdef MQTT_CLIENT
+	if (mqtt_enabled) MQTT_Connect(&mqttClient);
+#endif /* MQTT_CLIENT */
 
         // Post a Server Start message as the IP has been acquired to Task with priority 0
 	system_os_post(user_procTaskPrio, SIG_START_SERVER, 0 );
@@ -785,10 +946,8 @@ struct ip_info info;
     config_load(&config);
 
     // Configure the AP and start it, if required
-    if (config.dns_addr.addr == 0)
-	// Google's DNS as default, as long as we havn't got one from DHCP
-	IP4_ADDR(&dns_ip, 8, 8, 8, 8);
-    else
+
+    if (config.dns_addr.addr != 0)
 	// We have a static DNS server
 	dns_ip.addr = config.dns_addr.addr;
 
@@ -827,6 +986,25 @@ struct ip_info info;
       espconn_accept(pCon);
     }
 #endif
+
+#ifdef MQTT_CLIENT
+    mqtt_connected = false;
+    mqtt_enabled = (os_strcmp(config.mqtt_host, "none") != 0);
+    if (mqtt_enabled) {
+	MQTT_InitConnection(&mqttClient, config.mqtt_host, config.mqtt_port, 0);
+
+	if (os_strcmp(config.mqtt_user, "none") == 0) {
+	  MQTT_InitClient(&mqttClient, config.mqtt_id, 0, 0, 120, 1);
+	} else {
+	  MQTT_InitClient(&mqttClient, config.mqtt_id, config.mqtt_user, config.mqtt_password, 120, 1);
+	}
+//	MQTT_InitLWT(&mqttClient, "/lwt", "offline", 0, 0);
+	MQTT_OnConnected(&mqttClient, mqttConnectedCb);
+	MQTT_OnDisconnected(&mqttClient, mqttDisconnectedCb);
+	MQTT_OnPublished(&mqttClient, mqttPublishedCb);
+	MQTT_OnData(&mqttClient, mqttDataCb);
+    }
+#endif /* MQTT_CLIENT */
 
     remote_console_disconnect = 0;
 

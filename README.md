@@ -88,14 +88,8 @@ Advanced commands:
 
 While the user interface looks similar to my esp_wifi_repeater at https://github.com/martin-ger/esp_wifi_repeater this does NO NAT routing. AP and STA network are stricly separated and there is no routing in between. The only possible connection via both networks is the uMQTT broker that listens on both interfaces.
 
-# LOCAL client
-The broker comes with a "LOCAL client", which means, the broker itself can publish and subscribe topics (without the need of an additional TCP connection). You can test this with the commands:
-
-- publish [topic] [data]: this publishes a topic
-- subscribe [topic]: subscribes to a topic, received topic will be printed to serial output
-- unsubscribe [topic]: unsubscribes from a topic
-
-This feature is meant to provide the basis for a local rule engine that can react on MQTT events, e.g. to switch GPIOs or send other messages (MQTT, HTTP,...). You can use this with the functions:
+# MQTT client/bridging functionality
+The broker comes with a "local" and a "remote" client, which means, the broker itself can publish and subscribe topics. The "local" client is a client to the own broker (without the need of an additional TCP connection). This feature is meant to provide the basis for a local rule engine that can react on MQTT events, e.g. to switch GPIOs or send other messages (MQTT, HTTP,...). You can use this at source level with the functions:
 
 ```c
 bool MQTT_local_publish(uint8_t* topic, uint8_t* data, uint16_t data_length, uint8_t qos, uint8_t retain);
@@ -103,3 +97,17 @@ bool MQTT_local_subscribe(uint8_t* topic, uint8_t qos);
 bool MQTT_local_unsubscribe(uint8_t* topic);
 void MQTT_local_onData(MqttDataCallback dataCb);
 ```
+
+By default the "remote" MQTT client is disabled. It can be enabled by setting the config parameter "mqtt_host" to a hostname different from "none". To configure the "remote" MQTT client you can set the following parameters:
+- set mqtt_host _IP_or_hostname_: IP or hostname of the MQTT broker ("none" disables the MQTT client)
+- set mqtt_user _username_: Username for authentication ("none" if no authentication is required at the broker)
+- set mqtt_user _password_: Password for authentication
+- set mqtt_id _clientId_: Id of the client at the broker (default: "ESPRouter_xxxxxx" derived from the MAC address)
+
+You can test this with the commands:
+
+- publish [local|remote] [topic] [data]: this publishes a topic
+- subscribe [local|remote] [topic]: subscribes to a topic, received topic will be printed to serial output
+- unsubscribe [local|remote] [topic]: unsubscribes from a topic
+
+Currently the clients republish everything they receive (and they have subscribed) to the other client, thus it can act as something like an MQTT bridge. Up to now, the subscriptions are not persistently saved to config, so they have to be entered manually after each reboot - will work on this...

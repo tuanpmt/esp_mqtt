@@ -33,6 +33,15 @@ uint8_t mac[6];
 
     config->clock_speed			= 80;
     config->config_port			= CONSOLE_SERVER_PORT;
+
+#ifdef MQTT_CLIENT
+    os_sprintf(config->mqtt_host,"%s", "none");
+    config->mqtt_port			= 1883;
+    os_sprintf(config->mqtt_user,"%s", "none");
+    config->mqtt_password[0]		= 0;
+    wifi_get_macaddr(0, mac);
+    os_sprintf(config->mqtt_id,"%s_%2x%2x%2x", MQTT_ID, mac[3], mac[4], mac[5]);
+#endif
 }
 
 int config_load(sysconfig_p config)

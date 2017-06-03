@@ -44,6 +44,16 @@ typedef struct
 
     uint16_t	clock_speed;	// Freq of the CPU
     uint16_t	config_port;	// Port on which the concole listenes (0 if no access)
+
+#ifdef MQTT_CLIENT
+    uint8_t     mqtt_host[32];	// IP or hostname of the MQTT broker, "none" if empty
+    uint16_t	mqtt_port;	// Port of the MQTT broker
+
+    uint8_t     mqtt_user[32];	// Username for broker login, "none" if empty
+    uint8_t     mqtt_password[32]; // Password for broker login
+    uint8_t	mqtt_id[32];    // MQTT clientId
+#endif
+
 } sysconfig_t, *sysconfig_p;
 
 int config_load(sysconfig_p config);
