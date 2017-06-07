@@ -31,16 +31,18 @@ in the user_init() function.
 # Building and Flashing
 The code can be used in any project that is compiled using the NONOS_SDK or the esp-open-sdk. Also the sample code in the user directory can be build using the standard SDKs after adapting the variables in the Makefile.
 
+If you don't need the full demo program, you can find a minimal demo in the directory "user_basic". Rename it to "user", adapt "user_config.h", and do the "make" to build a small demo that just starts an MQTT broker.
+
 Build the esp_uMQTT_broker firmware with "make". "make flash" flashes it onto an esp8266.
 
-If you want to use the precompiled binaries from the firmware directory you can flash them on an ESP12 with 
+If you want to use the precompiled binaries of the bigger demo (see below) from the firmware directory you can flash them on an ESP12 with 
 
 ```bash
 esptool.py --port /dev/ttyUSB0 write_flash -fs 32m 0x00000 firmware/0x00000.bin 0x10000 firmware/0x10000.bin
 ```
 
 # Usage
-In the user directory there is a demo program that serves as a stand-alone MQTT broker. The program starts with the following default configuration:
+In the user directory there is a demo program that serves as a stand-alone MQTT broker and bridge. The program starts with the following default configuration:
 - ssid: ssid, password: password
 - ap_ssid: MyAP, ap_password: none, ap_on: 1, ap_open: 1
 - network: 192.168.4.0/24
