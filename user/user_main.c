@@ -384,7 +384,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn)
 
     if (strcmp(tokens[0], "publish") == 0)
     {
-	if (nTokens != 3) {
+	if (nTokens != 4) {
             os_sprintf(response, INVALID_NUMARGS);
             goto command_handled;
 	}
@@ -393,7 +393,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn)
 	}
 #ifdef MQTT_CLIENT
 	else if (strcmp(tokens[1], "remote") == 0 && mqtt_connected) {
-	  MQTT_Publish(&mqttClient, tokens[2], tokens[2], os_strlen(tokens[2]), 0, 0);
+	  MQTT_Publish(&mqttClient, tokens[2], tokens[3], os_strlen(tokens[3]), 0, 0);
 	}
 #endif
 	os_sprintf(response, "Published topic\r\n");
