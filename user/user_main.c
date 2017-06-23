@@ -389,7 +389,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn)
             goto command_handled;
 	}
 	if (strcmp(tokens[1], "local") == 0) {
-	  MQTT_local_publish(tokens[1], tokens[2], os_strlen(tokens[2]), 0, 0);
+	  MQTT_local_publish(tokens[2], tokens[3], os_strlen(tokens[2]), 0, 0);
 	}
 #ifdef MQTT_CLIENT
 	else if (strcmp(tokens[1], "remote") == 0 && mqtt_connected) {
