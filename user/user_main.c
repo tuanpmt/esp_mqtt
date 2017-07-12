@@ -883,6 +883,11 @@ void wifi_handle_event_cb(System_Event_t *evt)
 	if (mqtt_enabled) MQTT_Connect(&mqttClient);
 #endif /* MQTT_CLIENT */
 
+#ifdef NTP
+    if (os_strcmp(config.ntp_server, "none") != 0)
+	ntp_set_server(config.ntp_server);
+#endif
+
         // Post a Server Start message as the IP has been acquired to Task with priority 0
 	system_os_post(user_procTaskPrio, SIG_START_SERVER, 0 );
         break;
@@ -1057,11 +1062,6 @@ struct ip_info info;
 	MQTT_OnData(&mqttClient, mqttDataCb);
     }
 #endif /* MQTT_CLIENT */
-
-#ifdef NTP
-    if (os_strcmp(config.ntp_server, "none") != 0)
-	ntp_set_server(config.ntp_server);
-#endif
 
     remote_console_disconnect = 0;
 
