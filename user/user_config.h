@@ -27,6 +27,11 @@ typedef enum {SIG_DO_NOTHING=0, SIG_START_SERVER=1, SIG_SEND_DATA, SIG_UART0, SI
 #define MQTT_ID "ESPBroker"
 
 //
+// Define this if you want to have NTP support.
+//
+#define NTP	  1
+
+//
 // Size of the console buffers
 //
 #define MAX_CON_SEND_SIZE    1024

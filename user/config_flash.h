@@ -53,7 +53,11 @@ typedef struct
     uint8_t     mqtt_password[32]; // Password for broker login
     uint8_t	mqtt_id[32];    // MQTT clientId
 #endif
-
+#ifdef NTP
+    uint8_t	ntp_server[32];	// IP or hostname of the MQTT broker, "none" if empty
+    uint32_t	ntp_interval;	// Sync interval in usec
+    int16_t	ntp_timezone;	// Timezone (hour offset to GMT)
+#endif
 } sysconfig_t, *sysconfig_p;
 
 int config_load(sysconfig_p config);

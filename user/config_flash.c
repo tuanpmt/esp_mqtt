@@ -42,6 +42,11 @@ uint8_t mac[6];
     wifi_get_macaddr(0, mac);
     os_sprintf(config->mqtt_id,"%s_%2x%2x%2x", MQTT_ID, mac[3], mac[4], mac[5]);
 #endif
+#ifdef NTP
+    os_sprintf(config->ntp_server,"%s", "none");
+    config->ntp_interval		= 60000000;
+    config->ntp_timezone		= 0;
+#endif
 }
 
 int config_load(sysconfig_p config)
