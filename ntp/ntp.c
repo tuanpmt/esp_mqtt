@@ -138,6 +138,11 @@ void ICACHE_FLASH_ATTR ntp_set_server(uint8_t *ntp_server) {
 }
 
 
+bool ICACHE_FLASH_ATTR ntp_sync_done() {
+	return t_offset!=0;
+}
+
+
 void ICACHE_FLASH_ATTR ntp_get_time() {
 ntp_t ntp;
 

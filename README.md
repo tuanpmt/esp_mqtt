@@ -87,6 +87,9 @@ Advanced commands:
 - set ap_on [0|1]: selects, whether the soft-AP is disabled (ap_on=0) or enabled (ap_on=1, default)
 - set ap_open [0|1]: selects, whether the soft-AP uses WPA2 security (ap_open=0,  automatic, if an ap_password is set) or open (ap_open=1)
 - set speed [80|160]: sets the CPU clock frequency (default 80 Mhz)
+- set ntp_server _IP_or_hostname_: sets the name or IP of an NTP server ("none" disables NTP, default)
+- set ntp_interval _interval_: sets the NTP sync interval in seconds (default 60)
+- set ntp_timezone _tz_: sets the timezone in hours offset
 
 While the user interface looks similar to my esp_wifi_repeater at https://github.com/martin-ger/esp_wifi_repeater this does NO NAT routing. AP and STA network are stricly separated and there is no routing in between. The only possible connection via both networks is the uMQTT broker that listens on both interfaces.
 
@@ -113,3 +116,8 @@ You can test this with the commands:
 - unsubscribe [local|remote] [topic]: unsubscribes from a topic
 
 Currently the clients republish everything they receive (and they have subscribed) to the other client, thus it can act as something like an MQTT bridge. Up to now, the subscriptions are not persistently saved to config, so they have to be entered manually after each reboot - will work on this...
+
+# NTP Support
+Remote NTP time servers are supported. By default the NTP client is disabled - and the is no immediate need for synced time. Nowever, it can be enabled by setting the config parameter "ntp_server" to a hostname or IP different from "none" ("1.pool.ntp.org" is a good choice). Also you can set the "ntp_timezone" to an offset from GMT. The system time will be synced with the NTP server every "ntp_interval" seconds. Here it uses NOT the full NTP calculation and clock drift compensation. Instead it will just set the local time to the latest received time. 
+
+After NTP sync has been completed successful once, the local time will be published every second under the topic "$SYS/broker/time" in the format "hh:mm:ss". You can also query the NTP time with the "time" command from the commandline.

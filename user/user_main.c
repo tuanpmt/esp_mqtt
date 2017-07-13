@@ -779,14 +779,9 @@ static void ICACHE_FLASH_ATTR tcp_client_connected_cb(void *arg)
 #endif /* REMOTE_CONFIG */
 
 
-bool toggle;
 // Timer cb function
 void ICACHE_FLASH_ATTR timer_func(void *arg){
-uint32_t Vcurr;
 uint64_t t_new;
-uint32_t t_diff;
-
-    toggle = !toggle;
 
     // Do we still have to configure the AP netif? 
     if (do_ip_config) {
@@ -800,9 +795,12 @@ uint32_t t_diff;
         ntp_get_time();
 	t_ntp_resync = t_new;
     }
+
+    if (ntp_sync_done())
+	MQTT_local_publish("$SYS/broker/time", get_timestr(config.ntp_timezone), 8, 0, 0);
 #endif
 
-    os_timer_arm(&ptimer, toggle?1000:100, 0); 
+    os_timer_arm(&ptimer, 1000, 0); 
 }
 
 //Priority 0 Task
