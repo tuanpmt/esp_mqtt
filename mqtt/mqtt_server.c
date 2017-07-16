@@ -30,7 +30,7 @@ return _v;
 #define MQTT_TASK_QUEUE_SIZE  1
 #define MQTT_SEND_TIMOUT      5
 
-os_event_t mqtt_procTaskQueue[MQTT_TASK_QUEUE_SIZE];
+os_event_t mqtt_procServerTaskQueue[MQTT_TASK_QUEUE_SIZE];
 
 LOCAL uint8_t zero_len_id[2] = { 0, 0 };
 
@@ -801,7 +801,7 @@ bool ICACHE_FLASH_ATTR MQTT_server_start(uint16_t portno, uint16_t max_subscript
     /* Put the connection in accept mode */
     espconn_accept(pCon);
 
-    system_os_task(MQTT_ServerTask, MQTT_SERVER_TASK_PRIO, mqtt_procTaskQueue, MQTT_TASK_QUEUE_SIZE);
+    system_os_task(MQTT_ServerTask, MQTT_SERVER_TASK_PRIO, mqtt_procServerTaskQueue, MQTT_TASK_QUEUE_SIZE);
     return true;
 }
 
