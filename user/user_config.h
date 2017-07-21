@@ -1,7 +1,7 @@
 #ifndef _USER_CONFIG_
 #define _USER_CONFIG_
 
-typedef enum {SIG_DO_NOTHING=0, SIG_START_SERVER=1, SIG_SEND_DATA, SIG_UART0, SIG_CONSOLE_RX, SIG_CONSOLE_TX, SIG_GPIO_INT} USER_SIGNALS;
+typedef enum {SIG_DO_NOTHING=0, SIG_START_SERVER=1, SIG_UART0, SIG_SCRIPT_LOADED, SIG_CONSOLE_TX_RAW, SIG_CONSOLE_TX, SIG_CONSOLE_RX} USER_SIGNALS;
 
 #define WIFI_SSID            "ssid"
 #define WIFI_PASSWORD        "password"
@@ -27,6 +27,20 @@ typedef enum {SIG_DO_NOTHING=0, SIG_START_SERVER=1, SIG_SEND_DATA, SIG_UART0, SI
 #define MQTT_ID "ESPBroker"
 
 //
+// Define this if you want to have script support.
+//
+#define SCRIPTED  1
+// Define this if you want to have GPIO OUT support in scripts.
+#define GPIO	  1
+// Some params for scripts
+
+#define MAX_SCRIPT_SIZE 0x1000
+#define MAX_TIMERS	4
+#define MAX_VARS	6
+#define MAX_VAR_LEN	64
+#define MAX_TIMESTAMPS	6	
+
+//
 // Define this if you want to have NTP support.
 //
 #define NTP	  1
@@ -44,7 +58,7 @@ typedef enum {SIG_DO_NOTHING=0, SIG_START_SERVER=1, SIG_SEND_DATA, SIG_UART0, SI
 
 //
 // Define this if you want to have access to the config console via TCP.
-// Ohterwise only local access via serial is possible
+// Otherwise only local access via serial is possible
 //
 #define REMOTE_CONFIG      1
 #define CONSOLE_SERVER_PORT  7777

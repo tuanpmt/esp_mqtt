@@ -33,7 +33,7 @@ ESPPORT		?= /dev/ttyUSB0
 TARGET		= app
 
 # which modules (subdirectories) of the project to include in compiling
-MODULES		= driver user mqtt ntp
+MODULES		= driver user mqtt ntp easygpio
 #EXTRA_INCDIR    = $(BUILD_AREA)/esp-open-sdk/esp-open-lwip/include include
 EXTRA_INCDIR    = include
 
@@ -43,7 +43,7 @@ LIB_MODULES	= mqtt
 LIBS		= c gcc hal pp phy net80211 lwip wpa main 
 
 # compiler flags using during compilation of source files
-CFLAGS		= -Os -g -O2 -Wpointer-arith -Wundef -Werror -Wl,-EL -fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DICACHE_FLASH -DUSE_OPTIMIZE_PRINTF
+CFLAGS		= -Os -g -O2 -Wpointer-arith -Wundef -Werror -Wl,-EL -fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DICACHE_FLASH -DUSE_OPTIMIZE_PRINTF -Desp8266
 #-DMQTT_DEBUG_ON
 
 # linker flags used to generate the main object file

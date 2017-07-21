@@ -2,8 +2,7 @@
 #include "mqtt_server.h"
 #include "user_config.h"
 
-void ICACHE_FLASH_ATTR user_init()
-{
+void ICACHE_FLASH_ATTR user_init() {
     struct station_config stationConf;
 
     // Initialize the UART

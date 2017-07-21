@@ -35,6 +35,7 @@ typedef struct
     uint8_t	ap_on;		   // AP enabled?
 
     uint8_t     locked;		// Should we allow for config changes
+    uint8_t     lock_password[32];   // Password of config lock
     ip_addr_t	network_addr;	// Address of the internal network
     ip_addr_t	dns_addr;	// Optional: address of the dns server
 
