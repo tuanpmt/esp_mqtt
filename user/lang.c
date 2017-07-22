@@ -14,9 +14,10 @@
 extern void do_command(char *t1, char *t2, char *t3);
 extern void con_print(uint8_t *str);
 
+static char EOT[] = "end of text";
 #define len_check(x) \
 if (interpreter_status==SYNTAX_CHECK && next_token+(x) >= max_token) \
-  return syntax_error(next_token+(x), "end of text")
+  return syntax_error(next_token+(x), EOT)
 #define syn_chk (interpreter_status==SYNTAX_CHECK)
 
 #define ON "\xf0"
@@ -147,20 +148,43 @@ int ICACHE_FLASH_ATTR text_into_tokens(char *str) {
 	} else if (*p <= ' ' && !in_token) {
 	    // mark this as whitespace
 	    *q++ = 1;
+	} else if (*p == '|' && !in_token) {
+	    // mark this as concat
+	    *q++ = 2;
+	} else if (*p == '+' && !in_token) {
+	    // mark this as add
+	    *q++ = 3;
+	} else if (*p == '-' && !in_token) {
+	    // mark this as sub
+	    *q++ = 4;
+	} else if (*p == '*' && !in_token) {
+	    // mark this as mult
+	    *q++ = 5;
+	} else if (*p == '=' && !in_token) {
+	    // mark this as div
+	    *q++ = 6;
 	} else {
 	    *q++ = *p;
 	}
     }
     *q = 0;
 
-    // eliminate double whitespace and count tokens
+    // eliminate double whitespace, detect operators and count tokens
     lang_debug("lexxer whitespaces\r\n");
 
     in_token = false;
     for (p = q = str; *p != 0; p++) {
-	if (*p == 1) {
-	    if (in_token) {
-		*q++ = 1;
+	if (*p < ' ') {
+	    // it is a whitespace or an operator
+	    if (*p == 1 && in_token) {
+		// it is a whitespace
+		*q++ = *p;
+		in_token = false;
+	    }
+	    if (*p > 1) {
+		// it is an operator
+		*q++ = *p;
+		token_count++;
 		in_token = false;
 	    }
 	} else {
@@ -187,7 +211,33 @@ int ICACHE_FLASH_ATTR text_into_tokens(char *str) {
 	if (*p == 1) {
 	    *p = '\0';
 	    in_token = false;
-	} else {
+	} 
+	else if (*p == 2) {
+	    my_token[token_count++] = "|";
+	    *p = '\0';
+	    in_token = false;
+	}
+	else if (*p == 3) {
+	    my_token[token_count++] = "+";
+	    *p = '\0';
+	    in_token = false;
+	}
+	else if (*p == 4) {
+	    my_token[token_count++] = "-";
+	    *p = '\0';
+	    in_token = false;
+	}
+	else if (*p == 5) {
+	    my_token[token_count++] = "*";
+	    *p = '\0';
+	    in_token = false;
+	}
+	else if (*p == 6) {
+	    my_token[token_count++] = "=";
+	    *p = '\0';
+	    in_token = false;
+	}
+	else {
 	    if (!in_token) {
 		my_token[token_count++] = p;
 		in_token = true;
@@ -338,16 +388,20 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 
     while (next_token < max_token && !is_token(next_token, ON)
 	   && !is_token(next_token, CONFIG) && !is_token(next_token, "endif")) {
-	lang_debug("action %s %s\r\n", my_token[next_token], doit ? "do" : "ignore");
-
 	bool is_nl = false;
+
+	if (doit) {
+	    lang_debug("action %s\r\n", my_token[next_token]);
+	}
+	//os_printf("action %s %s\r\n", my_token[next_token], doit ? "do" : "ignore");
+
 	if ((is_nl = is_token(next_token, "println")) || is_token(next_token, "print")) {
 	    char *p_char;
 	    int p_len;
 	    Value_Type p_type;
 
 	    len_check(1);
-	    if ((next_token = parse_expression(next_token + 1, &p_char, &p_len, &p_type)) == -1)
+	    if ((next_token = parse_expression(next_token + 1, &p_char, &p_len, &p_type, doit)) == -1)
 		return -1;
 	    if (doit) {
 		con_print(p_char);
@@ -457,7 +511,7 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 	    Value_Type if_type;
 
 	    len_check(3);
-	    if ((next_token = parse_expression(next_token + 1, &if_char, &if_len, &if_type)) == -1)
+	    if ((next_token = parse_expression(next_token + 1, &if_char, &if_len, &if_type, doit)) == -1)
 		return -1;
 	    if (syn_chk && !is_token(next_token, "then"))
 		return syntax_error(next_token, "'then' expected");
@@ -497,17 +551,19 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 	}
 
 	else if (is_token(next_token, "setvar")) {
-	    len_check(2);
-	    if (my_token[next_token + 1][0] != '$')
+	    len_check(3);
+	    if (syn_chk && my_token[next_token + 1][0] != '$')
 		return syntax_error(next_token + 1, "invalid var identifier");
 	    uint32_t var_no = atoi(&(my_token[next_token + 1][1]));
 	    if (var_no == 0 || var_no > MAX_VARS)
 		return syntax_error(next_token + 1, "invalid var number");
+	    if (syn_chk && os_strcmp(my_token[next_token + 2], "=") != 0)
+		return syntax_error(next_token + 2, "'=' expected");
 
 	    char *var_data;
 	    int var_len;
 	    Value_Type var_type;
-	    if ((next_token = parse_expression(next_token + 2, &var_data, &var_len, &var_type)) == -1)
+	    if ((next_token = parse_expression(next_token + 3, &var_data, &var_len, &var_type, doit)) == -1)
 		return -1;
 
 	    if (doit) {
@@ -533,7 +589,7 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 	    char *gpio_data;
 	    int gpio_len;
 	    Value_Type gpio_type;
-	    if ((next_token = parse_expression(next_token + 2, &gpio_data, &gpio_len, &gpio_type)) == -1)
+	    if ((next_token = parse_expression(next_token + 2, &gpio_data, &gpio_len, &gpio_type, doit)) == -1)
 		return -1;
 
 	    if (doit) {
@@ -553,13 +609,13 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
     return next_token;
 }
 
-int ICACHE_FLASH_ATTR parse_expression(int next_token, char **data, int *data_len, Value_Type * data_type) {
+int ICACHE_FLASH_ATTR parse_expression(int next_token, char **data, int *data_len, Value_Type * data_type, bool doit) {
 
     if (is_token(next_token, "not")) {
 	len_check(1);
 	lang_debug("expr not\r\n");
 
-	if ((next_token = parse_expression(next_token + 1, data, data_len, data_type)) == -1)
+	if ((next_token = parse_expression(next_token + 1, data, data_len, data_type, doit)) == -1)
 	    return -1;
 	*data = atoi(*data) ? "0" : "1";
 	*data_len = 1;
@@ -571,11 +627,12 @@ int ICACHE_FLASH_ATTR parse_expression(int next_token, char **data, int *data_le
 	    return -1;
 
 	// if it is not some kind of binary operation - finished
-	if (!is_token(next_token, "eq") 
-	    && !is_token(next_token, "add")
-	    && !is_token(next_token, "sub")
-	    && !is_token(next_token, "mult")
+	if (!is_token(next_token, "=") 
+	    && !is_token(next_token, "+")
+	    && !is_token(next_token, "-")
+	    && !is_token(next_token, "*")
 	    && !is_token(next_token, "div")
+	    && !is_token(next_token, "|")
 	    && !is_token(next_token, "gt")
 	    && !is_token(next_token, "gte")
 	    && !is_token(next_token, "str_gt")
@@ -588,34 +645,30 @@ int ICACHE_FLASH_ATTR parse_expression(int next_token, char **data, int *data_le
 	char *r_data;
 	int r_data_len;
 	Value_Type r_data_type;
-	static char res_str[10];
 
 	// parse second operand
-	if ((next_token = parse_expression(next_token + 1, &r_data, &r_data_len, &r_data_type)) == -1)
+	if ((next_token = parse_expression(next_token + 1, &r_data, &r_data_len, &r_data_type, doit)) == -1)
 	    return -1;
 	//os_printf("l:%s(%d) r:%s(%d)\r\n", *data, *data_len, r_data, r_data_len);
 
-	*data_len = 1;
+	if (!doit)
+	    return next_token;
+
+// reuse of the syntax_error_buffer (unused during execution), dirty but saves RAM
+#define res_str syntax_error_buffer
+
 	*data_type = STRING_T;
-	if (is_token(op, "eq")) {
+	if (is_token(op, "=")) {
 	    *data = os_strcmp(*data, r_data) ? "0" : "1";
-	} else if (is_token(op, "gt")) {
-	    *data = atoi(*data) > atoi(r_data) ? "1" : "0";
-	} else if (is_token(op, "gte")) {
-	    *data = atoi(*data) >= atoi(r_data) ? "1" : "0";
-	} else if (is_token(op, "str_gt")) {
-	    *data = os_strcmp(*data, r_data) > 0 ? "1" : "0";
-	} else if (is_token(op, "str_gte")) {
-	    *data = os_strcmp(*data, r_data) >= 0 ? "1" : "0";
-	} else if (is_token(op, "add")) {
+	} else if (is_token(op, "+")) {
 	    os_sprintf(res_str, "%d", atoi(*data) + atoi(r_data));
 	    *data = res_str;
 	    *data_len = os_strlen(res_str);
-	} else if (is_token(op, "sub")) {
+	} else if (is_token(op, "-")) {
 	    os_sprintf(res_str, "%d", atoi(*data) - atoi(r_data));
 	    *data = res_str;
 	    *data_len = os_strlen(res_str);
-	} else if (is_token(op, "mult")) {
+	} else if (is_token(op, "*")) {
 	    os_sprintf(res_str, "%d", atoi(*data) * atoi(r_data));
 	    *data = res_str;
 	    *data_len = os_strlen(res_str);
@@ -623,6 +676,29 @@ int ICACHE_FLASH_ATTR parse_expression(int next_token, char **data, int *data_le
 	    os_sprintf(res_str, "%d", atoi(*data) / atoi(r_data));
 	    *data = res_str;
 	    *data_len = os_strlen(res_str);
+	} else if (is_token(op, "|")) {
+	    uint16_t len = os_strlen(*data) + os_strlen(r_data);
+	    char catbuf[len+1];
+	    os_sprintf(catbuf, "%s%s", *data, r_data);
+	    if (len > sizeof(res_str)-1) {
+		len = sizeof(res_str);
+		catbuf[len] = '\0';
+	    }
+	    *data_len = len;
+	    os_memcpy(res_str, catbuf, *data_len + 1);
+	    *data = res_str;
+	} else if (is_token(op, "gt")) {
+	    *data = atoi(*data) > atoi(r_data) ? "1" : "0";
+	    *data_len = 1;
+	} else if (is_token(op, "gte")) {
+	    *data = atoi(*data) >= atoi(r_data) ? "1" : "0";
+	    *data_len = 1;
+	} else if (is_token(op, "str_gt")) {
+	    *data = os_strcmp(*data, r_data) > 0 ? "1" : "0";
+	    *data_len = 1;
+	} else if (is_token(op, "str_gte")) {
+	    *data = os_strcmp(*data, r_data) >= 0 ? "1" : "0";
+	    *data_len = 1;
 	}
     }
 
@@ -787,7 +863,7 @@ int ICACHE_FLASH_ATTR interpreter_topic_received(const char *topic, const char *
     interpreter_topic = (char *)topic;
     interpreter_data_len = data_len;
     if ((interpreter_data = (uint8_t *) os_malloc(data_len + 1)) == 0) {
-	os_printf("Out of Memory\r\n");
+	os_printf("Out of memory\r\n");
 	return -1;
     }
     os_memcpy(interpreter_data, data, data_len);

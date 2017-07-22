@@ -582,8 +582,16 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	    goto command_handled;
 	}
 
+	if (strcmp(tokens[1], "delete") == 0) {
+	    script_enabled = false;
+	    free_script();
+	    blob_zero(0, MAX_SCRIPT_SIZE);
+	    os_sprintf(response, "Script deleted");
+	    goto command_handled;
+	}
+
 	port = atoi(tokens[1]);
-	if (nTokens == 0) {
+	if (port == 0) {
 	    os_sprintf(response, "Invalid port");
 	    goto command_handled;
 	}

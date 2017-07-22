@@ -16,6 +16,7 @@ int syntax_error(int i, char *message);
 int parse_statement(int next_token);
 int parse_event(int next_token, bool *happened);
 int parse_action(int next_token, bool doit);
+int parse_expression(int next_token, char **data, int *data_len, Value_Type * data_type, bool doit);
 int parse_value(int next_token, char **data, int *data_len, Value_Type *data_type);
 
 extern bool script_enabled;

@@ -82,8 +82,9 @@ do
 	println "MQTT Script 1.0 starting"
 	subscribe local /test/#
 	settimer 1 1000			% once per second
-	setvar $1 0
-	setvar $2 0
+	setvar $1=0
+	setvar $2=0
+	setvar $3=10
 
 % Now the events, checked whenever something happens
 
@@ -100,16 +101,15 @@ do
 
 	% Let the LED on GPIO 2 blink
 	gpio_out 2 $1
-	setvar $1 not $1
+	setvar $1 = not $1
 
 	% Count occurences in var $2
-	setvar $2 $2 add 1
+	setvar $2=$2+1
 
-	% And if we have reached 100, print that to the console
-	if $2 gte 100 then
-		print "We have reached "
-		println $2
-		setvar $2 0
+	% And if we have reached 10, print that to the console
+	if $2 = $3 then
+		println "We have reached "|$2| " at " |$timestamp
+		setvar $3=$2+10
 	endif
 
 	% Reload the timer
@@ -134,7 +134,7 @@ In general, scripts have the following BNF:
              subscribe (local|remote) <topic-id> |
              unsubscribe (local|remote) <topic-id> |
              settimer <num> <num> |
-             setvar $<num> <expr> |
+             setvar $<num> = <expr> |
              gpio_out <num> <expr> |
              if <expr> then <action> endif |
 	     print <expr> | println <expr>
@@ -142,7 +142,7 @@ In general, scripts have the following BNF:
 
 <expr> ::= <val> <op> <expr> | not <expr>
 
-<op> := eq | gt | gte | str_ge | str_gte | add | sub | mult | div
+<op> := '=' | gt | gte | str_ge | str_gte | '+' | '-' | '/' | '|' | div
 
 <val> := <string> | <const> | #<hex-string> | $<num> | $this_item | $this_data | $timestamp
 
