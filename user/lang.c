@@ -11,6 +11,7 @@
 #define lang_debug		//os_printf
 #define lang_info 		//os_printf
 
+extern uint8_t *my_script;
 extern void do_command(char *t1, char *t2, char *t3);
 extern void con_print(uint8_t *str);
 
@@ -115,7 +116,7 @@ int ICACHE_FLASH_ATTR text_into_tokens(char *str) {
     bool in_token = false;
 
     // preprocessing
-    lang_debug("lexxer preprocessing\r\n");
+    lang_debug("lexxer preprocessing (prog_len: %d)\r\n", os_strlen(str));
 
     for (p = q = str; *p != 0; p++) {
 	// special case "on" keyword - replace by special token ON (0xf0)
@@ -196,8 +197,13 @@ int ICACHE_FLASH_ATTR text_into_tokens(char *str) {
 	}
     }
     *q = 0;
-
     lang_debug("found %d tokens\r\n", token_count);
+
+    // resize (shrink) the mem needed for the script
+    lang_debug("prog_len compact: %d\r\n", (q-str)+1);
+    my_script = (char *)os_realloc(my_script, (q-str)+5);
+    str = &my_script[4];
+
     my_token = (char **)os_malloc(token_count * sizeof(char *));
     if (my_token == 0)
 	return 0;
@@ -272,15 +278,15 @@ int ICACHE_FLASH_ATTR search_token(int i, char *s) {
 int ICACHE_FLASH_ATTR syntax_error(int i, char *message) {
     int j;
 
-    os_sprintf(syntax_error_buffer, "Error (%s) at >>", message);
+    os_sprintf(tmp_buffer, "Error (%s) at >>", message);
     for (j = i; j < i + 5 && j < max_token; j++) {
-	int pos = os_strlen(syntax_error_buffer);
+	int pos = os_strlen(tmp_buffer);
 	if (is_token(j, ON))
 	    my_token[j] = "on";
 	if (is_token(j, CONFIG))
 	    my_token[j] = "config";
-	if (sizeof(syntax_error_buffer) - pos - 2 > os_strlen(my_token[j])) {
-	    os_sprintf(syntax_error_buffer + pos, "%s ", my_token[j]);
+	if (sizeof(tmp_buffer) - pos - 2 > os_strlen(my_token[j])) {
+	    os_sprintf(tmp_buffer + pos, "%s ", my_token[j]);
 	}
     }
     return -1;
@@ -324,7 +330,14 @@ int ICACHE_FLASH_ATTR parse_event(int next_token, bool * happend) {
     if (is_token(next_token, "init")) {
 	lang_debug("event init\r\n");
 
-	*happend = (interpreter_status == INIT || interpreter_status == RE_INIT);
+	*happend = (interpreter_status == INIT);
+	return next_token + 1;
+    }
+
+    if (is_token(next_token, "mqttconnect")) {
+	lang_debug("event mqttconnect\r\n");
+
+	*happend = (interpreter_status == MQTT_CLIENT_CONNECT);
 	return next_token + 1;
     }
 
@@ -381,7 +394,7 @@ int ICACHE_FLASH_ATTR parse_event(int next_token, bool * happend) {
 	return next_token + 2;
     }
 
-    return syntax_error(next_token, "'init', 'topic', 'clock', or 'timer' expected");
+    return syntax_error(next_token, "'init', 'mqttconnect', 'topic', 'clock', or 'timer' expected");
 }
 
 int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
@@ -448,7 +461,7 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 	    } else
 #endif
 	    if (is_token(lr_token, "local")) {
-		if (doit && interpreter_status != RE_INIT) {
+		if (doit) {
 		    MQTT_local_publish(topic, data, data_len, 0, retained);
 		    lang_info("published local %s len: %d\r\n", topic, data_len);
 		}
@@ -470,7 +483,7 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 	    } else 
 #endif
 	    if (is_token(next_token + 1, "local")) {
-		if (doit && interpreter_status != RE_INIT) {
+		if (doit) {
 		    retval = MQTT_local_subscribe(my_token[next_token + 2], 0);
 		    lang_info("subsrcibe local %s %s\r\n", my_token[next_token + 2], retval ? "success" : "failed");
 		}
@@ -493,7 +506,7 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 	    } else
 #endif
 	    if (is_token(next_token + 1, "local")) {
-		if (doit && interpreter_status != RE_INIT) {
+		if (doit) {
 		    retval = MQTT_local_unsubscribe(my_token[next_token + 2]);
 		    lang_info("unsubsrcibe local %s %s\r\n", my_token[next_token + 2], retval ? "success" : "failed");
 		}
@@ -654,39 +667,36 @@ int ICACHE_FLASH_ATTR parse_expression(int next_token, char **data, int *data_le
 	if (!doit)
 	    return next_token;
 
-// reuse of the syntax_error_buffer (unused during execution), dirty but saves RAM
-#define res_str syntax_error_buffer
-
 	*data_type = STRING_T;
 	if (is_token(op, "=")) {
 	    *data = os_strcmp(*data, r_data) ? "0" : "1";
 	} else if (is_token(op, "+")) {
-	    os_sprintf(res_str, "%d", atoi(*data) + atoi(r_data));
-	    *data = res_str;
-	    *data_len = os_strlen(res_str);
+	    os_sprintf(tmp_buffer, "%d", atoi(*data) + atoi(r_data));
+	    *data = tmp_buffer;
+	    *data_len = os_strlen(tmp_buffer);
 	} else if (is_token(op, "-")) {
-	    os_sprintf(res_str, "%d", atoi(*data) - atoi(r_data));
-	    *data = res_str;
-	    *data_len = os_strlen(res_str);
+	    os_sprintf(tmp_buffer, "%d", atoi(*data) - atoi(r_data));
+	    *data = tmp_buffer;
+	    *data_len = os_strlen(tmp_buffer);
 	} else if (is_token(op, "*")) {
-	    os_sprintf(res_str, "%d", atoi(*data) * atoi(r_data));
-	    *data = res_str;
-	    *data_len = os_strlen(res_str);
+	    os_sprintf(tmp_buffer, "%d", atoi(*data) * atoi(r_data));
+	    *data = tmp_buffer;
+	    *data_len = os_strlen(tmp_buffer);
 	} else if (is_token(op, "div")) {
-	    os_sprintf(res_str, "%d", atoi(*data) / atoi(r_data));
-	    *data = res_str;
-	    *data_len = os_strlen(res_str);
+	    os_sprintf(tmp_buffer, "%d", atoi(*data) / atoi(r_data));
+	    *data = tmp_buffer;
+	    *data_len = os_strlen(tmp_buffer);
 	} else if (is_token(op, "|")) {
 	    uint16_t len = os_strlen(*data) + os_strlen(r_data);
 	    char catbuf[len+1];
 	    os_sprintf(catbuf, "%s%s", *data, r_data);
-	    if (len > sizeof(res_str)-1) {
-		len = sizeof(res_str);
+	    if (len > sizeof(tmp_buffer)-1) {
+		len = sizeof(tmp_buffer);
 		catbuf[len] = '\0';
 	    }
 	    *data_len = len;
-	    os_memcpy(res_str, catbuf, *data_len + 1);
-	    *data = res_str;
+	    os_memcpy(tmp_buffer, catbuf, *data_len + 1);
+	    *data = tmp_buffer;
 	} else if (is_token(op, "gt")) {
 	    *data = atoi(*data) > atoi(r_data) ? "1" : "0";
 	    *data_len = 1;
@@ -731,7 +741,7 @@ int ICACHE_FLASH_ATTR parse_value(int next_token, char **data, int *data_len, Va
 	if (ntp_sync_done())
 	    *data = get_timestr();
 	else
-	    *data = "invalid";
+	    *data = "99:99:99";
 	*data_len = os_strlen(*data) + 1;
 	*data_type = STRING_T;
 	return next_token + 1;
@@ -807,7 +817,7 @@ int ICACHE_FLASH_ATTR parse_value(int next_token, char **data, int *data_len, Va
 int ICACHE_FLASH_ATTR interpreter_syntax_check() {
     lang_debug("interpreter_syntax_check\r\n");
 
-    os_sprintf(syntax_error_buffer, "Syntax okay");
+    os_sprintf(tmp_buffer, "Syntax okay");
     interpreter_status = SYNTAX_CHECK;
     interpreter_topic = interpreter_data = "";
     interpreter_data_len = 0;
@@ -841,13 +851,13 @@ int ICACHE_FLASH_ATTR interpreter_init() {
     return parse_statement(0);
 }
 
-int ICACHE_FLASH_ATTR interpreter_init_reconnect(void) {
+int ICACHE_FLASH_ATTR interpreter_reconnect(void) {
     if (!script_enabled)
 	return -1;
 
     lang_debug("interpreter_init_reconnect\r\n");
 
-    interpreter_status = RE_INIT;
+    interpreter_status = MQTT_CLIENT_CONNECT;
     interpreter_topic = interpreter_data = "";
     interpreter_data_len = 0;
     return parse_statement(0);

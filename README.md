@@ -178,7 +178,7 @@ You can examine the currently loaded script using the "show script" command. It 
 # NTP Support
 NTP time is supported and timestamps are only available if the sync with an NTP server is done. By default the NTP client is enabled and set to "1.pool.ntp.org". It can be changed by setting the config parameter "ntp_server" to a hostname or an IP address. An ntp_server of "none" will disable the NTP client. Also you can set the "ntp_timezone" to an offset from GMT in hours. The system time will be synced with the NTP server every "ntp_interval" seconds (default ). Here it uses NOT the full NTP calculation and clock drift compensation. Instead it will just set the local time to the latest received time.
 
-After NTP sync has been completed successfully once, the local time will be published every second under the topic "$SYS/broker/time" in the format "hh:mm:ss". You can also query the NTP time using the "time" command from the commandline.
+After NTP sync has been completed successfully once, the local time will be published every second under the topic "$SYS/broker/time" in the format "hh:mm:ss". You can also query the NTP time using the "time" command from the commandline and with the variable "$timestamp" from a script. If no NTP sync happened the time will be reported as "99:99:99".
 
 - set ntp_server _IP_or_hostname_: sets the name or IP of an NTP server (default "1.pool.ntp.org", "none" disables NTP)
 - set ntp_interval _interval_: sets the NTP sync interval in seconds (default 300)

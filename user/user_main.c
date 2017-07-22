@@ -78,7 +78,7 @@ static void ICACHE_FLASH_ATTR mqttConnectedCb(uint32_t * args) {
     MQTT_Client *client = (MQTT_Client *) args;
     mqtt_connected = true;
 #ifdef SCRIPTED
-    interpreter_init_reconnect();
+    interpreter_reconnect();
 #endif
     os_printf("MQTT client connected\r\n");
 }
@@ -161,7 +161,7 @@ uint32_t ICACHE_FLASH_ATTR get_script_size(void) {
     return size;
 }
 
-static uint8_t *my_script = NULL;
+uint8_t *my_script = NULL;
 uint32_t ICACHE_FLASH_ATTR read_script(void) {
     uint32_t size = get_script_size();
     if (size <= 5)
@@ -418,7 +418,8 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	    uint32_t time = (uint32_t) (get_long_systime() / 1000000);
 	    int16_t i;
 
-	    os_sprintf(response, "System uptime: %d:%02d:%02d\r\n", time / 3600, (time % 3600) / 60, time % 60);
+	    os_sprintf(response, "System uptime: %d:%02d:%02d\r\nFree Mem: %d\r\n", time / 3600, (time % 3600) / 60, time % 60,
+		       system_get_free_heap_size());
 	    to_console(response);
 
 	    if (connected) {
@@ -584,20 +585,22 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 
 	if (strcmp(tokens[1], "delete") == 0) {
 	    script_enabled = false;
-	    free_script();
+	    if (my_script != NULL)
+		free_script();
 	    blob_zero(0, MAX_SCRIPT_SIZE);
-	    os_sprintf(response, "Script deleted");
+	    os_sprintf(response, "Script deleted\r\n");
 	    goto command_handled;
 	}
 
 	port = atoi(tokens[1]);
 	if (port == 0) {
-	    os_sprintf(response, "Invalid port");
+	    os_sprintf(response, "Invalid port\r\n");
 	    goto command_handled;
 	}
 	// delete and disable existing script
 	script_enabled = false;
-	free_script();
+	if (my_script != NULL)
+	    free_script();
 
 	scriptcon = pespconn;
 	downloadCon = (struct espconn *)os_zalloc(sizeof(struct espconn));
@@ -877,8 +880,8 @@ void ICACHE_FLASH_ATTR do_command(char *t1, char *t2, char *t3) {
     ringbuf_memcpy_into(console_rx_buffer, " ", 1);
     ringbuf_memcpy_into(console_rx_buffer, t3, os_strlen(t3));
     console_handle_command(0);
-    ringbuf_memcpy_from(syntax_error_buffer, console_tx_buffer, ringbuf_bytes_used(console_tx_buffer));
-    os_printf("%s", syntax_error_buffer);
+    ringbuf_memcpy_from(tmp_buffer, console_tx_buffer, ringbuf_bytes_used(console_tx_buffer));
+    os_printf("%s", tmp_buffer);
 }
 #endif
 
@@ -987,9 +990,8 @@ static void ICACHE_FLASH_ATTR user_procTask(os_event_t * events) {
 
 	    if (read_script()) {
 		interpreter_syntax_check();
-		ringbuf_memcpy_into(console_tx_buffer, syntax_error_buffer, os_strlen(syntax_error_buffer));
+		ringbuf_memcpy_into(console_tx_buffer, tmp_buffer, os_strlen(tmp_buffer));
 		ringbuf_memcpy_into(console_tx_buffer, "\r\n", 2);
-		free_script();
 	    }
 	    // continue to next case and print...
 	}
@@ -1193,7 +1195,7 @@ void ICACHE_FLASH_ATTR user_init() {
 
 	    config.locked = lockstat;
 	} else {
-	    os_printf("ERROR in script: %s\r\nScript disabled\r\n", syntax_error_buffer);
+	    os_printf("ERROR in script: %s\r\nScript disabled\r\n", tmp_buffer);
 	}
     }
 #endif
@@ -1273,14 +1275,16 @@ void ICACHE_FLASH_ATTR user_init() {
 		      30 /*max_retained_items */ );
 
     MQTT_local_onData(MQTT_local_DataCallback);
+
+    //Start task
+    system_os_task(user_procTask, user_procTaskPrio, user_procTaskQueue, user_procTaskQueueLen);
+
 #ifdef SCRIPTED
     timestamps_init = false;
     interpreter_init();
 #endif
+
     // Start the timer
     os_timer_setfn(&ptimer, timer_func, 0);
     os_timer_arm(&ptimer, 500, 0);
-
-    //Start task
-    system_os_task(user_procTask, user_procTaskPrio, user_procTaskQueue, user_procTaskQueueLen);
 }
