@@ -164,6 +164,9 @@ int ICACHE_FLASH_ATTR text_into_tokens(char *str) {
 	} else if (*p == '=' && !in_token) {
 	    // mark this as div
 	    *q++ = 6;
+	} else if (*p == '>' && !in_token) {
+	    // mark this as div
+	    *q++ = 7;
 	} else {
 	    *q++ = *p;
 	}
@@ -243,6 +246,11 @@ int ICACHE_FLASH_ATTR text_into_tokens(char *str) {
 	    *p = '\0';
 	    in_token = false;
 	}
+	else if (*p == 7) {
+	    my_token[token_count++] = ">";
+	    *p = '\0';
+	    in_token = false;
+	}
 	else {
 	    if (!in_token) {
 		my_token[token_count++] = p;
@@ -296,12 +304,11 @@ int ICACHE_FLASH_ATTR parse_statement(int next_token) {
     bool event_happened;
     int on_token;
 
-    while (next_token < max_token) {
+    uint32_t start = system_get_time();
+
+    while ((next_token = syn_chk ? next_token : search_token(next_token, ON)) < max_token) {
 
 	in_topic_statement = false;
-
-	if (!syn_chk)
-	    next_token = search_token(next_token, ON);
 
 	if (is_token(next_token, ON)) {
 	    lang_debug("statement on\r\n");
@@ -321,6 +328,13 @@ int ICACHE_FLASH_ATTR parse_statement(int next_token) {
 	    return syntax_error(next_token, "'on' or 'config' expected");
 	}
     }
+
+    lang_info("Interpreter loop: %d us\r\n", (system_get_time()-start));
+    if (interpreter_status == INIT)
+	loop_time = system_get_time()-start;
+    else
+	loop_time = (loop_time * 7 + (system_get_time()-start)) / 8;
+
     return next_token;
 }
 
@@ -646,7 +660,7 @@ int ICACHE_FLASH_ATTR parse_expression(int next_token, char **data, int *data_le
 	    && !is_token(next_token, "*")
 	    && !is_token(next_token, "div")
 	    && !is_token(next_token, "|")
-	    && !is_token(next_token, "gt")
+	    && !is_token(next_token, ">")
 	    && !is_token(next_token, "gte")
 	    && !is_token(next_token, "str_gt")
 	    && !is_token(next_token, "str_gte"))
@@ -697,7 +711,7 @@ int ICACHE_FLASH_ATTR parse_expression(int next_token, char **data, int *data_le
 	    *data_len = len;
 	    os_memcpy(tmp_buffer, catbuf, *data_len + 1);
 	    *data = tmp_buffer;
-	} else if (is_token(op, "gt")) {
+	} else if (is_token(op, ">")) {
 	    *data = atoi(*data) > atoi(r_data) ? "1" : "0";
 	    *data_len = 1;
 	} else if (is_token(op, "gte")) {

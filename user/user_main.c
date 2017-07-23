@@ -418,8 +418,10 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	    uint32_t time = (uint32_t) (get_long_systime() / 1000000);
 	    int16_t i;
 
-	    os_sprintf(response, "System uptime: %d:%02d:%02d\r\nFree Mem: %d\r\n", time / 3600, (time % 3600) / 60, time % 60,
-		       system_get_free_heap_size());
+	    os_sprintf(response, "System uptime: %d:%02d:%02d\r\n", time / 3600, (time % 3600) / 60, time % 60);
+	    to_console(response);
+
+	    os_sprintf(response, "Free mem: %d\r\nInterpreter loop: %d us\r\n", system_get_free_heap_size(), loop_time);
 	    to_console(response);
 
 	    if (connected) {

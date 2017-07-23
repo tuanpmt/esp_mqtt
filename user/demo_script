@@ -3,19 +3,19 @@ config ap_ssid 		MyAP
 config ap_password	stupidPassword
 config ntp_server	1.de.pool.ntp.org
 config mqtt_host	martinshome.fritz.box
+config speed		160
 
 % Now the initialization, this is done once after booting
 on init
 do
 	println "MQTT Script 1.0 starting"
 	subscribe local /test/#
-	subscribe local $SYS/broker/time
-%	settimer 1 1000			% once per second
+	settimer 1 1000			% once per second
 	setvar $1=0
 	setvar $2=0
 	setvar $3=10
 
-% This is done each time the ESP connects to another MQTT broker
+% This is done each time the ESP (re-)connects to another MQTT broker
 on mqttconnect
 do
 	println "(Re-)connected to client"
@@ -28,13 +28,10 @@ on topic local /test/#
 do 
 	publish remote $this_topic $this_data
 
+% Print the time when published from remote
 on topic remote $SYS/broker/time
 do
 	println "Remote time: "|$this_data
-
-on topic local $SYS/broker/time
-do
-	println "Local time: "|$this_data
 
 % When timer 1 expires, do some stuff
 on timer 1

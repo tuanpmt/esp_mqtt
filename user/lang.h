@@ -3,6 +3,7 @@
 extern MQTT_Client mqttClient;
 extern bool mqtt_enabled, mqtt_connected;
 uint8_t tmp_buffer[128];
+uint32_t loop_time;
 
 typedef enum {SYNTAX_CHECK, CONFIG, INIT, MQTT_CLIENT_CONNECT, TOPIC_LOCAL, TOPIC_REMOTE, TIMER, CLOCK} Interpreter_Status;
 typedef enum {STRING_T, DATA_T} Value_Type;
