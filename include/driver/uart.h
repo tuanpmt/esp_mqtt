@@ -5,8 +5,7 @@
 #include "eagle_soc.h"
 #include "c_types.h"
 
-#define RX_BUFF_SIZE    256
-#define TX_BUFF_SIZE    100
+#define RX_FIFO_SIZE 100
 #define UART0   0
 #define UART1   1
 
@@ -97,5 +96,7 @@ typedef struct {
 
 void uart_init(UartBautRate uart0_br, UartBautRate uart1_br);
 void uart0_sendStr(const char *str);
+int ICACHE_FLASH_ATTR	uart0_rx_data(char	*pnt, uint32_t space);
+
 #endif
 
