@@ -745,16 +745,15 @@ MQTT_Task(os_event_t *e)
 
         client->sendTimeout = MQTT_SEND_TIMOUT;
         MQTT_INFO("MQTT: Sending, type: %d, id: %04X\r\n", client->mqtt_state.pending_msg_type, client->mqtt_state.pending_msg_id);
+        client->keepAliveTick = 0;
         if (client->security) {
 #ifdef MQTT_SSL_ENABLE
-          client->keepAliveTick = 0;
           espconn_secure_send(client->pCon, dataBuffer, dataLen);
 #else
           MQTT_INFO("TCP: Do not support SSL\r\n");
 #endif
         }
         else {
-          client->keepAliveTick = 0;
           espconn_send(client->pCon, dataBuffer, dataLen);
         }
 
