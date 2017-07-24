@@ -297,7 +297,6 @@ mqtt_tcpclient_recv(void *arg, char *pdata, unsigned short len)
   struct espconn *pCon = (struct espconn*)arg;
   MQTT_Client *client = (MQTT_Client *)pCon->reverse;
 
-  client->keepAliveTick = 0;
 READPACKET:
   MQTT_INFO("TCP: data received %d bytes\r\n", len);
   // MQTT_INFO("STATE: %d\r\n", client->connState);
@@ -746,6 +745,7 @@ MQTT_Task(os_event_t *e)
 
         client->sendTimeout = MQTT_SEND_TIMOUT;
         MQTT_INFO("MQTT: Sending, type: %d, id: %04X\r\n", client->mqtt_state.pending_msg_type, client->mqtt_state.pending_msg_id);
+        client->keepAliveTick = 0;
         if (client->security) {
 #ifdef MQTT_SSL_ENABLE
           espconn_secure_send(client->pCon, dataBuffer, dataLen);
