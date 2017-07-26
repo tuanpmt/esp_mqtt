@@ -36,9 +36,10 @@ typedef enum {SIG_DO_NOTHING=0, SIG_START_SERVER=1, SIG_UART0, SIG_SCRIPT_LOADED
 
 #define MAX_SCRIPT_SIZE 0x1000
 #define MAX_TIMERS	4
+#define MAX_GPIOS	3
 #define MAX_VARS	6
 #define MAX_VAR_LEN	64
-#define MAX_TIMESTAMPS	6	
+#define MAX_TIMESTAMPS	6
 
 //
 // Define this if you want to have NTP support.

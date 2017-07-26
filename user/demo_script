@@ -1,9 +1,8 @@
 % Config params, overwrite any previous settings from the commandline
 config ap_ssid 		MyAP
 config ap_password	stupidPassword
-config ntp_server	1.de.pool.ntp.org
-config mqtt_host	martinshome.fritz.box
-config speed		160
+config ntp_server	1.pool.ntp.org
+config mqtt_host	192.168.1.20
 
 % Now the initialization, this is done once after booting
 on init
@@ -14,41 +13,42 @@ do
 	setvar $1=0
 	setvar $2=0
 	setvar $3=10
-
-% This is done each time the ESP (re-)connects to another MQTT broker
-on mqttconnect
-do
-	println "(Re-)connected to client"
-	subscribe remote $SYS/broker/time
+	gpio_pinmode 5 input pullup	% configure GPIO 5 as input
 
 % Now the events, checked whenever something happens
 
-% Here a remote republish, of any local topic starting with "/test/"
+% Here a remote re-publish, of any local topic starting with "/test/"
 on topic local /test/#
 do 
 	publish remote $this_topic $this_data
 
-% Print the time when published from remote
-on topic remote $SYS/broker/time
+% Now a check for local GPIOs
+on gpio_interrupt 4 pullup
 do
-	println "Remote time: "|$this_data
+	println "New state GPIO 4: " | $this_gpio
+	publish local /t/gpio4 $this_gpio
 
 % When timer 1 expires, do some stuff
 on timer 1
 do
-	% publish a timestamp locally
-	publish local /t/time $timestamp
+	% publish the current status of GPIO 5 as two byte binary val
+	if gpio_in(5)=0 then
+		publish local /t/gpio5 #0000
+	endif
+	if gpio_in(5)=1 then
+		publish local /t/gpio5 #0001
+	endif
 
 	% Let the LED on GPIO 2 blink
 	gpio_out 2 $1
-	setvar $1 = not $1
+	setvar $1 = not($1)
 
-	% Count occurences in var $2
+	% Count timer 1 ticks in var $2
 	setvar $2=$2+1
 
-	% And if we have reached 10, print that to the console
+	% And each time if we have reached 10, print that to the console
 	if $2 = $3 then
-		println "We have reached *"|$2| "* at " |$timestamp
+		println "We have reached "|$2| " at " |$timestamp
 		setvar $3=$2+10
 	endif
 

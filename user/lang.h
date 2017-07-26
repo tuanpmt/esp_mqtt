@@ -5,7 +5,7 @@ extern bool mqtt_enabled, mqtt_connected;
 uint8_t tmp_buffer[128];
 uint32_t loop_time;
 
-typedef enum {SYNTAX_CHECK, CONFIG, INIT, MQTT_CLIENT_CONNECT, TOPIC_LOCAL, TOPIC_REMOTE, TIMER, CLOCK} Interpreter_Status;
+typedef enum {SYNTAX_CHECK, CONFIG, INIT, MQTT_CLIENT_CONNECT, TOPIC_LOCAL, TOPIC_REMOTE, TIMER, GPIO_INT, CLOCK} Interpreter_Status;
 typedef enum {STRING_T, DATA_T} Value_Type;
 
 int text_into_tokens(char *str);
@@ -29,3 +29,6 @@ int interpreter_topic_received(const char *topic, const char *data, int data_len
 
 void init_timestamps(uint8_t *curr_time);
 void check_timestamps(uint8_t *curr_time);
+
+void init_gpios();
+void stop_gpios();

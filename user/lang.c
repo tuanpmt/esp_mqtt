@@ -21,9 +21,6 @@ if (interpreter_status==SYNTAX_CHECK && next_token+(x) >= max_token) \
   return syntax_error(next_token+(x), EOT)
 #define syn_chk (interpreter_status==SYNTAX_CHECK)
 
-#define ON "\xf0"
-#define CONFIG "\xf1"
-
 typedef struct _var_entry_t {
     uint8_t data[MAX_VAR_LEN];
     uint32_t data_len;
@@ -35,17 +32,30 @@ typedef struct _timestamp_entry_t {
     bool happened;
 } timestamp_entry_t;
 
+#ifdef GPIO
+typedef struct _gpio_entry_t {
+    uint8_t no;
+    os_timer_t inttimer;
+    bool val;
+} gpio_entry_t;
+static gpio_entry_t gpios[MAX_GPIOS];
+#endif
+
 char **my_token;
 int max_token;
 bool script_enabled = false;
 bool in_topic_statement;
+bool in_gpio_statement;
 Interpreter_Status interpreter_status;
 char *interpreter_topic;
 char *interpreter_data;
 int interpreter_data_len;
 int interpreter_timer;
 char *interpreter_timestamp;
+int interpreter_gpio;
+int interpreter_gpioval;
 int ts_counter;
+int gpio_counter;
 
 static os_timer_t timers[MAX_TIMERS];
 static var_entry_t vars[MAX_VARS];
@@ -101,6 +111,70 @@ void ICACHE_FLASH_ATTR check_timestamps(uint8_t * curr_time) {
     }
 }
 
+#ifdef GPIO
+// GPIO int timer - debouncing
+void ICACHE_FLASH_ATTR inttimer_func(void *arg){
+
+	gpio_entry_t *my_gpio_entry = (gpio_entry_t *)arg;
+	interpreter_gpioval = easygpio_inputGet(my_gpio_entry->no);
+
+	//os_printf("GPIO %d %d\r\n", my_gpio_entry->no, interpreter_gpioval);
+
+        // Reactivate interrupts for GPIO
+        gpio_pin_intr_state_set(GPIO_ID_PIN(my_gpio_entry->no), GPIO_PIN_INTR_ANYEDGE);
+
+	if (script_enabled) {
+	    lang_debug("interpreter GPIO %d %d\r\n", my_gpio_entry->no, interpreter_gpioval);
+
+	    interpreter_status = GPIO_INT;
+	    interpreter_topic = interpreter_data = "";
+	    interpreter_data_len = 0;
+	    interpreter_gpio = my_gpio_entry->no;
+	    my_gpio_entry->val = interpreter_gpioval;
+	    parse_statement(0);
+	}
+}
+
+// Interrupt handler - this function will be executed on any edge of a GPIO
+LOCAL void  gpio_intr_handler(void *arg)
+{
+    gpio_entry_t *my_gpio_entry = (gpio_entry_t *)arg;
+
+    uint32 gpio_status = GPIO_REG_READ(GPIO_STATUS_ADDRESS);
+
+    if (gpio_status & BIT(my_gpio_entry->no)) {
+
+        // Disable interrupt for GPIO
+        gpio_pin_intr_state_set(GPIO_ID_PIN(my_gpio_entry->no), GPIO_PIN_INTR_DISABLE);
+
+        // Clear interrupt status for GPIO
+        GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, gpio_status & BIT(my_gpio_entry->no));
+
+	// Start the timer
+    	os_timer_setfn(&my_gpio_entry->inttimer, inttimer_func, my_gpio_entry);
+    	os_timer_arm(&my_gpio_entry->inttimer, 50, 0); 
+    }
+}
+
+void ICACHE_FLASH_ATTR init_gpios() {
+    int i;
+
+    if (!script_enabled)
+	return;
+    for (i = 0; i < gpio_counter; i++) {
+	gpio_pin_intr_state_set(GPIO_ID_PIN(gpios[i].no), GPIO_PIN_INTR_ANYEDGE);
+    }
+}
+
+void ICACHE_FLASH_ATTR stop_gpios() {
+    int i;
+
+    for (i = 0; i < gpio_counter; i++) {
+	gpio_pin_intr_state_set(GPIO_ID_PIN(gpios[i].no), GPIO_PIN_INTR_DISABLE);
+    }
+}
+#endif
+
 void ICACHE_FLASH_ATTR test_tokens(void) {
     int i;
 
@@ -119,34 +193,26 @@ int ICACHE_FLASH_ATTR text_into_tokens(char *str) {
     lang_debug("lexxer preprocessing (prog_len: %d)\r\n", os_strlen(str));
 
     for (p = q = str; *p != 0; p++) {
-	// special case "on" keyword - replace by special token ON (0xf0)
-	if (!in_token && *p == 'o' && *(p + 1) == 'n' && *(p + 2) <= ' ') {
-	    *q++ = '\xf0';
-	    p += 1;
-	    continue;
-	}
-	// special case "config" keyword - replace by special token CONFIG (0xf1)
-	if (!in_token && *p == 'c' && *(p + 1) == 'o' && *(p + 2) == 'n'
-	    && *(p + 3) == 'f' && *(p + 4) == 'i' && *(p + 5) == 'g' && *(p + 6) <= ' ') {
-	    *q++ = '\xf1';
-	    p += 5;
-	    continue;
-	}
 
 	if (*p == '\\') {
 	    // next char is quoted, copy that - skip this one
 	    if (*(p + 1) != 0)
 		*q++ = *++p;
-	} else if (*p == '\"') {
+	} else if (*p == '"') {
 	    // string quotation
+	    if (in_token)
+		*q++ = 1; // end of string
+	    else
+		*q++ = *p; // start of string - copy "
 	    in_token = !in_token;
-	    *q++ = 1;
 	} else if (*p == '%' && !in_token) {
 	    // comment till eol
 	    for (; *p != 0; p++)
 		if (*p == '\n')
 		    break;
-	} else if (*p <= ' ' && !in_token) {
+	}  
+
+	else if (*p <= ' ' && !in_token) {
 	    // mark this as whitespace
 	    *q++ = 1;
 	} else if (*p == '|' && !in_token) {
@@ -165,8 +231,14 @@ int ICACHE_FLASH_ATTR text_into_tokens(char *str) {
 	    // mark this as div
 	    *q++ = 6;
 	} else if (*p == '>' && !in_token) {
-	    // mark this as div
+	    // mark this as gt
 	    *q++ = 7;
+	} else if (*p == '(' && !in_token) {
+	    // mark this as bracket open
+	    *q++ = 8;
+	} else if (*p == ')' && !in_token) {
+	    // mark this as bracket close
+	    *q++ = 9;
 	} else {
 	    *q++ = *p;
 	}
@@ -251,6 +323,16 @@ int ICACHE_FLASH_ATTR text_into_tokens(char *str) {
 	    *p = '\0';
 	    in_token = false;
 	}
+	else if (*p == 8) {
+	    my_token[token_count++] = "(";
+	    *p = '\0';
+	    in_token = false;
+	}
+	else if (*p == 9) {
+	    my_token[token_count++] = ")";
+	    *p = '\0';
+	    in_token = false;
+	}
 	else {
 	    if (!in_token) {
 		my_token[token_count++] = p;
@@ -289,10 +371,6 @@ int ICACHE_FLASH_ATTR syntax_error(int i, char *message) {
     os_sprintf(tmp_buffer, "Error (%s) at >>", message);
     for (j = i; j < i + 5 && j < max_token; j++) {
 	int pos = os_strlen(tmp_buffer);
-	if (is_token(j, ON))
-	    my_token[j] = "on";
-	if (is_token(j, CONFIG))
-	    my_token[j] = "config";
 	if (sizeof(tmp_buffer) - pos - 2 > os_strlen(my_token[j])) {
 	    os_sprintf(tmp_buffer + pos, "%s ", my_token[j]);
 	}
@@ -306,11 +384,11 @@ int ICACHE_FLASH_ATTR parse_statement(int next_token) {
 
     uint32_t start = system_get_time();
 
-    while ((next_token = syn_chk ? next_token : search_token(next_token, ON)) < max_token) {
+    while ((next_token = syn_chk ? next_token : search_token(next_token, "on")) < max_token) {
 
-	in_topic_statement = false;
+	in_topic_statement = in_gpio_statement = false;
 
-	if (is_token(next_token, ON)) {
+	if (is_token(next_token, "on")) {
 	    lang_debug("statement on\r\n");
 
 	    if ((next_token = parse_event(next_token + 1, &event_happened)) == -1)
@@ -322,7 +400,7 @@ int ICACHE_FLASH_ATTR parse_statement(int next_token) {
 		return syntax_error(next_token, "'do' expected");
 	    if ((next_token = parse_action(next_token + 1, event_happened)) == -1)
 		return -1;
-	} else if (is_token(next_token, CONFIG)) {
+	} else if (is_token(next_token, "config")) {
 	    next_token += 3;
 	} else {
 	    return syntax_error(next_token, "'on' or 'config' expected");
@@ -392,8 +470,36 @@ int ICACHE_FLASH_ATTR parse_event(int next_token, bool * happend) {
 	}
 	return next_token + 2;
     }
+#ifdef GPIO
+    if (is_token(next_token, "gpio_interrupt")) {
+	lang_debug("event gpio\r\n");
 
-    else if (is_token(next_token, "clock")) {
+	in_gpio_statement = true;
+	len_check(2);
+	uint32_t gpio_no = atoi(my_token[next_token + 1]);
+
+	if (syn_chk) {
+	    if (gpio_no > 16)
+		return syntax_error(next_token + 1, "invalid gpio number");
+	    if (!is_token(next_token+2, "pullup") && !is_token(next_token+2, "nopullup"))
+		return syntax_error(next_token + 2, "expected 'pullup' or 'nopullup'");
+	    int pullup = is_token(next_token+2, "pullup") ? EASYGPIO_PULLUP : EASYGPIO_NOPULL;
+	    if (gpio_counter >= MAX_GPIOS)
+		return syntax_error(next_token, "too many gpio_interrupt");
+	    gpios[gpio_counter].no = gpio_no;
+	    easygpio_pinMode(gpio_no, pullup, EASYGPIO_INPUT);
+	    easygpio_attachInterrupt(gpio_no, pullup, gpio_intr_handler, &gpios[gpio_counter]);
+
+	    gpio_counter++;
+	}
+	if (interpreter_status == GPIO_INT && interpreter_gpio == gpio_no) {
+	    lang_info("gpio %s interrupt\r\n", my_token[next_token + 1]);
+	    *happend = true;
+	}
+	return next_token + 3;
+    }
+#endif
+    if (is_token(next_token, "clock")) {
 	lang_debug("event clock\r\n");
 
 	len_check(1);
@@ -408,13 +514,13 @@ int ICACHE_FLASH_ATTR parse_event(int next_token, bool * happend) {
 	return next_token + 2;
     }
 
-    return syntax_error(next_token, "'init', 'mqttconnect', 'topic', 'clock', or 'timer' expected");
+    return syntax_error(next_token, "'init', 'mqttconnect', 'topic', 'gpio_interrupt', 'clock', or 'timer' expected");
 }
 
 int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 
-    while (next_token < max_token && !is_token(next_token, ON)
-	   && !is_token(next_token, CONFIG) && !is_token(next_token, "endif")) {
+    while (next_token < max_token && !is_token(next_token, "on")
+	   && !is_token(next_token, "config") && !is_token(next_token, "endif")) {
 	bool is_nl = false;
 
 	if (doit) {
@@ -450,7 +556,7 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 	    len_check(3);
 	    if ((next_token = parse_value(next_token + 2, &topic, &topic_len, &topic_type)) == -1)
 		return -1;
-	    if ((next_token = parse_value(next_token, &data, &data_len, &data_type)) == -1)
+	    if ((next_token = parse_expression(next_token, &data, &data_len, &data_type, doit)) == -1)
 		return -1;
 	    if (next_token < max_token && is_token(next_token, "retained")) {
 		retained = true;
@@ -458,8 +564,6 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 	    }
 
 	    if (doit) {
-		if (data_type == STRING_T && data_len > 0)
-		    data_len--;
 		if (topic_type != STRING_T || Topics_hasWildcards(topic)) {
 		    os_printf("invalid topic string\r\n");
 		    return next_token;
@@ -606,6 +710,33 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 	    }
 	}
 #ifdef GPIO
+	else if (is_token(next_token, "gpio_pinmode")) {
+	    len_check(2);
+
+	    uint32_t gpio_no = atoi(my_token[next_token + 1]);
+	    if (gpio_no > 16)
+		return syntax_error(next_token + 1, "invalid gpio number");
+
+	    int pullup = EASYGPIO_NOPULL;
+	    int inout = EASYGPIO_OUTPUT;
+	    if (is_token(next_token+2, "input")) {
+		inout = EASYGPIO_INPUT;
+		if (is_token(next_token+3, "pullup")) {
+		    pullup = EASYGPIO_PULLUP;
+		    next_token++;
+		}
+	    else if (syn_chk && !is_token(next_token+2, "output"))
+		return syntax_error(next_token + 2, "expected 'input' or 'output'");	
+	    }
+
+	    if (doit) {
+		lang_info("gpio_pinmode %d %s\r\n", gpio_no, inout == EASYGPIO_INPUT ? "input" : "output");
+
+		easygpio_pinMode(gpio_no, pullup, inout);
+	    }
+	    next_token += 3;
+	}
+
 	else if (is_token(next_token, "gpio_out")) {
 	    len_check(2);
 
@@ -639,140 +770,150 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 int ICACHE_FLASH_ATTR parse_expression(int next_token, char **data, int *data_len, Value_Type * data_type, bool doit) {
 
     if (is_token(next_token, "not")) {
-	len_check(1);
 	lang_debug("expr not\r\n");
 
-	if ((next_token = parse_expression(next_token + 1, data, data_len, data_type, doit)) == -1)
+	len_check(3);
+	if (syn_chk && !is_token(next_token+1, "("))
+	    return syntax_error(next_token, "expected '('");
+	if ((next_token = parse_expression(next_token + 2, data, data_len, data_type, doit)) == -1)
 	    return -1;
+	if (syn_chk && !is_token(next_token, ")"))
+	    return syntax_error(next_token, "expected ')'");
+
+	next_token++;
 	*data = atoi(*data) ? "0" : "1";
 	*data_len = 1;
 	*data_type = STRING_T;
+    }
+#ifdef GPIO
+    else if (is_token(next_token, "gpio_in")) {
+	lang_debug("val gpio_in\r\n");
+
+	len_check(3);
+	if (syn_chk && !is_token(next_token+1, "("))
+	    return syntax_error(next_token, "expected '('");
+
+	uint32_t gpio_no = atoi(my_token[next_token + 2]);
+	if (gpio_no > 16)
+	    return syntax_error(next_token+2, "invalid gpio number");
+
+	if (syn_chk && !is_token(next_token+3, ")"))
+	    return syntax_error(next_token+3, "expected ')'");
+
+	next_token += 4;
+	*data = "0";
+	*data_len = 1;
+	*data_type = STRING_T;
+	if (easygpio_inputGet(gpio_no)) {
+	    *data = "1";
+	}
+    }
+#endif
+    else if (is_token(next_token, "(")) {
+	lang_debug("expr (\r\n");
+
+	len_check(2);
+	if ((next_token = parse_expression(next_token + 1, data, data_len, data_type, doit)) == -1)
+	    return -1;
+
+	if (!is_token(next_token, ")"))
+	    return syntax_error(next_token, "expected ')'");
+	next_token++;
     }
 
     else {
 	if ((next_token = parse_value(next_token, data, data_len, data_type)) == -1)
 	    return -1;
+    }
 
-	// if it is not some kind of binary operation - finished
-	if (!is_token(next_token, "=") 
-	    && !is_token(next_token, "+")
-	    && !is_token(next_token, "-")
-	    && !is_token(next_token, "*")
-	    && !is_token(next_token, "div")
-	    && !is_token(next_token, "|")
-	    && !is_token(next_token, ">")
-	    && !is_token(next_token, "gte")
-	    && !is_token(next_token, "str_gt")
-	    && !is_token(next_token, "str_gte"))
-	    return next_token;
+    // if it is not some kind of binary operation - finished
+    if (!is_token(next_token, "=") 
+	&& !is_token(next_token, "+")
+	&& !is_token(next_token, "-")
+	&& !is_token(next_token, "*")
+	&& !is_token(next_token, "div")
+	&& !is_token(next_token, "|")
+	&& !is_token(next_token, ">")
+	&& !is_token(next_token, "gte")
+	&& !is_token(next_token, "str_gt")
+	&& !is_token(next_token, "str_gte"))
+	return next_token;
 
-	// okay, it is an operation
-	int op = next_token;
+    // okay, it is an operation
+    int op = next_token;
 
-	char *r_data;
-	int r_data_len;
-	Value_Type r_data_type;
+    char *r_data;
+    int r_data_len;
+    Value_Type r_data_type;
 
-	// parse second operand
-	if ((next_token = parse_expression(next_token + 1, &r_data, &r_data_len, &r_data_type, doit)) == -1)
-	    return -1;
-	//os_printf("l:%s(%d) r:%s(%d)\r\n", *data, *data_len, r_data, r_data_len);
+    // parse second operand
+    if ((next_token = parse_expression(next_token + 1, &r_data, &r_data_len, &r_data_type, doit)) == -1)
+	return -1;
+    //os_printf("l:%s(%d) r:%s(%d)\r\n", *data, *data_len, r_data, r_data_len);
 
-	if (!doit)
-	    return next_token;
+    if (!doit)
+	return next_token;
 
-	*data_type = STRING_T;
-	if (is_token(op, "=")) {
-	    *data = os_strcmp(*data, r_data) ? "0" : "1";
-	} else if (is_token(op, "+")) {
-	    os_sprintf(tmp_buffer, "%d", atoi(*data) + atoi(r_data));
-	    *data = tmp_buffer;
-	    *data_len = os_strlen(tmp_buffer);
-	} else if (is_token(op, "-")) {
-	    os_sprintf(tmp_buffer, "%d", atoi(*data) - atoi(r_data));
-	    *data = tmp_buffer;
-	    *data_len = os_strlen(tmp_buffer);
-	} else if (is_token(op, "*")) {
-	    os_sprintf(tmp_buffer, "%d", atoi(*data) * atoi(r_data));
-	    *data = tmp_buffer;
-	    *data_len = os_strlen(tmp_buffer);
-	} else if (is_token(op, "div")) {
-	    os_sprintf(tmp_buffer, "%d", atoi(*data) / atoi(r_data));
-	    *data = tmp_buffer;
-	    *data_len = os_strlen(tmp_buffer);
-	} else if (is_token(op, "|")) {
-	    uint16_t len = os_strlen(*data) + os_strlen(r_data);
-	    char catbuf[len+1];
-	    os_sprintf(catbuf, "%s%s", *data, r_data);
-	    if (len > sizeof(tmp_buffer)-1) {
-		len = sizeof(tmp_buffer);
-		catbuf[len] = '\0';
-	    }
-	    *data_len = len;
-	    os_memcpy(tmp_buffer, catbuf, *data_len + 1);
-	    *data = tmp_buffer;
-	} else if (is_token(op, ">")) {
-	    *data = atoi(*data) > atoi(r_data) ? "1" : "0";
-	    *data_len = 1;
-	} else if (is_token(op, "gte")) {
-	    *data = atoi(*data) >= atoi(r_data) ? "1" : "0";
-	    *data_len = 1;
-	} else if (is_token(op, "str_gt")) {
-	    *data = os_strcmp(*data, r_data) > 0 ? "1" : "0";
-	    *data_len = 1;
-	} else if (is_token(op, "str_gte")) {
-	    *data = os_strcmp(*data, r_data) >= 0 ? "1" : "0";
-	    *data_len = 1;
+    *data_type = STRING_T;
+    if (is_token(op, "=")) {
+	*data = os_strcmp(*data, r_data) ? "0" : "1";
+    } else if (is_token(op, "+")) {
+	 os_sprintf(tmp_buffer, "%d", atoi(*data) + atoi(r_data));
+	 *data = tmp_buffer;
+	 *data_len = os_strlen(tmp_buffer);
+    } else if (is_token(op, "-")) {
+	os_sprintf(tmp_buffer, "%d", atoi(*data) - atoi(r_data));
+	*data = tmp_buffer;
+	*data_len = os_strlen(tmp_buffer);
+    } else if (is_token(op, "*")) {
+	os_sprintf(tmp_buffer, "%d", atoi(*data) * atoi(r_data));
+	*data = tmp_buffer;
+	*data_len = os_strlen(tmp_buffer);
+    } else if (is_token(op, "div")) {
+	os_sprintf(tmp_buffer, "%d", atoi(*data) / atoi(r_data));
+	*data = tmp_buffer;
+	*data_len = os_strlen(tmp_buffer);
+    } else if (is_token(op, "|")) {
+	uint16_t len = os_strlen(*data) + os_strlen(r_data);
+	char catbuf[len+1];
+	os_sprintf(catbuf, "%s%s", *data, r_data);
+	if (len > sizeof(tmp_buffer)-1) {
+	    len = sizeof(tmp_buffer);
+	    catbuf[len] = '\0';
 	}
+	*data_len = len;
+	os_memcpy(tmp_buffer, catbuf, *data_len + 1);
+	*data = tmp_buffer;
+    } else if (is_token(op, ">")) {
+	*data = atoi(*data) > atoi(r_data) ? "1" : "0";
+	*data_len = 1;
+    } else if (is_token(op, "gte")) {
+	*data = atoi(*data) >= atoi(r_data) ? "1" : "0";
+	*data_len = 1;
+    } else if (is_token(op, "str_gt")) {
+	*data = os_strcmp(*data, r_data) > 0 ? "1" : "0";
+	*data_len = 1;
+    } else if (is_token(op, "str_gte")) {
+	*data = os_strcmp(*data, r_data) >= 0 ? "1" : "0";
+	*data_len = 1;
     }
 
     return next_token;
 }
 
 int ICACHE_FLASH_ATTR parse_value(int next_token, char **data, int *data_len, Value_Type * data_type) {
-    if (is_token(next_token, "$this_data")) {
-	lang_debug("val $this_data\r\n");
-	if (!in_topic_statement)
-	    return syntax_error(next_token, "undefined $this_data");
-	*data = interpreter_data;
-	*data_len = interpreter_data_len;
-	*data_type = DATA_T;
-	return next_token + 1;
-    }
+    if (my_token[next_token][0] == '"') {
+	lang_debug("val str(%s)\r\n", &my_token[next_token][1]);
 
-    else if (is_token(next_token, "$this_topic")) {
-	lang_debug("val $this_topic\r\n");
-	if (!in_topic_statement)
-	    return syntax_error(next_token, "undefined $this_topic");
-	*data = interpreter_topic;
-	*data_len = os_strlen(interpreter_topic) + 1;
+	*data = &my_token[next_token][1];
+	*data_len = os_strlen(&my_token[next_token][1]);
 	*data_type = STRING_T;
 	return next_token + 1;
     }
-#ifdef NTP
-    else if (is_token(next_token, "$timestamp")) {
-	lang_debug("val $timestamp\r\n");
-	if (ntp_sync_done())
-	    *data = get_timestr();
-	else
-	    *data = "99:99:99";
-	*data_len = os_strlen(*data) + 1;
-	*data_type = STRING_T;
-	return next_token + 1;
-    }
-#endif
 
-/*   else if (my_token[next_token][0] == '\'') {
-	char *p = &(my_token[next_token][1]);
-	int *b = (int*)&val_buf[0];
-
-	*b = atoi(htonl(p));
-	*data = val_buf;
-	*data_len = sizeof(int);
-	return next_token+1;
-   }
-*/
     else if (my_token[next_token][0] == '$' && my_token[next_token][1] <= '9') {
+	lang_debug("val var\r\n");
+
 	uint32_t var_no = atoi(&(my_token[next_token][1]));
 	if (var_no == 0 || var_no > MAX_VARS)
 	    return syntax_error(next_token + 1, "invalid var number");
@@ -785,20 +926,19 @@ int ICACHE_FLASH_ATTR parse_value(int next_token, char **data, int *data_len, Va
     }
 
     else if (my_token[next_token][0] == '#') {
-
 	lang_debug("val hexbinary\r\n");
 
 	// Convert it in place to binary once during syntax check
 	// Format: Byte 0: '#', Byte 1: len (max 255), Byte 2 to len: binary data, Byte len+1: 0
 	if (syn_chk) {
-	    int i, j, len = os_strlen(my_token[next_token]);
+	    int i, j, len = os_strlen(my_token[next_token])-1;
 	    uint8_t a, *p = &(my_token[next_token][1]);
 
-	    if (len < 3)
-		return syntax_error(next_token, "hexbinary too short");
+	    if (len == 0 || len % 2)
+		return syntax_error(next_token, "number of hexdigits must be multiple of 2");
 	    if (len > 511)
 		return syntax_error(next_token, "hexbinary too long");
-	    for (i = 0, j = 1; i < len - 1; i += 2, j++) {
+	    for (i = 0, j = 1; i < len; i += 2, j++) {
 		if (p[i] <= '9')
 		    a = p[i] - '0';
 		else
@@ -811,18 +951,67 @@ int ICACHE_FLASH_ATTR parse_value(int next_token, char **data, int *data_len, Va
 		p[j] = a;
 	    }
 	    p[j] = '\0';
-	    p[0] = (uint8_t) j - 2;
+	    p[0] = (uint8_t) j - 1;
 	}
 
 	*data = &my_token[next_token][2];
 	*data_len = my_token[next_token][1];
 	*data_type = DATA_T;
+
 	return next_token + 1;
     }
 
+    else if (is_token(next_token, "$this_data")) {
+	lang_debug("val $this_data\r\n");
+
+	if (!in_topic_statement)
+	    return syntax_error(next_token, "undefined $this_data");
+	*data = interpreter_data;
+	*data_len = interpreter_data_len;
+	*data_type = DATA_T;
+	return next_token + 1;
+    }
+
+    else if (is_token(next_token, "$this_topic")) {
+	lang_debug("val $this_topic\r\n");
+
+	if (!in_topic_statement)
+	    return syntax_error(next_token, "undefined $this_topic");
+	*data = interpreter_topic;
+	*data_len = os_strlen(interpreter_topic);
+	*data_type = STRING_T;
+	return next_token + 1;
+    }
+#ifdef GPIO
+    else if (is_token(next_token, "$this_gpio")) {
+	lang_debug("val $this_gpio\r\n");
+
+	if (!in_gpio_statement)
+	    return syntax_error(next_token, "undefined $this_gpio");
+	*data = interpreter_gpioval == 0 ? "0" : "1";
+	*data_len = 1;
+	*data_type = STRING_T;
+	return next_token + 1;
+    }
+#endif
+#ifdef NTP
+    else if (is_token(next_token, "$timestamp")) {
+	lang_debug("val $timestamp\r\n");
+
+	if (ntp_sync_done())
+	    *data = get_timestr();
+	else
+	    *data = "99:99:99";
+	*data_len = os_strlen(*data);
+	*data_type = STRING_T;
+	return next_token + 1;
+    }
+#endif
     else {
+	lang_debug("val num/str(%s)\r\n", my_token[next_token]);
+
 	*data = my_token[next_token];
-	*data_len = os_strlen(my_token[next_token]) + 1;
+	*data_len = os_strlen(my_token[next_token]);
 	*data_type = STRING_T;
 	return next_token + 1;
     }
@@ -837,13 +1026,14 @@ int ICACHE_FLASH_ATTR interpreter_syntax_check() {
     interpreter_data_len = 0;
     os_bzero(&timestamps, sizeof(timestamps));
     ts_counter = 0;
+    gpio_counter = 0;
     return parse_statement(0);
 }
 
 int ICACHE_FLASH_ATTR interpreter_config() {
     int next_token = 0;
 
-    while ((next_token = search_token(next_token, CONFIG)) < max_token) {
+    while ((next_token = search_token(next_token, "config")) < max_token) {
 	lang_debug("statement config\r\n");
 
 	len_check(2);

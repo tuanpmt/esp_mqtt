@@ -3,6 +3,8 @@ A basic MQTT Broker/Client with scripting support on the ESP8266
 
 This program enables the ESP8266 to become the central node in a small distributed IoT system. It implements an MQTT Broker and a simple scripted rule engine with event/action statements that links together the MQTT sensors and actors. It can act as STA, as AP, or as both and it can connect to another MQTT broker (i.e. in the cloud). Here it can act as bridge and forward and rewrite topics in both directions.
 
+Also it can write on local GPIO pins and react on GPIO interrupts.
+
 # Usage
 In the user directory there is the main program that serves as a stand-alone MQTT broker, client and bridge. The program starts with the following default configuration:
 
@@ -85,28 +87,40 @@ do
 	setvar $1=0
 	setvar $2=0
 	setvar $3=10
+	gpio_pinmode 5 input pullup	% configure GPIO 5 as input
 
 % Now the events, checked whenever something happens
 
-% Here a remote republish, of any local topic starting with "/test/"
+% Here a remote re-publish, of any local topic starting with "/test/"
 on topic local /test/#
 do 
 	publish remote $this_topic $this_data
 
+% Now a check for local GPIOs
+on gpio_interrupt 4 pullup
+do
+	println "New state GPIO 4: " | $this_gpio
+	publish local /t/gpio4 $this_gpio
+
 % When timer 1 expires, do some stuff
 on timer 1
 do
-	% publish a timestamp locally
-	publish local /t/time $timestamp
+	% publish the current status of GPIO 5 as two byte binary val
+	if gpio_in(5)=0 then
+		publish local /t/gpio5 #0000
+	endif
+	if gpio_in(5)=1 then
+		publish local /t/gpio5 #0001
+	endif
 
 	% Let the LED on GPIO 2 blink
 	gpio_out 2 $1
-	setvar $1 = not $1
+	setvar $1 = not($1)
 
-	% Count occurences in var $2
+	% Count timer 1 ticks in var $2
 	setvar $2=$2+1
 
-	% And if we have reached 10, print that to the console
+	% And each time if we have reached 10, print that to the console
 	if $2 = $3 then
 		println "We have reached "|$2| " at " |$timestamp
 		setvar $3=$2+10
@@ -128,23 +142,30 @@ In general, scripts have the following BNF:
 		config <param> <value> |
                 <statement> <statement>
 
-<event> ::= init | timer <num> | clock <timestamp> | topic (local|remote) <topic-id>
+<event> ::= init |
+	    mqttconnect |
+            timer <num> |
+            clock <timestamp> |
+            gpio_interrupt <num> (pullup|nopullup) |
+            topic (local|remote) <topic-id>
 
 <action> ::= publish (local|remote) <topic-id> <val> [retained] |
              subscribe (local|remote) <topic-id> |
              unsubscribe (local|remote) <topic-id> |
              settimer <num> <num> |
              setvar $<num> = <expr> |
+             gpio_pinmode <num> [pullup]
              gpio_out <num> <expr> |
              if <expr> then <action> endif |
 	     print <expr> | println <expr>
              <action> <action>
 
-<expr> ::= <val> <op> <expr> | not <expr>
+<expr> ::= <val> <op> <expr> | (<expr>) | not (<expr>)
 
-<op> := '=' | '>' | gte | str_ge | str_gte | '+' | '-' | '/' | '*' | div
+<op> := '=' | '>' | gte | str_ge | str_gte | '+' | '-' | '*' | '|' | div
 
-<val> := <string> | <const> | #<hex-string> | $<num> | $this_item | $this_data | $timestamp
+<val> := <string> | <const> | #<hex-string> | $<num> | gpio_in(<num>) |
+         $this_item | $this_data | $this_gpio | $timestamp
 
 <string> := "[any ASCII]*" | [any ASCII]*
 

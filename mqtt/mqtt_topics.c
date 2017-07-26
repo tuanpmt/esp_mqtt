@@ -26,7 +26,8 @@
 #include "os_type.h"
 #include "osapi.h"
 #include "mem.h"
-
+#include "string.h"
+/*
 char *_strtok_r(char *s, const char *delim, char **last);
 
 char *_strchr(const char *s, int c) {
@@ -35,8 +36,8 @@ char *_strchr(const char *s, int c) {
 	    return 0;
     return (char *)s;
 }
-
-char *_strdup(char *src) {
+*/
+char ICACHE_FLASH_ATTR *_strdup(char *src) {
     char *str;
     char *p;
     int len = 0;
@@ -56,21 +57,21 @@ char *_strdup(char *src) {
  * @param aName the topic name string
  * @return boolean value indicating whether the topic name is valid
  */
-int Topics_isValidName(char *aName) {
+int ICACHE_FLASH_ATTR Topics_isValidName(char *aName) {
     int rc = true;
     char *c = NULL;
     int length = os_strlen(aName);
-    char *hashpos = _strchr(aName, '#');	/* '#' wildcard can be only at the beginning or the end of a topic */
+    char *hashpos = strchr(aName, '#');	/* '#' wildcard can be only at the beginning or the end of a topic */
 
     if (hashpos != NULL) {
-	char *second = _strchr(hashpos + 1, '#');
+	char *second = strchr(hashpos + 1, '#');
 	if ((hashpos != aName && hashpos != aName + (length - 1)) || second != NULL)
 	    rc = false;
     }
 
     /* '#' or '+' only next to a slash separator or end of name */
     for (c = "#+"; *c != '\0'; ++c) {
-	char *pos = _strchr(aName, *c);
+	char *pos = strchr(aName, *c);
 	while (pos != NULL) {
 	    if (pos > aName) {	/* check previous char is '/' */
 		if (*(pos - 1) != '/')
@@ -80,7 +81,7 @@ int Topics_isValidName(char *aName) {
 		if (*(pos + 1) != '/')
 		    rc = false;
 	    }
-	    pos = _strchr(pos + 1, *c);
+	    pos = strchr(pos + 1, *c);
 	}
     }
 
@@ -93,7 +94,7 @@ int Topics_isValidName(char *aName) {
  * @param astr the character string to reverse
  * @return pointer to the reversed string which was reversed in place
  */
-char *_strrev(char *astr) {
+char ICACHE_FLASH_ATTR *_strrev(char *astr) {
     char *forwards = astr;
     int len = os_strlen(astr);
     if (len > 1) {
@@ -112,8 +113,8 @@ char *_strrev(char *astr) {
  * @param topic the topic name string
  * @return boolean value indicating whether the topic contains a wildcard or not
  */
-int Topics_hasWildcards(char *topic) {
-    return (_strchr(topic, '+') != NULL) || (_strchr(topic, '#') != NULL);
+int ICACHE_FLASH_ATTR Topics_hasWildcards(char *topic) {
+    return (strchr(topic, '+') != NULL) || (strchr(topic, '#') != NULL);
 }
 
 /**
@@ -122,7 +123,7 @@ int Topics_hasWildcards(char *topic) {
  * @param topic a topic name string that must not contain wildcards
  * @return boolean value indicating whether topic matches wildTopic
  */
-int Topics_matches(char *wildTopic, int wildcards, char *topic) {
+int ICACHE_FLASH_ATTR Topics_matches(char *wildTopic, int wildcards, char *topic) {
     int rc = false;
     char *last1 = NULL, *last2 = NULL;
     char *pwild = NULL, *pmatch = NULL;
@@ -174,8 +175,8 @@ int Topics_matches(char *wildTopic, int wildcards, char *topic) {
 	topic = (char *)_strdup(topic);
     }
 
-    pwild = _strtok_r(wildTopic, TOPIC_LEVEL_SEPARATOR, &last1);
-    pmatch = _strtok_r(topic, TOPIC_LEVEL_SEPARATOR, &last2);
+    pwild = strtok_r(wildTopic, TOPIC_LEVEL_SEPARATOR, &last1);
+    pmatch = strtok_r(topic, TOPIC_LEVEL_SEPARATOR, &last2);
 
     /* Step through the subscription, level by level */
     while (pwild != NULL) {
@@ -191,8 +192,8 @@ int Topics_matches(char *wildTopic, int wildcards, char *topic) {
 		break;
 	} else
 	    break;		/* No more tokens to match against further tokens in the wildcard stream... */
-	pwild = _strtok_r(NULL, TOPIC_LEVEL_SEPARATOR, &last1);
-	pmatch = _strtok_r(NULL, TOPIC_LEVEL_SEPARATOR, &last2);
+	pwild = strtok_r(NULL, TOPIC_LEVEL_SEPARATOR, &last1);
+	pmatch = strtok_r(NULL, TOPIC_LEVEL_SEPARATOR, &last2);
     }
 
     /* All tokens up to here matched, and we didn't end in #. If there
@@ -201,7 +202,7 @@ int Topics_matches(char *wildTopic, int wildcards, char *topic) {
     if (pmatch == NULL && pwild == NULL)
 	rc = true;
 
-    /* Now free the memory allocated in strdup() */
+    /* Now free the memory allocated in _strdup() */
     os_free(wildTopic);
     os_free(topic);
  exit:
@@ -216,7 +217,7 @@ int Topics_matches(char *wildTopic, int wildcards, char *topic) {
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 #endif
 
-int test() {
+int ICACHE_FLASH_ATTR test() {
     int i;
 
     struct {
