@@ -149,7 +149,7 @@ In general, scripts have the following BNF:
             gpio_interrupt <num> (pullup|nopullup) |
             topic (local|remote) <topic-id>
 
-<action> ::= publish (local|remote) <topic-id> <val> [retained] |
+<action> ::= publish (local|remote) <topic-id> <expr> [retained] |
              subscribe (local|remote) <topic-id> |
              unsubscribe (local|remote) <topic-id> |
              settimer <num> <num> |

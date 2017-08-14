@@ -562,6 +562,10 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
     }
 #endif
     if (strcmp(tokens[0], "reset") == 0) {
+	if (config.locked && pespconn != NULL) {
+	    os_sprintf(response, INVALID_LOCKED);
+	    goto command_handled;
+	}
 	if (nTokens == 2 && strcmp(tokens[1], "factory") == 0) {
 	    config_load_default(&config);
 	    config_save(&config);
