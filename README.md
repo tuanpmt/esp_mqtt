@@ -36,9 +36,9 @@ Basic commands (enough to get it working in nearly all environments):
 - set [ap_ssid|ap_password] _value_: changes the settings for the soft-AP of the ESP (for your stations)
 - show [config|stats|script|mqtt]: prints the current config or some status information and statistics
 - save: saves the current config parameters to flash
-- reset [factory]: resets the esp, optionally resets WiFi params to default values
 - lock [_password_]: saves and locks the current config, changes are not allowed. Password can be left open if already set before
 - unlock _password_: unlocks the config, requires password from the lock command
+- reset [factory]: resets the esp, 'factory' optionally resets WiFi params to default values (works on a locked device only from serial console)
 - quit: terminates a remote session
 
 Advanced commands (most of the set-commands are effective only after save and reset):
@@ -70,7 +70,8 @@ By default the "remote" MQTT client is disabled. It can be enabled by setting th
 # Scripting
 The esp_uMQTT_broker comes with a build-in scripting engine. A script enables the ESP not just to act as a passive broker but to react on events (publications and timing events) and to send out its own items.
 
-Here is a demo of a small script to give you an idea of the power of the scripting feature:
+Here is a demo of a script to give you an idea of the power of the scripting feature. This script controls a Sonoff switch module. It connects to a remote MQTT broker and in parallel offers locally its own. On both brokers it subscribes to a topic named '/martinshome/switch/1/command', where it receives commands, and it publishes the topic '/martinshome/switch/1/status' with the current state of the switch relay. It understands the commands 'on','off', 'toggle', and 'blink'. Blinking is realized via a timer event. Local status is stored in the two variables $1 (switch state) and $2 (blinking on/off). The 'on gpio_interrupt' clause reacts on pressing the pushbutton of the Sonnoff and simply  toggle the switch (and stops blinking). The last two 'on clock' clauses implement a daily on and off period:
+
 ```
 % Config params, overwrite any previous settings from the commandline
 config ap_ssid 		MyAP
@@ -81,58 +82,94 @@ config mqtt_host	192.168.1.20
 % Now the initialization, this is done once after booting
 on init
 do
-	println "MQTT Script 1.0 starting"
-	subscribe local /test/#
-	settimer 1 1000			% once per second
+	% $1 status of the relay
 	setvar $1=0
+	gpio_out 12 $1
+	gpio_out 13 not ($1)
+
+	publish local /martinshome/switch/1/status $1 retained
+	publish remote /martinshome/switch/1/status $1 retained
+
+	% $2 is blink flag
 	setvar $2=0
-	setvar $3=10
-	gpio_pinmode 5 input pullup	% configure GPIO 5 as input
+
+	% local subscriptions once in 'init'
+	subscribe local /martinshome/switch/1/command
+
+% Now the MQTT client init, this is done each time the client connects
+on mqttconnect
+do
+	% remote subscriptions for each connection in 'mqttconnect'
+	subscribe remote /martinshome/switch/1/command
 
 % Now the events, checked whenever something happens
 
-% Here a remote re-publish, of any local topic starting with "/test/"
-on topic local /test/#
-do 
-	publish remote $this_topic $this_data
-
-% Now a check for local GPIOs
-on gpio_interrupt 4 pullup
+% Is there a remote command?
+on topic remote /martinshome/switch/1/command
 do
-	println "New state GPIO 4: " | $this_gpio
-	publish local /t/gpio4 $this_gpio
+	println "Received remote command: " | $this_data
 
-% When timer 1 expires, do some stuff
+	% republish this locally - this does the action
+	publish local /martinshome/switch/1/command $this_data
+
+
+% Is there a local command?
+on topic local /martinshome/switch/1/command
+do
+	println "Received local command: " | $this_data
+
+	if $this_data = "on" then
+		setvar $1 = 1
+		setvar $2 = 0
+		gpio_out 12 $1
+		gpio_out 13 not ($1)
+	endif
+	if $this_data = "off" then
+		setvar $1 = 0
+		setvar $2 = 0
+		gpio_out 12 $1
+		gpio_out 13 not ($1)
+	endif
+	if $this_data = "toggle" then
+		setvar $1 = not ($1)
+		gpio_out 12 $1
+		gpio_out 13 not ($1)
+	endif
+	if $this_data = "blink" then
+		setvar $2 = 1
+		settimer 1 500
+	endif
+
+	publish local /martinshome/switch/1/status $1 retained
+	publish remote /martinshome/switch/1/status $1 retained
+
+% The local pushbotton
+on gpio_interrupt 0 pullup
+do
+	println "New state GPIO 0: " | $this_gpio
+	if $this_gpio = 0 then
+		setvar $2 = 0
+		publish local /martinshome/switch/1/command "toggle"
+	endif
+
+% Blinking
 on timer 1
 do
-	% publish the current status of GPIO 5 as two byte binary val
-	if gpio_in(5)=0 then
-		publish local /t/gpio5 #0000
-	endif
-	if gpio_in(5)=1 then
-		publish local /t/gpio5 #0001
+	if $2 = 1 then
+		publish local /martinshome/switch/1/command "toggle"
+
+		settimer 1 500
 	endif
 
-	% Let the LED on GPIO 2 blink
-	gpio_out 2 $1
-	setvar $1 = not($1)
-
-	% Count timer 1 ticks in var $2
-	setvar $2=$2+1
-
-	% And each time if we have reached 10, print that to the console
-	if $2 = $3 then
-		println "We have reached "|$2| " at " |$timestamp
-		setvar $3=$2+10
-	endif
-
-	% Reload the timer
-	settimer 1 1000
-
-% Here a local publication once each day at noon
-on clock 12:00:00
+% Switch on in the evening
+on clock 19:30:00
 do
-	publish local /t/2 "High Noon"
+	publish local /martinshome/switch/1/command "on"
+
+% Switch off at night
+on clock 01:00:00
+do
+	publish local /martinshome/switch/1/command "off"
 ```
 
 In general, scripts have the following BNF:

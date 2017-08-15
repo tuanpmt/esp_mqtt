@@ -24,6 +24,7 @@ uint64_t t_ntp_resync = 0;
 
 #ifdef SCRIPTED
 #include "lang.h"
+#include "pub_list.h"
 
 struct espconn *downloadCon;
 struct espconn *scriptcon;
@@ -34,7 +35,7 @@ bool timestamps_init;
 
 /* System Task, for signals refer to user_config.h */
 #define user_procTaskPrio        0
-#define user_procTaskQueueLen    1
+#define user_procTaskQueueLen    2
 os_event_t user_procTaskQueue[user_procTaskQueueLen];
 static void user_procTask(os_event_t * events);
 
@@ -95,18 +96,11 @@ static void ICACHE_FLASH_ATTR mqttPublishedCb(uint32_t * args) {
 
 static void ICACHE_FLASH_ATTR mqttDataCb(uint32_t * args, const char *topic,
 					 uint32_t topic_len, const char *data, uint32_t data_len) {
-    MQTT_Client *client = (MQTT_Client *) args;
-    uint8_t buffer[256];
-
-    if (topic_len >= sizeof(buffer)) {
-	os_printf("Topic to long for republication");
-	return;
-    }
-
-    strncpy(buffer, topic, topic_len);
-    buffer[topic_len] = 0;
 #ifdef SCRIPTED
-    interpreter_topic_received(buffer, (uint8_t *) data, data_len, false);
+    MQTT_Client *client = (MQTT_Client *) args;
+
+    pub_insert(topic, topic_len, data, data_len, false);
+    system_os_post(user_procTaskPrio, SIG_TOPIC_RECEIVED, 0);
 #endif
 }
 #endif				/* MQTT_CLIENT */
@@ -318,7 +312,9 @@ bool ICACHE_FLASH_ATTR printf_retainedtopic(retained_entry * entry, void *user_d
 void MQTT_local_DataCallback(uint32_t * args, const char *topic, uint32_t topic_len, const char *data, uint32_t length) {
 //  os_printf("Received: \"%s\" len: %d\r\n", topic, length);
 #ifdef SCRIPTED
-    interpreter_topic_received(topic, data, length, true);
+    //interpreter_topic_received(topic, data, length, true);
+    pub_insert(topic, topic_len, data, length, true);
+    system_os_post(user_procTaskPrio, SIG_TOPIC_RECEIVED, 0);
 #endif
 }
 
@@ -1004,6 +1000,12 @@ static void ICACHE_FLASH_ATTR user_procTask(os_event_t * events) {
 	// Anything else to do here, when the repeater has received its IP?
 	break;
 #ifdef SCRIPTED
+    case SIG_TOPIC_RECEIVED:
+	{
+	    pub_process();
+	}
+	break;
+
     case SIG_SCRIPT_LOADED:
 	{
 	    espconn_disconnect(downloadCon);

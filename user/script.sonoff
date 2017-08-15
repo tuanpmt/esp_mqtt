@@ -1,0 +1,101 @@
+% Config params, overwrite any previous settings from the commandline
+config ap_ssid 		DerKluge
+config ap_password	Bonn2016
+config ntp_server	1.de.pool.ntp.org
+config mqtt_host	martinshome.fritz.box
+config speed		160
+
+% Now the initialization, this is done once after booting
+on init
+do
+	% $1 status of the relay
+	setvar $1=0
+	gpio_out 12 $1
+	gpio_out 13 not ($1)
+
+	publish local /martinshome/switch/1/status $1 retained
+	publish remote /martinshome/switch/1/status $1 retained
+
+	% $2 is blink flag
+	setvar $2=0
+
+	% local subscriptions once in 'init'
+	subscribe local /martinshome/switch/1/command
+
+% Now the MQTT client init, this is done each time the client connects
+on mqttconnect
+do
+	% remote subscriptions for each connection in 'mqttconnect'
+	subscribe remote /martinshome/switch/1/command
+
+% Now the events, checked whenever something happens
+
+% Is there a remote command?
+on topic remote /martinshome/switch/1/command
+do
+	println "Received remote command: " | $this_data
+
+	% republish this locally - this does the action
+	publish local /martinshome/switch/1/command $this_data
+
+
+% Is there a local command?
+on topic local /martinshome/switch/1/command
+do
+	println "Received local command: " | $this_data
+
+	if $this_data = "on" then
+		setvar $1 = 1
+		setvar $2 = 0
+		gpio_out 12 $1
+		gpio_out 13 not ($1)
+	endif
+	if $this_data = "off" then
+		setvar $1 = 0
+		setvar $2 = 0
+		gpio_out 12 $1
+		gpio_out 13 not ($1)
+	endif
+	if $this_data = "toggle" then
+		setvar $1 = not ($1)
+		gpio_out 12 $1
+		gpio_out 13 not ($1)
+	endif
+	if $this_data = "blink" then
+		setvar $2 = 1
+		settimer 1 500
+	endif
+
+	publish local /martinshome/switch/1/status $1 retained
+	publish remote /martinshome/switch/1/status $1 retained
+
+
+% The local pushbotton
+on gpio_interrupt 0 pullup
+do
+	println "New state GPIO 0: " | $this_gpio
+	if $this_gpio = 0 then
+		setvar $2 = 0
+		publish local /martinshome/switch/1/command "toggle"
+	endif
+
+
+% Blinking
+on timer 1
+do
+	if $2 = 1 then
+		publish local /martinshome/switch/1/command "toggle"
+
+		settimer 1 500
+	endif
+
+
+% Switch on in the evening
+on clock 19:30:00
+do
+	publish local /martinshome/switch/1/command "on"
+
+% Switch off at night
+on clock 01:00:00
+do
+	publish local /martinshome/switch/1/command "off"

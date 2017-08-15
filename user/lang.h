@@ -1,3 +1,6 @@
+#ifndef _LANG_
+#define _LANG_
+
 #include "mqtt_server.h"
 
 extern MQTT_Client mqttClient;
@@ -32,3 +35,5 @@ void check_timestamps(uint8_t *curr_time);
 
 void init_gpios();
 void stop_gpios();
+
+#endif /* _LANG_ */

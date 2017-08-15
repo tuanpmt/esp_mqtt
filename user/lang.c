@@ -407,7 +407,7 @@ int ICACHE_FLASH_ATTR parse_statement(int next_token) {
 	}
     }
 
-    lang_info("Interpreter loop: %d us\r\n", (system_get_time()-start));
+    lang_debug("Interpreter loop: %d us\r\n", (system_get_time()-start));
     if (interpreter_status == INIT)
 	loop_time = system_get_time()-start;
     else
@@ -1075,16 +1075,8 @@ int ICACHE_FLASH_ATTR interpreter_topic_received(const char *topic, const char *
 
     interpreter_status = (local) ? TOPIC_LOCAL : TOPIC_REMOTE;
     interpreter_topic = (char *)topic;
+    interpreter_data = (char *)data;
     interpreter_data_len = data_len;
-    if ((interpreter_data = (uint8_t *) os_malloc(data_len + 1)) == 0) {
-	os_printf("Out of memory\r\n");
-	return -1;
-    }
-    os_memcpy(interpreter_data, data, data_len);
-    interpreter_data[data_len] = '\0';
 
-    int retval = parse_statement(0);
-
-    os_free(interpreter_data);
-    return retval;
+    return parse_statement(0);
 }
