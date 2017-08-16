@@ -2,6 +2,8 @@
 config ap_ssid 		DerKluge
 config ap_password	Bonn2016
 config ntp_server	1.de.pool.ntp.org
+config broker_user	Martin
+config broker_password	secret
 config mqtt_host	martinshome.fritz.box
 config speed		160
 
@@ -70,7 +72,7 @@ do
 	publish remote /martinshome/switch/1/status $1 retained
 
 
-% The local pushbotton
+% The local pushbutton
 on gpio_interrupt 0 pullup
 do
 	println "New state GPIO 0: " | $this_gpio

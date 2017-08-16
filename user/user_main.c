@@ -348,7 +348,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 
     if (strcmp(tokens[0], "help") == 0) {
 	os_sprintf(response,
-		   "show [config|stats|mqtt|script]\r\n|set [ssid|password|auto_connect|ap_ssid|ap_password|network|dns|ip|netmask|gw|ap_on|ap_open|speed|config_port] <val>\r\n|quit|save [config]|reset [factory]|lock [<password>]|unlock <password>");
+		   "show [config|stats|mqtt|script]\r\n|set [ssid|password|auto_connect|ap_ssid|ap_password|network|dns|ip|netmask|gw|ap_on|ap_open|speed|config_port|broker_user|broker_password] <val>\r\n|quit|save [config]|reset [factory]|lock [<password>]|unlock <password>");
 	to_console(response);
 #ifdef SCRIPTED
 	os_sprintf(response, "|script <port>");
@@ -396,6 +396,14 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	    // if static DNS, add it
 	    os_sprintf(response, config.dns_addr.addr ? "DNS: %d.%d.%d.%d\r\n" : "", IP2STR(&config.dns_addr));
 	    to_console(response);
+
+	    if (os_strcmp(config.mqtt_broker_user, "none") != 0) {
+		os_sprintf(response,
+			   "MQTT broker username: %s password: %s\r\n",
+			   config.mqtt_broker_user,
+			   config.locked ? "***" : (char *)config.mqtt_broker_password);
+		to_console(response);
+	    }
 #ifdef MQTT_CLIENT
 	    os_sprintf(response, "MQTT client %s\r\n", mqtt_enabled ? "enabled" : "disabled");
 	    to_console(response);
@@ -819,6 +827,23 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 		goto command_handled;
 	    }
 #endif
+	    if (strcmp(tokens[1], "broker_user") == 0) {
+		os_strncpy(config.mqtt_broker_user, tokens[2], 32);
+		config.mqtt_broker_user[31] = '\0';
+		os_sprintf(response, "Broker username set\r\n");
+		goto command_handled;
+	    }
+
+	    if (strcmp(tokens[1], "broker_password") == 0) {
+		if (os_strcmp(tokens[2], "none") == 0) {
+		    config.mqtt_broker_password[0] = '\0';
+		} else {
+		    os_strncpy(config.mqtt_broker_password, tokens[2], 32);
+		    config.mqtt_broker_password[31] = '\0';
+		}
+		os_sprintf(response, "Broker password set\r\n");
+		goto command_handled;
+	    }
 #ifdef NTP
 	    if (strcmp(tokens[1], "ntp_server") == 0) {
 		os_strncpy(config.ntp_server, tokens[2], 32);
@@ -1188,7 +1213,21 @@ void ICACHE_FLASH_ATTR user_set_station_config(void) {
     wifi_station_set_auto_connect(config.auto_connect != 0);
 }
 
-void ICACHE_FLASH_ATTR user_init() {
+
+bool ICACHE_FLASH_ATTR mqtt_broker_auth(const char* username, const char *password) {
+    if (os_strcmp(config.mqtt_broker_user, "none") == 0)
+	return true;
+
+    if (os_strcmp(username, config.mqtt_broker_user) != 0 ||
+	os_strcmp(password, config.mqtt_broker_password) != 0) {
+	os_printf("Authentication with %s/%s failed\r\n", username, password);
+	return false;
+    }
+    return true;
+}
+
+
+void  user_init() {
     struct ip_info info;
 
     connected = false;
@@ -1297,10 +1336,11 @@ void ICACHE_FLASH_ATTR user_init() {
     espconn_tcp_set_max_con(10);
     os_printf("Max number of TCP clients: %d\r\n", espconn_tcp_get_max_con());
 
+    MQTT_local_onData(MQTT_local_DataCallback);
+    MQTT_server_onAuth(mqtt_broker_auth);
+
     MQTT_server_start(1883 /*port */ , 30 /*max_subscriptions */ ,
 		      30 /*max_retained_items */ );
-
-    MQTT_local_onData(MQTT_local_DataCallback);
 
     //Start task
     system_os_task(user_procTask, user_procTaskPrio, user_procTaskQueue, user_procTaskQueueLen);

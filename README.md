@@ -36,6 +36,8 @@ Basic commands (enough to get it working in nearly all environments):
 - set [ap_ssid|ap_password] _value_: changes the settings for the soft-AP of the ESP (for your stations)
 - show [config|stats|script|mqtt]: prints the current config or some status information and statistics
 - save: saves the current config parameters to flash
+- set broker_user _unsername_: sets the username for authentication of MQTT clients ("none" if no auth, default)
+- set broker_password _password_: sets the password for authentication of MQTT clients ("none" if empty, default)
 - lock [_password_]: saves and locks the current config, changes are not allowed. Password can be left open if already set before
 - unlock _password_: unlocks the config, requires password from the lock command
 - reset [factory]: resets the esp, 'factory' optionally resets WiFi params to default values (works on a locked device only from serial console)
@@ -70,7 +72,7 @@ By default the "remote" MQTT client is disabled. It can be enabled by setting th
 # Scripting
 The esp_uMQTT_broker comes with a build-in scripting engine. A script enables the ESP not just to act as a passive broker but to react on events (publications and timing events) and to send out its own items.
 
-Here is a demo of a script to give you an idea of the power of the scripting feature. This script controls a Sonoff switch module. It connects to a remote MQTT broker and in parallel offers locally its own. On both brokers it subscribes to a topic named '/martinshome/switch/1/command', where it receives commands, and it publishes the topic '/martinshome/switch/1/status' with the current state of the switch relay. It understands the commands 'on','off', 'toggle', and 'blink'. Blinking is realized via a timer event. Local status is stored in the two variables $1 (switch state) and $2 (blinking on/off). The 'on gpio_interrupt' clause reacts on pressing the pushbutton of the Sonnoff and simply  toggle the switch (and stops blinking). The last two 'on clock' clauses implement a daily on and off period:
+Here is a demo of a script to give you an idea of the power of the scripting feature. This script controls a Sonoff switch module. It connects to a remote MQTT broker and in parallel offers locally its own. On both brokers it subscribes to a topic named '/martinshome/switch/1/command', where it receives commands, and it publishes the topic '/martinshome/switch/1/status' with the current state of the switch relay. It understands the commands 'on','off', 'toggle', and 'blink'. Blinking is realized via a timer event. Local status is stored in the two variables $1 (switch state) and $2 (blinking on/off). The 'on gpio_interrupt' clause reacts on pressing the pushbutton of the Sonnoff and simply toggles the switch (and stops blinking). The last two 'on clock' clauses implement a daily on and off period:
 
 ```
 % Config params, overwrite any previous settings from the commandline
@@ -78,6 +80,8 @@ config ap_ssid 		MyAP
 config ap_password	stupidPassword
 config ntp_server	1.pool.ntp.org
 config mqtt_host	192.168.1.20
+config broker_user	Martin
+config broker_password	secret
 
 % Now the initialization, this is done once after booting
 on init
@@ -143,7 +147,7 @@ do
 	publish local /martinshome/switch/1/status $1 retained
 	publish remote /martinshome/switch/1/status $1 retained
 
-% The local pushbotton
+% The local pushbutton
 on gpio_interrupt 0 pullup
 do
 	println "New state GPIO 0: " | $this_gpio
@@ -263,10 +267,9 @@ The broker does support:
 - retained messages
 - LWT
 - QoS level 0
-- a subset of MQTT (CONNECT, DISCONNECT, SUBSCRIBE, UNSUBSCRIBE, PUBLISH, PING)
+- username/password authentication
  
 The broker does not yet support:
-- username, password authentication
 - QoS levels other than 0
 - many TCP(=MQTT) clients
 - non-clear sessions
@@ -294,3 +297,12 @@ void MQTT_local_onData(MqttDataCallback dataCb);
 
 With these functions you can publish and subscribe topics as a local client like you would with a remote MQTT broker.
 
+Username/password authentication is provided with the following interface:
+
+```c
+typedef bool (*MqttAuthCallback)(const char* username, const char *password);
+
+void MQTT_server_onAuth(MqttAuthCallback authCb);
+```
+
+If an *MqttAuthCallback* function is provided, it is called on each connect request. Based on username and password the function has to return *true* for authenticated or *false* for rejected. No provided username/password are empty strings. If no *MqttAuthCallback* function is set, each request will be admitted.

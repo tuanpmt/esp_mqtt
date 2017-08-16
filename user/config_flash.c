@@ -34,6 +34,9 @@ void config_load_default(sysconfig_p config) {
     config->clock_speed = 80;
     config->config_port = CONSOLE_SERVER_PORT;
 
+    os_sprintf(config->mqtt_broker_user, "%s", "none");
+    config->mqtt_broker_password[0] = 0;
+
 #ifdef MQTT_CLIENT
     os_sprintf(config->mqtt_host, "%s", "none");
     config->mqtt_port = 1883;

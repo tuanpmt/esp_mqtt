@@ -36,6 +36,7 @@ LOCAL uint8_t zero_len_id[2] = { 0, 0 };
 
 MQTT_ClientCon *clientcon_list;
 LOCAL MqttDataCallback local_data_cb = NULL;
+LOCAL MqttAuthCallback local_auth_cb = NULL;
 
 //#define MQTT_INFO os_printf
 #define MQTT_WARNING os_printf
@@ -335,22 +336,18 @@ static void ICACHE_FLASH_ATTR MQTT_ClientCon_recv_cb(void *arg, char *pdata, uns
 		}
 	    }
 
+	    uint16_t msg_used_len = var_header_len;
+
 	    MQTT_INFO("MQTT: Connect flags %x\r\n", variable_header->flags);
 	    clientcon->connect_info.clean_session = (variable_header->flags & MQTT_CONNECT_FLAG_CLEAN_SESSION) != 0;
-	    if ((variable_header->flags & MQTT_CONNECT_FLAG_USERNAME) != 0 ||
-		(variable_header->flags & MQTT_CONNECT_FLAG_PASSWORD) != 0) {
-		MQTT_WARNING("MQTT: Connect option currently not supported\r\n");
-		msg_conn_ret = CONNECTION_REFUSE_NOT_AUTHORIZED;
-		clientcon->connState = TCP_DISCONNECTING;
-		break;
-	    }
+
 	    clientcon->connect_info.keepalive = (variable_header->keepaliveMsb << 8) + variable_header->keepaliveLsb;
 	    espconn_regist_time(clientcon->pCon, 2 * clientcon->connect_info.keepalive, 1);
 	    MQTT_INFO("MQTT: Keepalive %d\r\n", clientcon->connect_info.keepalive);
 
 	    // Get the client id
-	    uint16_t id_len = clientcon->mqtt_state.message_length - (2 + var_header_len);
-	    const char *client_id = mqtt_get_str(&clientcon->mqtt_state.in_buffer[2 + var_header_len], &id_len);
+	    uint16_t id_len = clientcon->mqtt_state.message_length - (2 + msg_used_len);
+	    const char *client_id = mqtt_get_str(&clientcon->mqtt_state.in_buffer[2 + msg_used_len], &id_len);
 	    if (client_id == NULL || id_len > 80) {
 		MQTT_WARNING("MQTT: Client Id invalid\r\n");
 		msg_conn_ret = CONNECTION_REFUSE_ID_REJECTED;
@@ -384,6 +381,7 @@ static void ICACHE_FLASH_ATTR MQTT_ClientCon_recv_cb(void *arg, char *pdata, uns
 		    break;
 		}
 	    }
+	    msg_used_len += 2 + id_len;
 
 	    // Get the LWT
 	    clientcon->connect_info.will_retain = (variable_header->flags & MQTT_CONNECT_FLAG_WILL_RETAIN) != 0;
@@ -396,9 +394,9 @@ static void ICACHE_FLASH_ATTR MQTT_ClientCon_recv_cb(void *arg, char *pdata, uns
 		    return;
 		}
 	    } else {
-		uint16_t lw_topic_len = clientcon->mqtt_state.message_length - (4 + var_header_len + id_len);
+		uint16_t lw_topic_len = clientcon->mqtt_state.message_length - (2 + msg_used_len);
 		const char *lw_topic =
-		    mqtt_get_str(&clientcon->mqtt_state.in_buffer[4 + var_header_len + id_len], &lw_topic_len);
+		    mqtt_get_str(&clientcon->mqtt_state.in_buffer[2 + msg_used_len], &lw_topic_len);
 
 		if (lw_topic == NULL) {
 		    MQTT_WARNING("MQTT: Last Will topic invalid\r\n");
@@ -422,11 +420,12 @@ static void ICACHE_FLASH_ATTR MQTT_ClientCon_recv_cb(void *arg, char *pdata, uns
 		    clientcon->connState = TCP_DISCONNECTING;
 		    break;
 		}
+		msg_used_len += 2 + lw_topic_len;
 
 		uint16_t lw_data_len =
-		    clientcon->mqtt_state.message_length - (6 + var_header_len + id_len + lw_topic_len);
+		    clientcon->mqtt_state.message_length - (2 + msg_used_len);
 		const char *lw_data =
-		    mqtt_get_str(&clientcon->mqtt_state.in_buffer[6 + var_header_len + id_len + lw_topic_len],
+		    mqtt_get_str(&clientcon->mqtt_state.in_buffer[2 + msg_used_len],
 				 &lw_data_len);
 
 		if (lw_data == NULL) {
@@ -446,6 +445,71 @@ static void ICACHE_FLASH_ATTR MQTT_ClientCon_recv_cb(void *arg, char *pdata, uns
 		    clientcon->connState = TCP_DISCONNECTING;
 		    break;
 		}
+		msg_used_len += 2 + lw_data_len;
+	    }
+
+	    // Get the username
+	    if ((variable_header->flags & MQTT_CONNECT_FLAG_USERNAME) != 0) {
+		uint16_t username_len = clientcon->mqtt_state.message_length - (2 + msg_used_len);
+		const char *username =
+		    mqtt_get_str(&clientcon->mqtt_state.in_buffer[2 + msg_used_len], &username_len);
+
+		if (username == NULL) {
+		    MQTT_WARNING("MQTT: Username invalid\r\n");
+		    MQTT_ServerDisconnect(clientcon);
+		    return;
+		}
+
+		clientcon->connect_info.username = (char *)os_zalloc(username_len+1);
+		if (clientcon->connect_info.username != NULL) {
+		    os_memcpy(clientcon->connect_info.username, username, username_len);
+		    clientcon->connect_info.username[username_len] = '\0';
+		    MQTT_INFO("MQTT: Username %s\r\n", clientcon->connect_info.username);
+		} else {
+		    MQTT_ERROR("MQTT: Out of mem\r\n");
+		    msg_conn_ret = CONNECTION_REFUSE_SERVER_UNAVAILABLE;
+		    clientcon->connState = TCP_DISCONNECTING;
+		    break;
+		}
+		msg_used_len += 2 + username_len;
+	    }
+
+	    // Get the password
+	    if ((variable_header->flags & MQTT_CONNECT_FLAG_PASSWORD) != 0) {
+
+		if ((variable_header->flags & MQTT_CONNECT_FLAG_USERNAME) == 0) {
+		    MQTT_WARNING("MQTT: Password without username\r\n");
+		    MQTT_ServerDisconnect(clientcon);
+		    return;
+		}
+
+		uint16_t password_len = clientcon->mqtt_state.message_length - (2 + msg_used_len);
+		const char *password =
+		    mqtt_get_str(&clientcon->mqtt_state.in_buffer[2 + msg_used_len], &password_len);
+
+		if (password != NULL)
+		clientcon->connect_info.password = (char *)os_zalloc(password_len+1);
+		if (clientcon->connect_info.password != NULL) {
+		    os_memcpy(clientcon->connect_info.password, password, password_len);
+		    clientcon->connect_info.password[password_len] = '\0';
+		    MQTT_INFO("MQTT: Password %s\r\n", clientcon->connect_info.password);
+		} else {
+		    MQTT_ERROR("MQTT: Out of mem\r\n");
+		    msg_conn_ret = CONNECTION_REFUSE_SERVER_UNAVAILABLE;
+		    clientcon->connState = TCP_DISCONNECTING;
+		    break;
+		}
+		msg_used_len += 2 + password_len;
+	    }
+
+	    // Check Auth
+	    if ((local_auth_cb != NULL) && 
+		local_auth_cb(clientcon->connect_info.username==NULL?"":clientcon->connect_info.username,
+			      clientcon->connect_info.password==NULL?"":clientcon->connect_info.password) == false) {
+		MQTT_WARNING("MQTT: Authorization failed\r\n");
+		msg_conn_ret = CONNECTION_REFUSE_NOT_AUTHORIZED;
+		clientcon->connState = TCP_DISCONNECTING;
+		break;
 	    }
 
 	    msg_conn_ret = CONNECTION_ACCEPTED;
@@ -811,4 +875,8 @@ bool ICACHE_FLASH_ATTR MQTT_local_unsubscribe(uint8_t * topic) {
 
 void ICACHE_FLASH_ATTR MQTT_local_onData(MqttDataCallback dataCb) {
     local_data_cb = dataCb;
+}
+
+void ICACHE_FLASH_ATTR MQTT_server_onAuth(MqttAuthCallback authCb) {
+    local_auth_cb = authCb;
 }

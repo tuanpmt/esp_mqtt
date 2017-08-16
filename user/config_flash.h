@@ -13,7 +13,7 @@
 
 #define FLASH_BLOCK_NO 0xc
 
-#define MAGIC_NUMBER    0x015005fc
+#define MAGIC_NUMBER    0x015005fd
 
 typedef struct
 {
@@ -45,6 +45,9 @@ typedef struct
 
     uint16_t	clock_speed;	// Freq of the CPU
     uint16_t	config_port;	// Port on which the concole listenes (0 if no access)
+
+    uint8_t     mqtt_broker_user[32];	// Username for client login, "none" if empty
+    uint8_t     mqtt_broker_password[32]; // Password for client login
 
 #ifdef MQTT_CLIENT
     uint8_t     mqtt_host[32];	// IP or hostname of the MQTT broker, "none" if empty
