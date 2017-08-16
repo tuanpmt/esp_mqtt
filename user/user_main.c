@@ -67,6 +67,23 @@ void ICACHE_FLASH_ATTR to_console(char *str) {
     ringbuf_memcpy_into(console_tx_buffer, str, os_strlen(str));
 }
 
+bool ICACHE_FLASH_ATTR check_connection_access(struct espconn *pesp_conn, uint8_t access_flags) {
+    remot_info *premot = NULL;
+    ip_addr_t *remote_addr;
+    bool is_local;
+
+    remote_addr = (ip_addr_t *)&(pesp_conn->proto.tcp->remote_ip);
+    //os_printf("Remote addr is %d.%d.%d.%d\r\n", IP2STR(remote_addr));
+    is_local = (remote_addr->addr & 0x00ffffff) == (config.network_addr.addr & 0x00ffffff);
+
+    if (is_local && (access_flags & LOCAL_ACCESS))
+	return true;
+    if (!is_local && (access_flags & REMOTE_ACCESS))
+	return true;
+
+    return false;
+}
+
 #ifdef MQTT_CLIENT
 
 MQTT_Client mqttClient;
@@ -397,6 +414,15 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	    os_sprintf(response, config.dns_addr.addr ? "DNS: %d.%d.%d.%d\r\n" : "", IP2STR(&config.dns_addr));
 	    to_console(response);
 
+#ifdef REMOTE_CONFIG
+	    if (config.config_port == 0 || config.config_access == 0) {
+		os_sprintf(response, "No network console access\r\n");
+	    } else {
+		os_sprintf(response, "Network console access on port %d (mode %d)\r\n", config.config_port, config.config_access);
+	    }
+	    to_console(response);
+#endif
+
 	    if (os_strcmp(config.mqtt_broker_user, "none") != 0) {
 		os_sprintf(response,
 			   "MQTT broker username: %s password: %s\r\n",
@@ -463,6 +489,11 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	}
 
 	if (nTokens == 2 && strcmp(tokens[1], "mqtt") == 0) {
+	    if (config.locked) {
+		os_sprintf(response, INVALID_LOCKED);
+		goto command_handled;
+	    }
+
 	    MQTT_ClientCon *clientcon;
 	    int ccnt = 0;
 
@@ -490,6 +521,11 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	}
 #ifdef SCRIPTED
 	if (nTokens >= 2 && strcmp(tokens[1], "script") == 0) {
+	    if (config.locked) {
+		os_sprintf(response, INVALID_LOCKED);
+		goto command_handled;
+	    }
+
 	    uint32_t line_count, char_count, start_line = 1;
 	    if (nTokens == 3)
 		start_line = atoi(tokens[2]);
@@ -826,6 +862,15 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 		    os_sprintf(response, "Config port set to %d\r\n", config.config_port);
 		goto command_handled;
 	    }
+
+	    if (strcmp(tokens[1], "config_access") == 0) {
+		config.config_access = atoi(tokens[2]) & (LOCAL_ACCESS | REMOTE_ACCESS);
+		if (config.config_access == 0)
+		    os_sprintf(response, "WARNING: if you save this, remote console access will be disabled!\r\n");
+		else
+		    os_sprintf(response, "Config access set\r\n", config.config_port);
+		goto command_handled;
+	    }
 #endif
 	    if (strcmp(tokens[1], "broker_user") == 0) {
 		os_strncpy(config.mqtt_broker_user, tokens[2], 32);
@@ -968,6 +1013,12 @@ static void ICACHE_FLASH_ATTR tcp_client_connected_cb(void *arg) {
     struct espconn *pespconn = (struct espconn *)arg;
 
     os_printf("tcp_client_connected_cb(): Client connected\r\n");
+
+    if (!check_connection_access(pespconn, config.config_access)) {
+	os_printf("Client disconnected - no config access on this network\r\n");
+	espconn_disconnect(pespconn);
+	return;
+    }
 
     espconn_regist_sentcb(pespconn, tcp_client_sent_cb);
     espconn_regist_disconcb(pespconn, tcp_client_discon_cb);

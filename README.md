@@ -55,6 +55,7 @@ Advanced commands (most of the set-commands are effective only after save and re
 - set ap_open [0|1]: selects, whether the soft-AP uses WPA2 security (ap_open=0,  automatic, if an ap_password is set) or open (ap_open=1)
 - set speed [80|160]: sets the CPU clock frequency (default 80 Mhz)
 - set config_port _portno_: sets the port number of the console login (default is 7777, 0 disables remote console config)
+- set config_access _mode_: controls the networks that allow config access (0: no access, 1: only internal, 2: only external, 3: both (default))
 - script [_portno_|delete]: opens port for upload of scripts or deletes the current script
 
 While the user interface looks similar to my esp_wifi_repeater at https://github.com/martin-ger/esp_wifi_repeater this does NO NAT routing. AP and STA network are stricly separated and there is no routing in between. The only possible connection via both networks is the uMQTT broker that listens on both interfaces.
@@ -305,4 +306,4 @@ typedef bool (*MqttAuthCallback)(const char* username, const char *password);
 void MQTT_server_onAuth(MqttAuthCallback authCb);
 ```
 
-If an *MqttAuthCallback* function is provided, it is called on each connect request. Based on username and password the function has to return *true* for authenticated or *false* for rejected. No provided username/password are empty strings. If no *MqttAuthCallback* function is set, each request will be admitted.
+If an *MqttAuthCallback* function is provided, it is called on each connect request. Based on username and password the function has to return *true* for authenticated or *false* for rejected. If a request provides no username and or password the strings are empty. If no *MqttAuthCallback* function is set, each request will be admitted.

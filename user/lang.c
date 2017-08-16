@@ -596,14 +596,14 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 	    if (is_token(next_token + 1, "remote")) {
 		if (doit && mqtt_connected) {
 		    retval = MQTT_Subscribe(&mqttClient, my_token[next_token + 2], 0);
-		    lang_info("subsrcibe remote %s %s\r\n", my_token[next_token + 2], retval ? "success" : "failed");
+		    lang_info("subscribe remote %s %s\r\n", my_token[next_token + 2], retval ? "success" : "failed");
 		}
 	    } else 
 #endif
 	    if (is_token(next_token + 1, "local")) {
 		if (doit) {
 		    retval = MQTT_local_subscribe(my_token[next_token + 2], 0);
-		    lang_info("subsrcibe local %s %s\r\n", my_token[next_token + 2], retval ? "success" : "failed");
+		    lang_info("subscribe local %s %s\r\n", my_token[next_token + 2], retval ? "success" : "failed");
 		}
 	    } else {
 		return syntax_error(next_token + 1, "'local' or 'remote' expected");

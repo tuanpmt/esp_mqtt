@@ -45,6 +45,7 @@ typedef struct
 
     uint16_t	clock_speed;	// Freq of the CPU
     uint16_t	config_port;	// Port on which the concole listenes (0 if no access)
+    uint8_t	config_access;	// Controls the interfaces that allow config access (default LOCAL_ACCESS | REMOTE_ACCESS)
 
     uint8_t     mqtt_broker_user[32];	// Username for client login, "none" if empty
     uint8_t     mqtt_broker_password[32]; // Password for client login
