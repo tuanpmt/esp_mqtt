@@ -35,7 +35,7 @@ bool timestamps_init;
 
 /* System Task, for signals refer to user_config.h */
 #define user_procTaskPrio        0
-#define user_procTaskQueueLen    2
+#define user_procTaskQueueLen    1
 os_event_t user_procTaskQueue[user_procTaskQueueLen];
 static void user_procTask(os_event_t * events);
 
@@ -327,7 +327,7 @@ bool ICACHE_FLASH_ATTR printf_retainedtopic(retained_entry * entry, void *user_d
 }
 
 void MQTT_local_DataCallback(uint32_t * args, const char *topic, uint32_t topic_len, const char *data, uint32_t length) {
-//  os_printf("Received: \"%s\" len: %d\r\n", topic, length);
+    //os_printf("Received: \"%s\" len: %d\r\n", topic, length);
 #ifdef SCRIPTED
     //interpreter_topic_received(topic, data, length, true);
     pub_insert(topic, topic_len, data, length, true);
@@ -1075,6 +1075,7 @@ void ICACHE_FLASH_ATTR timer_func(void *arg) {
 //Priority 0 Task
 static void ICACHE_FLASH_ATTR user_procTask(os_event_t * events) {
     //os_printf("Sig: %d\r\n", events->sig);
+    //os_printf("Pub_list: %d\r\n", pub_empty());
 
     switch (events->sig) {
     case SIG_START_SERVER:
@@ -1083,7 +1084,8 @@ static void ICACHE_FLASH_ATTR user_procTask(os_event_t * events) {
 #ifdef SCRIPTED
     case SIG_TOPIC_RECEIVED:
 	{
-	    pub_process();
+	    // We check this on any signal
+	    // pub_process();
 	}
 	break;
 
@@ -1130,6 +1132,9 @@ static void ICACHE_FLASH_ATTR user_procTask(os_event_t * events) {
 	os_printf("Spurious Signal received\r\n");
 	break;
     }
+
+    // Check queued messages on any signal
+    pub_process();
 }
 
 /* Callback called when the connection state of the module with an Access Point changes */
