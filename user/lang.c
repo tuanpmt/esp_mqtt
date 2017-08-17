@@ -22,7 +22,10 @@ if (interpreter_status==SYNTAX_CHECK && next_token+(x) >= max_token) \
 #define syn_chk (interpreter_status==SYNTAX_CHECK)
 
 typedef struct _var_entry_t {
-    uint8_t data[MAX_VAR_LEN];
+    uint8_t name[15];
+    uint8_t free;
+    uint32_t buffer_len;
+    uint8_t *data;
     uint32_t data_len;
     Value_Type data_type;
 } var_entry_t;
@@ -60,6 +63,24 @@ int gpio_counter;
 static os_timer_t timers[MAX_TIMERS];
 static var_entry_t vars[MAX_VARS];
 static timestamp_entry_t timestamps[MAX_TIMESTAMPS];
+
+var_entry_t ICACHE_FLASH_ATTR *find_var(const uint8_t *name, var_entry_t **free_var) {
+    int i;
+
+    *free_var = NULL;
+    for (i = 0; i<MAX_VARS; i++) {
+	if (!vars[i].free) {
+	    if (os_strncmp(name, vars[i].name, 14) == 0) {
+		lang_debug("var %s found at %d\r\n", vars[i].name, i);
+		return &vars[i];
+	    }
+	} else {
+	    if (*free_var == NULL)
+		*free_var = &vars[i];
+	}
+    }
+    return NULL;
+}
 
 static void ICACHE_FLASH_ATTR lang_timers_timeout(void *arg) {
 
@@ -700,11 +721,24 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 
 	else if (is_token(next_token, "setvar")) {
 	    len_check(3);
-	    if (syn_chk && my_token[next_token + 1][0] != '$')
-		return syntax_error(next_token + 1, "invalid var identifier");
-	    uint32_t var_no = atoi(&(my_token[next_token + 1][1]));
-	    if (var_no == 0 || var_no > MAX_VARS)
-		return syntax_error(next_token + 1, "invalid var number");
+	    if (syn_chk && (my_token[next_token + 1][0] != '$' || my_token[next_token + 1][1] == '\0'))
+		return syntax_error(next_token, "invalid var identifier");
+
+	    var_entry_t *this_var, *free_var;
+
+	    this_var = find_var(&(my_token[next_token + 1][1]), &free_var);
+	    if (this_var == NULL) {
+		if (free_var == NULL)
+		    return syntax_error(next_token, "too many vars used");
+
+		this_var = free_var;
+		this_var->free = 0;
+		os_strncpy(this_var->name, &(my_token[next_token + 1][1]), 14);
+		this_var->name[14] = '\0';
+		this_var->data = (uint8_t *)os_malloc(DEFAULT_VAR_LEN);
+		this_var->buffer_len = DEFAULT_VAR_LEN;
+	    }
+
 	    if (syn_chk && os_strcmp(my_token[next_token + 2], "=") != 0)
 		return syntax_error(next_token + 2, "'=' expected");
 
@@ -715,15 +749,22 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 		return -1;
 
 	    if (doit) {
-		lang_info("setvar $%d \r\n", var_no);
-		if (var_len > MAX_VAR_LEN) {
-		    os_printf("Var $%d too long '%s'\r\n", var_no, var_data);
-		    return next_token;
+		lang_debug("setvar $%s\r\n", this_var->name);
+		if (var_len > this_var->buffer_len - 1) {
+		    os_free(this_var->data);
+		    this_var->data = (uint8_t *)os_malloc(var_len+1);
+		    this_var->buffer_len = var_len+1;
+		    if (this_var->data == NULL) {
+			os_printf("Out of mem for var $%s\r\n", this_var->name);
+			this_var->data = (uint8_t *)os_malloc(DEFAULT_VAR_LEN);
+			this_var->buffer_len = DEFAULT_VAR_LEN;
+			return next_token;
+		    }
 		}
-		var_no--;
-		os_memcpy(vars[var_no].data, var_data, var_len);
-		vars[var_no].data_len = var_len;
-		vars[var_no].data_type = var_type;
+		os_memcpy(this_var->data, var_data, var_len);
+		this_var->data[var_len] = '\0';
+		this_var->data_len = var_len;
+		this_var->data_type = var_type;
 	    }
 	}
 #ifdef GPIO
@@ -928,20 +969,6 @@ int ICACHE_FLASH_ATTR parse_value(int next_token, char **data, int *data_len, Va
 	return next_token + 1;
     }
 
-    else if (my_token[next_token][0] == '$' && my_token[next_token][1] <= '9') {
-	lang_debug("val var\r\n");
-
-	uint32_t var_no = atoi(&(my_token[next_token][1]));
-	if (var_no == 0 || var_no > MAX_VARS)
-	    return syntax_error(next_token + 1, "invalid var number");
-	var_no--;
-
-	*data = vars[var_no].data;
-	*data_len = vars[var_no].data_len;
-	*data_type = vars[var_no].data_type;
-	return next_token + 1;
-    }
-
     else if (my_token[next_token][0] == '#') {
 	lang_debug("val hexbinary\r\n");
 
@@ -1024,6 +1051,21 @@ int ICACHE_FLASH_ATTR parse_value(int next_token, char **data, int *data_len, Va
 	return next_token + 1;
     }
 #endif
+    else if (my_token[next_token][0] == '$' && my_token[next_token][1] != '\0') {
+	lang_debug("val var %s\r\n", &(my_token[next_token][1]));
+
+	var_entry_t *this_var, *free_var;
+
+	this_var = find_var(&(my_token[next_token][1]), &free_var);
+	if (this_var == NULL)
+	    return syntax_error(next_token, "unknown var name");
+
+	*data = this_var->data;
+	*data_len = this_var->data_len;
+	*data_type = this_var->data_type;
+	return next_token + 1;
+    }
+
     else {
 	lang_debug("val num/str(%s)\r\n", my_token[next_token]);
 
@@ -1036,6 +1078,13 @@ int ICACHE_FLASH_ATTR parse_value(int next_token, char **data, int *data_len, Va
 
 int ICACHE_FLASH_ATTR interpreter_syntax_check() {
     lang_debug("interpreter_syntax_check\r\n");
+
+    int i;
+    for (i = 0; i<MAX_VARS; i++) {
+	vars[i].free = 1;
+	vars[i].data = "";//(uint8_t *)os_malloc(MAX_VAR_LEN);
+	vars[i].data_len = 0;
+    }
 
     os_sprintf(tmp_buffer, "Syntax okay");
     interpreter_status = SYNTAX_CHECK;

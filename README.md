@@ -73,109 +73,124 @@ By default the "remote" MQTT client is disabled. It can be enabled by setting th
 # Scripting
 The esp_uMQTT_broker comes with a build-in scripting engine. A script enables the ESP not just to act as a passive broker but to react on events (publications and timing events) and to send out its own items.
 
-Here is a demo of a script to give you an idea of the power of the scripting feature. This script controls a Sonoff switch module. It connects to a remote MQTT broker and in parallel offers locally its own. On both brokers it subscribes to a topic named '/martinshome/switch/1/command', where it receives commands, and it publishes the topic '/martinshome/switch/1/status' with the current state of the switch relay. It understands the commands 'on','off', 'toggle', and 'blink'. Blinking is realized via a timer event. Local status is stored in the two variables $1 (switch state) and $2 (blinking on/off). The 'on gpio_interrupt' clause reacts on pressing the pushbutton of the Sonnoff and simply toggles the switch (and stops blinking). The last two 'on clock' clauses implement a daily on and off period:
+Here is a demo of a script to give you an idea of the power of the scripting feature. This script controls a Sonoff switch module. It connects to a remote MQTT broker and in parallel offers locally its own. The device has a number stored in the variable $device_number. On both brokers it subscribes to a topic named '/martinshome/switch/($device_number)/command', where it receives commands, and it publishes the topic '/martinshome/switch/($device_number)/status' with the current state of the switch relay. It understands the commands 'on','off', 'toggle', and 'blink'. Blinking is realized via a timer event. Local status is stored in the two variables $relay_status and $blink (blinking on/off). The 'on gpio_interrupt' clause reacts on pressing the pushbutton of the Sonoff and simply toggles the switch (and stops blinking). The last two 'on clock' clauses implement a daily on and off period:
 
 ```
 % Config params, overwrite any previous settings from the commandline
 config ap_ssid 		MyAP
 config ap_password	stupidPassword
-config ntp_server	1.pool.ntp.org
-config mqtt_host	192.168.1.20
+config ntp_server	1.de.pool.ntp.org
 config broker_user	Martin
 config broker_password	secret
+config mqtt_host	martinshome.fritz.box
+config speed		160
 
 % Now the initialization, this is done once after booting
 on init
 do
-	% $1 status of the relay
-	setvar $1=0
-	gpio_out 12 $1
-	gpio_out 13 not ($1)
+	% Device number
+	setvar $device_number = 1
 
-	publish local /martinshome/switch/1/status $1 retained
-	publish remote /martinshome/switch/1/status $1 retained
+	% Status of the relay
+	setvar $relay_status=0
+	gpio_out 12 $relay_status
+	gpio_out 13 not ($relay_status)
 
-	% $2 is blink flag
-	setvar $2=0
+	% Blink flag
+	setvar $blink=0
+
+	% Command topic
+	setvar $command_topic="/martinshome/switch/" | $device_number | "/command"
+
+	% Status topic
+	setvar $status_topic="/martinshome/switch/" | $device_number | "/status"
+
+	publish local $status_topic $relay_status retained
+	publish remote $status_topic $relay_status retained
 
 	% local subscriptions once in 'init'
-	subscribe local /martinshome/switch/1/command
+	subscribe local $command_topic
 
 % Now the MQTT client init, this is done each time the client connects
 on mqttconnect
 do
 	% remote subscriptions for each connection in 'mqttconnect'
-	subscribe remote /martinshome/switch/1/command
+	subscribe remote $command_topic
 
 % Now the events, checked whenever something happens
 
 % Is there a remote command?
-on topic remote /martinshome/switch/1/command
+on topic remote $command_topic
 do
 	println "Received remote command: " | $this_data
 
 	% republish this locally - this does the action
-	publish local /martinshome/switch/1/command $this_data
+	publish local $command_topic $this_data
 
 
 % Is there a local command?
-on topic local /martinshome/switch/1/command
+on topic local $command_topic
 do
 	println "Received local command: " | $this_data
 
 	if $this_data = "on" then
-		setvar $1 = 1
-		setvar $2 = 0
-		gpio_out 12 $1
-		gpio_out 13 not ($1)
+		setvar $relay_status = 1
+		setvar $blink = 0
+		gpio_out 12 $relay_status
+		gpio_out 13 not ($relay_status)
 	endif
 	if $this_data = "off" then
-		setvar $1 = 0
-		setvar $2 = 0
-		gpio_out 12 $1
-		gpio_out 13 not ($1)
+		setvar $relay_status = 0
+		setvar $blink = 0
+		gpio_out 12 $relay_status
+		gpio_out 13 not ($relay_status)
 	endif
 	if $this_data = "toggle" then
-		setvar $1 = not ($1)
-		gpio_out 12 $1
-		gpio_out 13 not ($1)
+		setvar $relay_status = not ($relay_status)
+		gpio_out 12 $relay_status
+		gpio_out 13 not ($relay_status)
 	endif
 	if $this_data = "blink" then
-		setvar $2 = 1
+		setvar $blink = 1
 		settimer 1 500
 	endif
 
-	publish local /martinshome/switch/1/status $1 retained
-	publish remote /martinshome/switch/1/status $1 retained
+	publish local $status_topic $relay_status retained
+	publish remote $status_topic $relay_status retained
+
 
 % The local pushbutton
 on gpio_interrupt 0 pullup
 do
 	println "New state GPIO 0: " | $this_gpio
 	if $this_gpio = 0 then
-		setvar $2 = 0
-		publish local /martinshome/switch/1/command "toggle"
+		setvar $blink = 0
+		publish local $command_topic "toggle"
 	endif
+
 
 % Blinking
 on timer 1
 do
-	if $2 = 1 then
-		publish local /martinshome/switch/1/command "toggle"
+	if $blink = 1 then
+		publish local $command_topic "toggle"
 
 		settimer 1 500
 	endif
 
+
 % Switch on in the evening
 on clock 19:30:00
 do
-	publish local /martinshome/switch/1/command "on"
+	publish local $command_topic "on"
 
 % Switch off at night
 on clock 01:00:00
 do
-	publish local /martinshome/switch/1/command "off"
+	publish local $command_topic "off"
 ```
+
+Currently the interpreter is configured for a maximum of 10 variables, with a significant id length of 15. Some (additional) vars contain special status: $this_topic and $this_data are only defined in 'on topic' clauses and contain the current topic and its data. $this_gpio contains the state of the GPIO in an 'on gpio_pinmode' clause and $timestamp contains the current time of day in 'hh:mm:ss' format. 
 
 In general, scripts have the following BNF:
 
@@ -206,7 +221,7 @@ In general, scripts have the following BNF:
 
 <op> := '=' | '>' | gte | str_ge | str_gte | '+' | '-' | '*' | '|' | div
 
-<val> := <string> | <const> | #<hex-string> | $<num> | gpio_in(<num>) |
+<val> := <string> | <const> | #<hex-string> | $[any ASCII]* | gpio_in(<num>) |
          $this_item | $this_data | $this_gpio | $timestamp
 
 <string> := "[any ASCII]*" | [any ASCII]*

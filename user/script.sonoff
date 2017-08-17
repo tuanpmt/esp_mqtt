@@ -1,6 +1,6 @@
 % Config params, overwrite any previous settings from the commandline
-config ap_ssid 		DerKluge
-config ap_password	Bonn2016
+config ap_ssid 		MyAP
+config ap_password	stupidPassword
 config ntp_server	1.de.pool.ntp.org
 config broker_user	Martin
 config broker_password	secret
@@ -10,72 +10,75 @@ config speed		160
 % Now the initialization, this is done once after booting
 on init
 do
-	% $1 status of the relay
-	setvar $1=0
-	gpio_out 12 $1
-	gpio_out 13 not ($1)
+	% Device number
+	setvar $device_number = 1
 
-	% $2 is blink flag
-	setvar $2=0
+	% Status of the relay
+	setvar $relay_status=0
+	gpio_out 12 $relay_status
+	gpio_out 13 not ($relay_status)
 
-	% $3 is the command topic
-	setvar $3="/martinshome/switch/1/command"
+	% Blink flag
+	setvar $blink=0
 
-	% $4 is the status topic
-	setvar $4="/martinshome/switch/1/status"
+	% Command topic
+	setvar $command_topic="/martinshome/switch/" | $device_number | "/command"
 
-	publish local $4 $1 retained
-	publish remote $4 $1 retained
+	% Status topic
+	setvar $status_topic="/martinshome/switch/" | $device_number | "/status"
+
+	publish local $status_topic $relay_status retained
+	publish remote $status_topic $relay_status retained
 
 	% local subscriptions once in 'init'
-	subscribe local $3
+	subscribe local $command_topic
 
 % Now the MQTT client init, this is done each time the client connects
 on mqttconnect
 do
 	% remote subscriptions for each connection in 'mqttconnect'
-	subscribe remote $3
+	subscribe remote $command_topic
 
 % Now the events, checked whenever something happens
 
 % Is there a remote command?
-on topic remote $3
+on topic remote $command_topic
 do
 	println "Received remote command: " | $this_data
 
 	% republish this locally - this does the action
-	publish local $3 $this_data
+	publish local $command_topic $this_data
 
 
 % Is there a local command?
-on topic local $3
+on topic local $command_topic
 do
 	println "Received local command: " | $this_data
 
 	if $this_data = "on" then
-		setvar $1 = 1
-		setvar $2 = 0
-		gpio_out 12 $1
-		gpio_out 13 not ($1)
+		setvar $relay_status = 1
+		setvar $blink = 0
+		gpio_out 12 $relay_status
+		gpio_out 13 not ($relay_status)
 	endif
 	if $this_data = "off" then
-		setvar $1 = 0
-		setvar $2 = 0
-		gpio_out 12 $1
-		gpio_out 13 not ($1)
+		setvar $relay_status = 0
+		setvar $blink = 0
+		gpio_out 12 $relay_status
+		gpio_out 13 not ($relay_status)
 	endif
 	if $this_data = "toggle" then
-		setvar $1 = not ($1)
-		gpio_out 12 $1
-		gpio_out 13 not ($1)
+		setvar $relay_status = not ($relay_status)
+		gpio_out 12 $relay_status
+		gpio_out 13 not ($relay_status)
 	endif
 	if $this_data = "blink" then
-		setvar $2 = 1
+		setvar $blink = 1
 		settimer 1 500
 	endif
 
-	publish local $4 $1 retained
-	publish remote $4 $1 retained
+	publish local $status_topic $relay_status retained
+	publish remote $status_topic $relay_status retained
 
 
 % The local pushbutton
@@ -83,16 +86,16 @@ on gpio_interrupt 0 pullup
 do
 	println "New state GPIO 0: " | $this_gpio
 	if $this_gpio = 0 then
-		setvar $2 = 0
-		publish local $3 "toggle"
+		setvar $blink = 0
+		publish local $command_topic "toggle"
 	endif
 
 
 % Blinking
 on timer 1
 do
-	if $2 = 1 then
-		publish local $3 "toggle"
+	if $blink = 1 then
+		publish local $command_topic "toggle"
 
 		settimer 1 500
 	endif
@@ -101,9 +104,9 @@ do
 % Switch on in the evening
 on clock 19:30:00
 do
-	publish local $3 "on"
+	publish local $command_topic "on"
 
 % Switch off at night
 on clock 01:00:00
 do
-	publish local $3 "off"
+	publish local $command_topic "off"
