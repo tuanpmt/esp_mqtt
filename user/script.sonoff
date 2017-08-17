@@ -15,34 +15,40 @@ do
 	gpio_out 12 $1
 	gpio_out 13 not ($1)
 
-	publish local /martinshome/switch/1/status $1 retained
-	publish remote /martinshome/switch/1/status $1 retained
-
 	% $2 is blink flag
 	setvar $2=0
 
+	% $3 is the command topic
+	setvar $3="/martinshome/switch/1/command"
+
+	% $4 is the status topic
+	setvar $4="/martinshome/switch/1/status"
+
+	publish local $4 $1 retained
+	publish remote $4 $1 retained
+
 	% local subscriptions once in 'init'
-	subscribe local /martinshome/switch/1/command
+	subscribe local $3
 
 % Now the MQTT client init, this is done each time the client connects
 on mqttconnect
 do
 	% remote subscriptions for each connection in 'mqttconnect'
-	subscribe remote /martinshome/switch/1/command
+	subscribe remote $3
 
 % Now the events, checked whenever something happens
 
 % Is there a remote command?
-on topic remote /martinshome/switch/1/command
+on topic remote $3
 do
 	println "Received remote command: " | $this_data
 
 	% republish this locally - this does the action
-	publish local /martinshome/switch/1/command $this_data
+	publish local $3 $this_data
 
 
 % Is there a local command?
-on topic local /martinshome/switch/1/command
+on topic local $3
 do
 	println "Received local command: " | $this_data
 
@@ -68,8 +74,8 @@ do
 		settimer 1 500
 	endif
 
-	publish local /martinshome/switch/1/status $1 retained
-	publish remote /martinshome/switch/1/status $1 retained
+	publish local $4 $1 retained
+	publish remote $4 $1 retained
 
 
 % The local pushbutton
@@ -78,7 +84,7 @@ do
 	println "New state GPIO 0: " | $this_gpio
 	if $this_gpio = 0 then
 		setvar $2 = 0
-		publish local /martinshome/switch/1/command "toggle"
+		publish local $3 "toggle"
 	endif
 
 
@@ -86,7 +92,7 @@ do
 on timer 1
 do
 	if $2 = 1 then
-		publish local /martinshome/switch/1/command "toggle"
+		publish local $3 "toggle"
 
 		settimer 1 500
 	endif
@@ -95,9 +101,9 @@ do
 % Switch on in the evening
 on clock 19:30:00
 do
-	publish local /martinshome/switch/1/command "on"
+	publish local $3 "on"
 
 % Switch off at night
 on clock 01:00:00
 do
-	publish local /martinshome/switch/1/command "off"
+	publish local $3 "off"

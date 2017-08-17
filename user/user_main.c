@@ -365,7 +365,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 
     if (strcmp(tokens[0], "help") == 0) {
 	os_sprintf(response,
-		   "show [config|stats|mqtt|script]\r\n|set [ssid|password|auto_connect|ap_ssid|ap_password|network|dns|ip|netmask|gw|ap_on|ap_open|speed|config_port|broker_user|broker_password] <val>\r\n|quit|save [config]|reset [factory]|lock [<password>]|unlock <password>");
+		   "show [config|stats|mqtt|script]\r\n|set [ssid|password|auto_connect|ap_ssid|ap_password|network|dns|ip|netmask|gw|ap_on|ap_open|speed|config_port|config_access|broker_user|broker_password] <val>\r\n|quit|save [config]|reset [factory]|lock [<password>]|unlock <password>");
 	to_console(response);
 #ifdef SCRIPTED
 	os_sprintf(response, "|script <port>");
@@ -962,6 +962,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 
 #ifdef SCRIPTED
 void ICACHE_FLASH_ATTR do_command(char *t1, char *t2, char *t3) {
+int len;
 
     ringbuf_memcpy_into(console_rx_buffer, t1, os_strlen(t1));
     ringbuf_memcpy_into(console_rx_buffer, " ", 1);
@@ -969,7 +970,11 @@ void ICACHE_FLASH_ATTR do_command(char *t1, char *t2, char *t3) {
     ringbuf_memcpy_into(console_rx_buffer, " ", 1);
     ringbuf_memcpy_into(console_rx_buffer, t3, os_strlen(t3));
     console_handle_command(0);
-    ringbuf_memcpy_from(tmp_buffer, console_tx_buffer, ringbuf_bytes_used(console_tx_buffer));
+    len = ringbuf_bytes_used(console_tx_buffer);
+    if (len >= sizeof(tmp_buffer))
+	len = sizeof(tmp_buffer)-1;
+    ringbuf_memcpy_from(tmp_buffer, console_tx_buffer, len);
+    tmp_buffer[len] = '\0';
     os_printf("%s", tmp_buffer);
 }
 #endif

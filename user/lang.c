@@ -434,27 +434,35 @@ int ICACHE_FLASH_ATTR parse_event(int next_token, bool * happend) {
     }
 
     if (is_token(next_token, "topic")) {
-	lang_debug("event topic\r\n");
+	char *topic;
+	int topic_len;
+	Value_Type topic_type;
+	int lr_token = next_token + 1;
 
+	lang_debug("event topic\r\n");
 	in_topic_statement = true;
+
 	len_check(2);
-	if (is_token(next_token + 1, "remote")) {
+	if ((next_token = parse_value(next_token + 2, &topic, &topic_len, &topic_type)) == -1)
+	    return -1;
+
+	if (is_token(lr_token, "remote")) {
 	    if (interpreter_status != TOPIC_REMOTE)
-		return next_token + 3;
-	} else if (is_token(next_token + 1, "local")) {
+		return next_token;
+	} else if (is_token(lr_token, "local")) {
 	    if (interpreter_status != TOPIC_LOCAL)
-		return next_token + 3;
+		return next_token;
 	} else {
 	    return syntax_error(next_token + 1, "'local' or 'remote' expected");
 	}
 
-	*happend = Topics_matches(my_token[next_token + 2], true, interpreter_topic);
+	*happend = Topics_matches(topic, true, interpreter_topic);
 
 	if (*happend)
-	    lang_info("topic %s %s %s match\r\n", my_token[next_token + 1],
-		      my_token[next_token + 2], interpreter_topic);
+	    lang_info("topic %s %s match\r\n", my_token[lr_token],
+		      topic, interpreter_topic);
 
-	return next_token + 3;
+	return next_token;
     }
 
     if (is_token(next_token, "timer")) {
@@ -589,50 +597,59 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 	}
 
 	else if (is_token(next_token, "subscribe")) {
+	    char *topic;
+	    int topic_len;
+	    Value_Type topic_type;
 	    bool retval;
+	    int rl_token = next_token + 1;
 
 	    len_check(2);
+	    if ((next_token = parse_value(next_token + 2, &topic, &topic_len, &topic_type)) == -1)
+		return -1;
 #ifdef MQTT_CLIENT
-	    if (is_token(next_token + 1, "remote")) {
+	    if (is_token(rl_token, "remote")) {
 		if (doit && mqtt_connected) {
-		    retval = MQTT_Subscribe(&mqttClient, my_token[next_token + 2], 0);
-		    lang_info("subscribe remote %s %s\r\n", my_token[next_token + 2], retval ? "success" : "failed");
+		    retval = MQTT_Subscribe(&mqttClient, topic, 0);
+		    lang_info("subscribe remote %s %s\r\n", topic, retval ? "success" : "failed");
 		}
 	    } else 
 #endif
-	    if (is_token(next_token + 1, "local")) {
+	    if (is_token(rl_token, "local")) {
 		if (doit) {
-		    retval = MQTT_local_subscribe(my_token[next_token + 2], 0);
-		    lang_info("subscribe local %s %s\r\n", my_token[next_token + 2], retval ? "success" : "failed");
+		    retval = MQTT_local_subscribe(topic, 0);
+		    lang_info("subscribe local %s %s\r\n", topic, retval ? "success" : "failed");
 		}
 	    } else {
 		return syntax_error(next_token + 1, "'local' or 'remote' expected");
 	    }
-	    next_token += 3;
 	}
 
 	else if (is_token(next_token, "unsubscribe")) {
+	    char *topic;
+	    int topic_len;
+	    Value_Type topic_type;
 	    bool retval;
+	    int rl_token = next_token + 1;
 
 	    len_check(2);
+	    if ((next_token = parse_value(next_token + 2, &topic, &topic_len, &topic_type)) == -1)
+		return -1;
 #ifdef MQTT_CLIENT
-	    if (is_token(next_token + 1, "remote")) {
+	    if (is_token(rl_token, "remote")) {
 		if (doit && mqtt_connected) {
-		    retval = MQTT_UnSubscribe(&mqttClient, my_token[next_token + 2]);
-		    lang_info("unsubsrcibe remote %s %s\r\n", my_token[next_token + 2], retval ? "success" : "failed");
+		    retval = MQTT_UnSubscribe(&mqttClient, topic);
+		    lang_info("unsubsrcibe remote %s %s\r\n", topic, retval ? "success" : "failed");
 		}
 	    } else
 #endif
-	    if (is_token(next_token + 1, "local")) {
+	    if (is_token(rl_token, "local")) {
 		if (doit) {
-		    retval = MQTT_local_unsubscribe(my_token[next_token + 2]);
-		    lang_info("unsubsrcibe local %s %s\r\n", my_token[next_token + 2], retval ? "success" : "failed");
+		    retval = MQTT_local_unsubscribe(topic);
+		    lang_info("unsubsrcibe local %s %s\r\n", topic, retval ? "success" : "failed");
 		}
 	    } else {
 		return syntax_error(next_token + 1, "'local' or 'remote' expected");
 	    }
-
-	    next_token += 3;
 	}
 
 	else if (is_token(next_token, "if")) {
@@ -1080,3 +1097,4 @@ int ICACHE_FLASH_ATTR interpreter_topic_received(const char *topic, const char *
 
     return parse_statement(0);
 }
+
