@@ -1,5 +1,5 @@
 # esp_uMQTT_broker
-A basic MQTT Broker/Client with scripting support on the ESP8266
+An MQTT Broker/Client with scripting support on the ESP8266
 
 This program enables the ESP8266 to become the central node in a small distributed IoT system. It implements an MQTT Broker and a simple scripted rule engine with event/action statements that links together the MQTT sensors and actors. It can act as STA, as AP, or as both and it can connect to another MQTT broker (i.e. in the cloud). Here it can act as bridge and forward and rewrite topics in both directions.
 
@@ -190,7 +190,7 @@ do
 	publish local $command_topic "off"
 ```
 
-Currently the interpreter is configured for a maximum of 10 variables, with a significant id length of 15. Some (additional) vars contain special status: $this_topic and $this_data are only defined in 'on topic' clauses and contain the current topic and its data. $this_gpio contains the state of the GPIO in an 'on gpio_pinmode' clause and $timestamp contains the current time of day in 'hh:mm:ss' format. 
+Currently the interpreter is configured for a maximum of 10 variables, with a significant id length of 15. Some (additional) vars contain special status: $this_topic and $this_data are only defined in 'on topic' clauses and contain the current topic and its data. $this_gpio contains the state of the GPIO in an 'on gpio_interrupt' clause and $timestamp contains the current time of day in 'hh:mm:ss' format. 
 
 In general, scripts have the following BNF:
 
@@ -214,7 +214,8 @@ In general, scripts have the following BNF:
              gpio_pinmode <num> [pullup]
              gpio_out <num> <expr> |
              if <expr> then <action> endif |
-	     print <expr> | println <expr>
+	     print <expr> | println <expr> |
+	     system <expr> |
              <action> <action>
 
 <expr> ::= <val> <op> <expr> | (<expr>) | not (<expr>)
@@ -300,7 +301,9 @@ The complete functionality is included in the mqtt directory and can be integrat
 bool MQTT_server_start(uint16_t portno, uint16_t max_subscriptions, uint16_t max_retained_topics);
 
 ```
-in the user_init() function. Now it is ready for MQTT connections on all activated interfaces (STA and/or AP). You can find a minimal demo in the directory "user_basic". Rename it to "user", adapt "user_config.h", and do the "make" to build a small demo that just starts an MQTT broker.
+in the user_init() function. Now it is ready for MQTT connections on all activated interfaces (STA and/or AP). Please note, that the lib uses two tasks (with prio 1 and 2) for client and broker. Thus, only task with prio 0 is left for a user application.
+
+You can find a minimal demo in the directory "user_basic". Rename it to "user", adapt "user_config.h", and do the "make" to build a small demo that just starts an MQTT broker without any additional logic.
 
 Your code can locally interact with the broker using the functions:
 

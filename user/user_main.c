@@ -304,7 +304,6 @@ void ICACHE_FLASH_ATTR scan_done(void *arg, STATUS status) {
 
 void ICACHE_FLASH_ATTR con_print(uint8_t *str) {
     ringbuf_memcpy_into(console_tx_buffer, str, os_strlen(str));
-//    console_send_response(console_conn);
     system_os_post(user_procTaskPrio, SIG_CONSOLE_TX_RAW, (ETSParam) console_conn);
 }
 
@@ -962,20 +961,23 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 
 #ifdef SCRIPTED
 void ICACHE_FLASH_ATTR do_command(char *t1, char *t2, char *t3) {
-int len;
-
     ringbuf_memcpy_into(console_rx_buffer, t1, os_strlen(t1));
     ringbuf_memcpy_into(console_rx_buffer, " ", 1);
     ringbuf_memcpy_into(console_rx_buffer, t2, os_strlen(t2));
     ringbuf_memcpy_into(console_rx_buffer, " ", 1);
     ringbuf_memcpy_into(console_rx_buffer, t3, os_strlen(t3));
+
     console_handle_command(0);
-    len = ringbuf_bytes_used(console_tx_buffer);
+
+    system_os_post(user_procTaskPrio, SIG_CONSOLE_TX_RAW, (ETSParam) console_conn);
+/*
+    int len = ringbuf_bytes_used(console_tx_buffer);
     if (len >= sizeof(tmp_buffer))
 	len = sizeof(tmp_buffer)-1;
     ringbuf_memcpy_from(tmp_buffer, console_tx_buffer, len);
     tmp_buffer[len] = '\0';
     os_printf("%s", tmp_buffer);
+*/
 }
 #endif
 

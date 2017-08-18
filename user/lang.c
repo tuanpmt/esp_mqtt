@@ -572,6 +572,19 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 	    }
 	}
 
+	else if (is_token(next_token, "system")) {
+	    char *p_char;
+	    int p_len;
+	    Value_Type p_type;
+
+	    len_check(1);
+	    if ((next_token = parse_expression(next_token + 1, &p_char, &p_len, &p_type, doit)) == -1)
+		return -1;
+	    if (doit) {
+		do_command(p_char, "", "");
+	    }
+	}
+
 	else if (is_token(next_token, "publish")) {
 	    bool retained = false;
 	    char *data;
