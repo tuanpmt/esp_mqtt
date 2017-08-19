@@ -96,7 +96,6 @@ on timer 1
 do
 	if $blink = 1 then
 		publish local $command_topic "toggle"
-
 		settimer 1 500
 	endif
 

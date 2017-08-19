@@ -967,17 +967,12 @@ void ICACHE_FLASH_ATTR do_command(char *t1, char *t2, char *t3) {
     ringbuf_memcpy_into(console_rx_buffer, " ", 1);
     ringbuf_memcpy_into(console_rx_buffer, t3, os_strlen(t3));
 
-    console_handle_command(0);
+    uint8_t save_locked = config.locked;
+    config.locked = false;
+    console_handle_command(console_conn);
+    config.locked = save_locked;
 
     system_os_post(user_procTaskPrio, SIG_CONSOLE_TX_RAW, (ETSParam) console_conn);
-/*
-    int len = ringbuf_bytes_used(console_tx_buffer);
-    if (len >= sizeof(tmp_buffer))
-	len = sizeof(tmp_buffer)-1;
-    ringbuf_memcpy_from(tmp_buffer, console_tx_buffer, len);
-    tmp_buffer[len] = '\0';
-    os_printf("%s", tmp_buffer);
-*/
 }
 #endif
 
