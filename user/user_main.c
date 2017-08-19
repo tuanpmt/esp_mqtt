@@ -461,9 +461,12 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	    os_sprintf(response, "System uptime: %d:%02d:%02d\r\n", time / 3600, (time % 3600) / 60, time % 60);
 	    to_console(response);
 
-	    os_sprintf(response, "Free mem: %d\r\nInterpreter loop: %d us\r\n", system_get_free_heap_size(), loop_time);
+	    os_sprintf(response, "Free mem: %d\r\n", system_get_free_heap_size());
 	    to_console(response);
-
+#ifdef SCRIPTED
+	    os_sprintf(response, "Interpreter loop: %d us\r\n", loop_time);
+	    to_console(response);
+#endif
 	    if (connected) {
 		os_sprintf(response, "External IP-address: " IPSTR "\r\n", IP2STR(&my_ip));
 	    } else {
@@ -596,7 +599,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 #endif
 #ifdef NTP
     if (strcmp(tokens[0], "time") == 0) {
-	os_sprintf(response, "%s\r\n", get_timestr(config.ntp_timezone));
+	os_sprintf(response, "%s\r\n", get_timestr());
 	goto command_handled;
     }
 #endif
@@ -640,8 +643,10 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	}
 
 	if (strcmp(tokens[1], "delete") == 0) {
+#ifdef SCRIPTED
 #ifdef GPIO
 	    stop_gpios();
+#endif
 #endif
 	    script_enabled = false;
 	    if (my_script != NULL)
@@ -657,8 +662,10 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	    goto command_handled;
 	}
 	// delete and disable existing script
+#ifdef SCRIPTED
 #ifdef GPIO
 	stop_gpios();
+#endif
 #endif
 	script_enabled = false;
 	if (my_script != NULL)
@@ -1131,7 +1138,9 @@ static void ICACHE_FLASH_ATTR user_procTask(os_event_t * events) {
     }
 
     // Check queued messages on any signal
+#ifdef SCRIPTED
     pub_process();
+#endif
 }
 
 /* Callback called when the connection state of the module with an Access Point changes */

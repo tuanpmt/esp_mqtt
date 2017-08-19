@@ -1,11 +1,6 @@
 #ifndef _USER_CONFIG_
 #define _USER_CONFIG_
 
-typedef enum {SIG_DO_NOTHING=0, SIG_START_SERVER=1, SIG_UART0, SIG_TOPIC_RECEIVED, SIG_SCRIPT_LOADED, SIG_CONSOLE_TX_RAW, SIG_CONSOLE_TX, SIG_CONSOLE_RX} USER_SIGNALS;
-
-#define LOCAL_ACCESS 0x01
-#define REMOTE_ACCESS 0x02
-
 #define WIFI_SSID            "ssid"
 #define WIFI_PASSWORD        "password"
 
@@ -33,8 +28,7 @@ typedef enum {SIG_DO_NOTHING=0, SIG_START_SERVER=1, SIG_UART0, SIG_TOPIC_RECEIVE
 // Define this if you want to have script support.
 //
 #define SCRIPTED  1
-// Define this if you want to have GPIO OUT support in scripts.
-#define GPIO	  1
+
 // Some params for scripts
 
 #define MAX_SCRIPT_SIZE 0x1000
@@ -49,11 +43,8 @@ typedef enum {SIG_DO_NOTHING=0, SIG_START_SERVER=1, SIG_UART0, SIG_TOPIC_RECEIVE
 //
 #define NTP	  1
 
-//
-// Size of the console buffers
-//
-#define MAX_CON_SEND_SIZE    1024
-#define MAX_CON_CMD_SIZE     80
+// Define this if you want to have GPIO OUT support in scripts.
+#define GPIO	  1
 
 //
 // Define this to support the "scan" command for AP search
@@ -67,4 +58,15 @@ typedef enum {SIG_DO_NOTHING=0, SIG_START_SERVER=1, SIG_UART0, SIG_TOPIC_RECEIVE
 #define REMOTE_CONFIG      1
 #define CONSOLE_SERVER_PORT  7777
 
-#endif
+//
+// Size of the console buffers
+//
+#define MAX_CON_SEND_SIZE    1024
+#define MAX_CON_CMD_SIZE     80
+
+typedef enum {SIG_DO_NOTHING=0, SIG_START_SERVER=1, SIG_UART0, SIG_TOPIC_RECEIVED, SIG_SCRIPT_LOADED, SIG_CONSOLE_TX_RAW, SIG_CONSOLE_TX, SIG_CONSOLE_RX} USER_SIGNALS;
+
+#define LOCAL_ACCESS 0x01
+#define REMOTE_ACCESS 0x02
+
+#endif /* _USER_CONFIG_ */

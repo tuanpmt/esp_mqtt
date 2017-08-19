@@ -4,12 +4,16 @@
 #include "lang.h"
 #include "user_config.h"
 #include "mqtt_topics.h"
+#ifdef NTP
 #include "ntp.h"
-
+#endif
+#ifdef GPIO
 #include "easygpio.h"
-
-#define lang_debug		//os_printf
-#define lang_info 		//os_printf
+#endif
+#define lang_debug	//os_printf
+//bool lang_logging = true;
+//#define lang_log(...) 	{if (lang_logging){char log_buffer[256]; os_sprintf (log_buffer, "%s: ", get_timestr()); con_print(log_buffer); os_sprintf (log_buffer, __VA_ARGS__); con_print(log_buffer);}}
+#define lang_log	//os_printf
 
 extern uint8_t *my_script;
 extern void do_command(char *t1, char *t2, char *t3);
@@ -118,7 +122,7 @@ void ICACHE_FLASH_ATTR check_timestamps(uint8_t * curr_time) {
 	if (os_strcmp(curr_time, timestamps[i].ts) >= 0) {
 	    if (timestamps[i].happened)
 		continue;
-	    lang_info("timerstamp %s happened\r\n", timestamps[i].ts);
+	    lang_debug("timerstamp %s happened\r\n", timestamps[i].ts);
 
 	    interpreter_topic = interpreter_data = "";
 	    interpreter_data_len = 0;
@@ -444,6 +448,8 @@ int ICACHE_FLASH_ATTR parse_event(int next_token, bool * happend) {
 	lang_debug("event init\r\n");
 
 	*happend = (interpreter_status == INIT);
+	if (*happend)
+	    lang_log("on init\r\n");
 	return next_token + 1;
     }
 
@@ -451,6 +457,8 @@ int ICACHE_FLASH_ATTR parse_event(int next_token, bool * happend) {
 	lang_debug("event mqttconnect\r\n");
 
 	*happend = (interpreter_status == MQTT_CLIENT_CONNECT);
+	if (*happend)
+	    lang_log("on init\r\n");
 	return next_token + 1;
     }
 
@@ -480,7 +488,7 @@ int ICACHE_FLASH_ATTR parse_event(int next_token, bool * happend) {
 	*happend = Topics_matches(topic, true, interpreter_topic);
 
 	if (*happend)
-	    lang_info("topic %s %s match\r\n", my_token[lr_token],
+	    lang_log("on topic %s %s matched %s\r\n", my_token[lr_token],
 		      topic, interpreter_topic);
 
 	return next_token;
@@ -494,7 +502,7 @@ int ICACHE_FLASH_ATTR parse_event(int next_token, bool * happend) {
 	if (timer_no == 0 || timer_no > MAX_TIMERS)
 	    return syntax_error(next_token + 1, "invalid timer number");
 	if (interpreter_status == TIMER && interpreter_timer == --timer_no) {
-	    lang_info("timer %s expired\r\n", my_token[next_token + 1]);
+	    lang_log("on timer %s\r\n", my_token[next_token + 1]);
 	    *happend = true;
 	}
 	return next_token + 2;
@@ -522,7 +530,7 @@ int ICACHE_FLASH_ATTR parse_event(int next_token, bool * happend) {
 	    gpio_counter++;
 	}
 	if (interpreter_status == GPIO_INT && interpreter_gpio == gpio_no) {
-	    lang_info("gpio %s interrupt\r\n", my_token[next_token + 1]);
+	    lang_log("on gpio_interrupt %s\r\n", my_token[next_token + 1]);
 	    *happend = true;
 	}
 	return next_token + 3;
@@ -540,6 +548,8 @@ int ICACHE_FLASH_ATTR parse_event(int next_token, bool * happend) {
 	    timestamps[ts_counter++].ts = my_token[next_token + 1];
 	}
 	*happend = (interpreter_status == CLOCK && os_strcmp(interpreter_timestamp, my_token[next_token + 1]) == 0);
+	if (*happend)
+	    lang_log("on clock %s\r\n", my_token[next_token + 1]);
 	return next_token + 2;
     }
 
@@ -581,6 +591,7 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 	    if ((next_token = parse_expression(next_token + 1, &p_char, &p_len, &p_type, doit)) == -1)
 		return -1;
 	    if (doit) {
+		lang_log("system '%s'\r\n", p_char);
 		do_command(p_char, "", "");
 	    }
 	}
@@ -615,15 +626,23 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 #ifdef MQTT_CLIENT
 	    if (is_token(lr_token, "remote")) {
 		if (doit && mqtt_connected) {
+		    if (data_type == STRING_T) {
+		    	lang_log("publish remote %s %s\r\n", topic, data);
+		    } else {
+			lang_log("publish remote %s binary (%d bytes)\r\n", topic, data_len);
+		    }
 		    MQTT_Publish(&mqttClient, topic, data, data_len, 0, retained);
-		    lang_info("published remote %s len: %d\r\n", topic, data_len);
 		}
 	    } else
 #endif
 	    if (is_token(lr_token, "local")) {
 		if (doit) {
+		    if (data_type == STRING_T) {
+		    	lang_log("publish local %s %s\r\n", topic, data);
+		    } else {
+			lang_log("publish local %s binary (%d bytes)\r\n", topic, data_len);
+		    }
 		    MQTT_local_publish(topic, data, data_len, 0, retained);
-		    lang_info("published local %s len: %d\r\n", topic, data_len);
 		}
 	    } else {
 		return syntax_error(lr_token, "'local' or 'remote' expected");
@@ -643,15 +662,15 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 #ifdef MQTT_CLIENT
 	    if (is_token(rl_token, "remote")) {
 		if (doit && mqtt_connected) {
+		    lang_log("subscribe remote %s\r\n", topic);
 		    retval = MQTT_Subscribe(&mqttClient, topic, 0);
-		    lang_info("subscribe remote %s %s\r\n", topic, retval ? "success" : "failed");
 		}
 	    } else 
 #endif
 	    if (is_token(rl_token, "local")) {
 		if (doit) {
+		    lang_log("subscribe local %s\r\n", topic);
 		    retval = MQTT_local_subscribe(topic, 0);
-		    lang_info("subscribe local %s %s\r\n", topic, retval ? "success" : "failed");
 		}
 	    } else {
 		return syntax_error(next_token + 1, "'local' or 'remote' expected");
@@ -671,15 +690,15 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 #ifdef MQTT_CLIENT
 	    if (is_token(rl_token, "remote")) {
 		if (doit && mqtt_connected) {
+		    lang_log("unsubscribe remote %s\r\n", topic);
 		    retval = MQTT_UnSubscribe(&mqttClient, topic);
-		    lang_info("unsubsrcibe remote %s %s\r\n", topic, retval ? "success" : "failed");
 		}
 	    } else
 #endif
 	    if (is_token(rl_token, "local")) {
 		if (doit) {
+		    lang_log("subscribe local %s\r\n", topic);
 		    retval = MQTT_local_unsubscribe(topic);
-		    lang_info("unsubsrcibe local %s %s\r\n", topic, retval ? "success" : "failed");
 		}
 	    } else {
 		return syntax_error(next_token + 1, "'local' or 'remote' expected");
@@ -700,7 +719,7 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 
 	    if (doit) {
 		if_val = atoi(if_char);
-		lang_info("if %s\r\n", if_val != 0 ? "done" : "not done");
+		lang_log("if %s\r\n", if_val != 0 ? "(done)" : "(not done)");
 	    }
 	    if ((next_token = parse_action(next_token + 1, doit && if_val != 0)) == -1)
 		return -1;
@@ -721,9 +740,9 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 
 	    if (doit) {
 		timer_val = atoi(timer_char);
-		lang_info("settimer %d %d\r\n", timer_no, timer_val);
-		timer_no--;
+		lang_log("settimer %d %d\r\n", timer_no, timer_val);
 
+		timer_no--;
 		os_timer_disarm(&timers[timer_no]);
 		if (timer_val != 0) {
 		    os_timer_setfn(&timers[timer_no], (os_timer_func_t *) lang_timers_timeout, timer_no);
@@ -762,6 +781,11 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 		return -1;
 
 	    if (doit) {
+		if (var_type == STRING_T) {
+		    lang_log("setvar %s = %s\r\n", this_var->name, var_data);
+		} else {
+		    lang_log("setvar %s = binary (%d bytes)\r\n", this_var->name, var_len);
+		}
 		lang_debug("setvar $%s\r\n", this_var->name);
 		if (var_len > this_var->buffer_len - 1) {
 		    os_free(this_var->data);
@@ -801,8 +825,7 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 	    }
 
 	    if (doit) {
-		lang_info("gpio_pinmode %d %s\r\n", gpio_no, inout == EASYGPIO_INPUT ? "input" : "output");
-
+		lang_log("gpio_pinmode %d %s\r\n", gpio_no, inout == EASYGPIO_INPUT ? "input" : "output");
 		easygpio_pinMode(gpio_no, pullup, inout);
 	    }
 	    next_token += 3;
@@ -822,8 +845,7 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 		return -1;
 
 	    if (doit) {
-		lang_info("gpio_out %d %d\r\n", gpio_no, atoi(gpio_data) != 0);
-
+		lang_log("gpio_out %d %d\r\n", gpio_no, atoi(gpio_data) != 0);
 		if (easygpio_pinMode(gpio_no, EASYGPIO_NOPULL, EASYGPIO_OUTPUT))
 		    easygpio_outputSet(gpio_no, atoi(gpio_data) != 0);
 	    }
