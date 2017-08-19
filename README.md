@@ -28,22 +28,25 @@ After reboot it will connect to your home router and itself is ready for station
 
 The console understands the following commands:
 
-Basic commands (enough to get it working in nearly all environments):
+General commands:
 
 - help: prints a short help message
-- set [ssid|password] _value_: changes the settings for the uplink AP (WiFi config of your home-router)
-- set ap_on [0|1]: selects, whether the soft-AP is disabled (ap_on=0) or enabled (ap_on=1, default)
-- set [ap_ssid|ap_password] _value_: changes the settings for the soft-AP of the ESP (for your stations)
 - show [config|stats|script|mqtt]: prints the current config or some status information and statistics
 - save: saves the current config parameters to flash
-- set broker_user _unsername_: sets the username for authentication of MQTT clients ("none" if no auth, default)
-- set broker_password _password_: sets the password for authentication of MQTT clients ("none" if empty, default)
 - lock [_password_]: saves and locks the current config, changes are not allowed. Password can be left open if already set before
 - unlock _password_: unlocks the config, requires password from the lock command
 - reset [factory]: resets the esp, 'factory' optionally resets WiFi params to default values (works on a locked device only from serial console)
+- set speed [80|160]: sets the CPU clock frequency (default 80 Mhz)
+- set config_port _portno_: sets the port number of the console login (default is 7777, 0 disables remote console config)
+- set config_access _mode_: controls the networks that allow config access (0: no access, 1: only internal, 2: only external, 3: both (default))
 - quit: terminates a remote session
 
-Advanced commands (most of the set-commands are effective only after save and reset):
+WiFi and network related commands:
+
+- set [ssid|password] _value_: changes the settings for the uplink AP (WiFi config of your home-rou- set [ap_ssid|ap_password] _value_: changes the settings for the soft-AP of the ESP (for your stations)ter)
+- set ap_on [0|1]: selects, whether the soft-AP is disabled (ap_on=0) or enabled (ap_on=1, default)
+- set ap_open [0|1]: selects, whether the soft-AP uses WPA2 security (ap_open=0,  automatic, if an ap_password is set) or open (ap_open=1)
+- set auto_connect [0|1]: selects, whether the WiFi client should automatically retry to connect to the uplink AP (default: on=1)
 - set network _ip-addr_: sets the IP address of the internal network, network is always /24, router is always x.x.x.1
 - set dns _dns-addr_: sets a static DNS address
 - set dns dhcp: configures use of the dynamic DNS address from DHCP, default
@@ -52,13 +55,17 @@ Advanced commands (most of the set-commands are effective only after save and re
 - set netmask _netmask_: sets a static netmask for the uplink network
 - set gw _gw-addr_: sets a static gateway address in the uplink network
 - scan: does a scan for APs
-- set ap_open [0|1]: selects, whether the soft-AP uses WPA2 security (ap_open=0,  automatic, if an ap_password is set) or open (ap_open=1)
-- set speed [80|160]: sets the CPU clock frequency (default 80 Mhz)
-- set config_port _portno_: sets the port number of the console login (default is 7777, 0 disables remote console config)
-- set config_access _mode_: controls the networks that allow config access (0: no access, 1: only internal, 2: only external, 3: both (default))
-- script [_portno_|delete]: opens port for upload of scripts or deletes the current script
 
 While the user interface looks similar to my esp_wifi_repeater at https://github.com/martin-ger/esp_wifi_repeater this does NO NAT routing. AP and STA network are stricly separated and there is no routing in between. The only possible connection via both networks is the uMQTT broker that listens on both interfaces.
+
+MQTT broker related command:
+
+- set broker_user _unsername_: sets the username for authentication of MQTT clients ("none" if no auth, default)
+- set broker_password _password_: sets the password for authentication of MQTT clients ("none" if empty, default)
+- set broker_subscriptions _max_: sets the max number of subscription the broker can store (default: 30)
+- set broker_retained_messages _max_: sets the max number of retained messages the broker can store (default: 30)
+- set script_logging [0|1]: switches logging of script execution on or off (not permanently stored in the configuration)
+- script [_portno_|delete]: opens port for upload of scripts or deletes the current script
 
 # MQTT client/bridging functionality
 The broker comes with a "local" and a "remote" client, which means, the broker itself can publish and subscribe topics. The "local" client is a client to the own broker (without the need of an additional TCP connection).

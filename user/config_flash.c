@@ -35,6 +35,8 @@ void config_load_default(sysconfig_p config) {
     config->config_port = CONSOLE_SERVER_PORT;
     config->config_access = LOCAL_ACCESS | REMOTE_ACCESS;
 
+    config->max_subscriptions = 30;
+    config->max_retained_messages = 30;
     os_sprintf(config->mqtt_broker_user, "%s", "none");
     config->mqtt_broker_password[0] = 0;
 

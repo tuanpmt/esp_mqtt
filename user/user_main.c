@@ -364,7 +364,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 
     if (strcmp(tokens[0], "help") == 0) {
 	os_sprintf(response,
-		   "show [config|stats|mqtt|script]\r\n|set [ssid|password|auto_connect|ap_ssid|ap_password|network|dns|ip|netmask|gw|ap_on|ap_open|speed|config_port|config_access|broker_user|broker_password] <val>\r\n|quit|save [config]|reset [factory]|lock [<password>]|unlock <password>");
+		   "show [config|stats|mqtt|script]\r\n|set [ssid|password|auto_connect|ap_ssid|ap_password|network|dns|ip|netmask|gw|ap_on|ap_open|speed|config_port|config_access|broker_subscriptions|broker_retained_messages|broker_user|broker_password] <val>\r\n|quit|save [config]|reset [factory]|lock [<password>]|unlock <password>");
 	to_console(response);
 #ifdef SCRIPTED
 	os_sprintf(response, "|script <port>");
@@ -422,9 +422,12 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	    to_console(response);
 #endif
 
+	    os_sprintf(response, "MQTT broker max. subscription: %d\r\nMQTT broker max. retained messages: %d\r\n",
+		       config.max_subscriptions, config.max_retained_messages);
+		to_console(response);
 	    if (os_strcmp(config.mqtt_broker_user, "none") != 0) {
 		os_sprintf(response,
-			   "MQTT broker username: %s password: %s\r\n",
+			   "MQTT broker username: %s\r\nMQTT broker password: %s\r\n",
 			   config.mqtt_broker_user,
 			   config.locked ? "***" : (char *)config.mqtt_broker_password);
 		to_console(response);
@@ -435,7 +438,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 
 	    if (os_strcmp(config.mqtt_host, "none") != 0) {
 		os_sprintf(response,
-			   "MQTT host: %s\r\nMQTT port: %d\r\nMQTT user: %s\r\nMQTT password: %s\r\nMQTT id: %s\r\n",
+			   "MQTT client host: %s\r\nMQTT client port: %d\r\nMQTT client user: %s\r\nMQTT client password: %s\r\nMQTT client id: %s\r\n",
 			   config.mqtt_host, config.mqtt_port, config.mqtt_user,
 			   config.locked ? "***" : (char *)config.mqtt_password, config.mqtt_id);
 		to_console(response);
@@ -878,6 +881,18 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 		goto command_handled;
 	    }
 #endif
+	    if (strcmp(tokens[1], "broker_subscriptions") == 0) {
+		config.max_subscriptions = atoi(tokens[2]);
+		os_sprintf(response, "Broker subscriptions set\r\n");
+		goto command_handled;
+	    }
+
+	    if (strcmp(tokens[1], "broker_retained_messages") == 0) {
+		config.max_retained_messages = atoi(tokens[2]);
+		os_sprintf(response, "Broker retained messages set\r\n");
+		goto command_handled;
+	    }
+
 	    if (strcmp(tokens[1], "broker_user") == 0) {
 		os_strncpy(config.mqtt_broker_user, tokens[2], 32);
 		config.mqtt_broker_user[31] = '\0';
@@ -895,6 +910,13 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 		os_sprintf(response, "Broker password set\r\n");
 		goto command_handled;
 	    }
+#ifdef SCRIPTED
+	    if (strcmp(tokens[1], "script_logging") == 0) {
+		lang_logging = atoi(tokens[2]);
+		os_sprintf(response, "Script logging set\r\n");
+		goto command_handled;
+	    }
+#endif
 #ifdef NTP
 	    if (strcmp(tokens[1], "ntp_server") == 0) {
 		os_strncpy(config.ntp_server, tokens[2], 32);
@@ -1406,8 +1428,8 @@ void  user_init() {
     MQTT_local_onData(MQTT_local_DataCallback);
     MQTT_server_onAuth(mqtt_broker_auth);
 
-    MQTT_server_start(1883 /*port */ , 30 /*max_subscriptions */ ,
-		      30 /*max_retained_items */ );
+    MQTT_server_start(1883 /*port */ , config.max_subscriptions,
+		      config.max_retained_messages);
 
     //Start task
     system_os_task(user_procTask, user_procTaskPrio, user_procTaskQueue, user_procTaskQueueLen);

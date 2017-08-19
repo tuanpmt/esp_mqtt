@@ -11,9 +11,9 @@
 #include "easygpio.h"
 #endif
 #define lang_debug	//os_printf
-//bool lang_logging = true;
-//#define lang_log(...) 	{if (lang_logging){char log_buffer[256]; os_sprintf (log_buffer, "%s: ", get_timestr()); con_print(log_buffer); os_sprintf (log_buffer, __VA_ARGS__); con_print(log_buffer);}}
-#define lang_log	//os_printf
+
+#define lang_log(...) 	{if (lang_logging){char log_buffer[256]; os_sprintf (log_buffer, "%s: ", get_timestr()); con_print(log_buffer); os_sprintf (log_buffer, __VA_ARGS__); con_print(log_buffer);}}
+//#define lang_log	//os_printf
 
 extern uint8_t *my_script;
 extern void do_command(char *t1, char *t2, char *t3);
@@ -48,6 +48,7 @@ typedef struct _gpio_entry_t {
 static gpio_entry_t gpios[MAX_GPIOS];
 #endif
 
+bool lang_logging = false;
 char **my_token;
 int max_token;
 bool script_enabled = false;

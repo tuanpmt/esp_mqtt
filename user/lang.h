@@ -5,6 +5,8 @@
 
 extern MQTT_Client mqttClient;
 extern bool mqtt_enabled, mqtt_connected;
+extern bool lang_logging;
+
 uint8_t tmp_buffer[128];
 uint32_t loop_time;
 
