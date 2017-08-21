@@ -63,6 +63,7 @@ MQTT broker related command:
 
 - set broker_user _unsername_: sets the username for authentication of MQTT clients ("none" if no auth, default)
 - set broker_password _password_: sets the password for authentication of MQTT clients ("none" if empty, default)
+- set broker_access _mode_: controls the networks that allow MQTT broker access (0: no access, 1: only internal, 2: only external, 3: both (default))
 - set broker_subscriptions _max_: sets the max number of subscription the broker can store (default: 30)
 - set broker_retained_messages _max_: sets the max number of retained messages the broker can store (default: 30)
 - set script_logging [0|1]: switches logging of script execution on or off (not permanently stored in the configuration)
@@ -324,7 +325,8 @@ Your code can locally interact with the broker using the functions:
 bool MQTT_local_publish(uint8_t* topic, uint8_t* data, uint16_t data_length, uint8_t qos, uint8_t retain);
 bool MQTT_local_subscribe(uint8_t* topic, uint8_t qos);
 bool MQTT_local_unsubscribe(uint8_t* topic);
-void MQTT_local_onData(MqttDataCallback dataCb);
+
+void MQTT_server_onData(MqttDataCallback dataCb);
 ```
 
 With these functions you can publish and subscribe topics as a local client like you would with a remote MQTT broker.
@@ -332,9 +334,15 @@ With these functions you can publish and subscribe topics as a local client like
 Username/password authentication is provided with the following interface:
 
 ```c
-typedef bool (*MqttAuthCallback)(const char* username, const char *password);
+typedef bool (*MqttAuthCallback)(const char* username, const char *password, struct espconn *pesp_conn);
 
 void MQTT_server_onAuth(MqttAuthCallback authCb);
+
+typedef bool (*MqttConnectCallback)(struct espconn *pesp_conn);
+
+void MQTT_server_onConnect(MqttConnectCallback connectCb);
 ```
 
-If an *MqttAuthCallback* function is provided, it is called on each connect request. Based on username and password the function has to return *true* for authenticated or *false* for rejected. If a request provides no username and or password the strings are empty. If no *MqttAuthCallback* function is set, each request will be admitted.
+If an *MqttAuthCallback* function is registered with MQTT_server_onAuth(), it is called on each connect request. Based on username, password, and optionally the connection info (e.g. the IP address) the function has to return *true* for authenticated or *false* for rejected. If a request provides no username and/or password these parameter strings are empty. If no *MqttAuthCallback* function is set, each request will be admitted.
+
+The *MqttConnectCallback* function does a similar check for the connection, but it is called right after the connect request before any internal status is allocated. This is done in order to reject requests from unautorized clients in an early stage.

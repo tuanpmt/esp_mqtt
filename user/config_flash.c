@@ -41,6 +41,7 @@ void config_load_default(sysconfig_p config) {
     config->max_retained_messages = 30;
     os_sprintf(config->mqtt_broker_user, "%s", "none");
     config->mqtt_broker_password[0] = 0;
+    config->mqtt_broker_access = LOCAL_ACCESS | REMOTE_ACCESS;
 
 #ifdef MQTT_CLIENT
     os_sprintf(config->mqtt_host, "%s", "none");

@@ -36,6 +36,7 @@ LOCAL uint8_t zero_len_id[2] = { 0, 0 };
 
 MQTT_ClientCon *clientcon_list;
 LOCAL MqttDataCallback local_data_cb = NULL;
+LOCAL MqttConnectCallback local_connect_cb = NULL;
 LOCAL MqttAuthCallback local_auth_cb = NULL;
 
 //#define MQTT_INFO os_printf
@@ -505,7 +506,8 @@ static void ICACHE_FLASH_ATTR MQTT_ClientCon_recv_cb(void *arg, char *pdata, uns
 	    // Check Auth
 	    if ((local_auth_cb != NULL) && 
 		local_auth_cb(clientcon->connect_info.username==NULL?"":clientcon->connect_info.username,
-			      clientcon->connect_info.password==NULL?"":clientcon->connect_info.password) == false) {
+			      clientcon->connect_info.password==NULL?"":clientcon->connect_info.password,
+			      clientcon->pCon) == false) {
 		MQTT_WARNING("MQTT: Authorization failed\r\n");
 		msg_conn_ret = CONNECTION_REFUSE_NOT_AUTHORIZED;
 		clientcon->connState = TCP_DISCONNECTING;
@@ -763,8 +765,15 @@ static void ICACHE_FLASH_ATTR MQTT_ClientCon_sent_cb(void *arg) {
 static void ICACHE_FLASH_ATTR MQTT_ClientCon_connected_cb(void *arg) {
     struct espconn *pespconn = (struct espconn *)arg;
     MQTT_ClientCon *mqttClientCon;
+    pespconn->reverse = NULL;
 
     MQTT_INFO("MQTT_ClientCon_connected_cb(): Client connected\r\n");
+
+    if (local_connect_cb != NULL && local_connect_cb(pespconn) == false) {
+	MQTT_INFO("Connected not allowed\r\n");
+	espconn_disconnect(pespconn);
+	return;
+    }
 
     espconn_regist_sentcb(pespconn, MQTT_ClientCon_sent_cb);
     espconn_regist_disconcb(pespconn, MQTT_ClientCon_discon_cb);
@@ -873,8 +882,12 @@ bool ICACHE_FLASH_ATTR MQTT_local_unsubscribe(uint8_t * topic) {
     return delete_topic(LOCAL_MQTT_CLIENT, topic);
 }
 
-void ICACHE_FLASH_ATTR MQTT_local_onData(MqttDataCallback dataCb) {
+void ICACHE_FLASH_ATTR MQTT_server_onData(MqttDataCallback dataCb) {
     local_data_cb = dataCb;
+}
+
+void ICACHE_FLASH_ATTR MQTT_server_onConnect(MqttConnectCallback connectCb) {
+    local_connect_cb = connectCb;
 }
 
 void ICACHE_FLASH_ATTR MQTT_server_onAuth(MqttAuthCallback authCb) {
