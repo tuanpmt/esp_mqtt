@@ -96,6 +96,20 @@ bool ICACHE_FLASH_ATTR publish_retainedtopic(retained_entry * entry, MQTT_Client
     return true;
 }
 
+bool ICACHE_FLASH_ATTR delete_client_by_id(const uint8_t *id) {
+    MQTT_ClientCon *clientcon = clientcon_list;
+
+    for (clientcon = clientcon_list; clientcon != NULL; clientcon = clientcon->next) {
+	if (os_strcmp(id, clientcon->connect_info.client_id) == 0) {
+	    MQTT_INFO("MQTT: Disconnect client: %s\r\n", clientcon->connect_info.client_id);
+	    clientcon->connState = TCP_DISCONNECTED;
+	    espconn_disconnect(clientcon->pCon);
+	    return true;
+	}
+    }
+    return true;
+}
+
 bool ICACHE_FLASH_ATTR activate_next_client() {
     MQTT_ClientCon *clientcon = clientcon_list;
 
@@ -370,17 +384,21 @@ static void ICACHE_FLASH_ATTR MQTT_ClientCon_recv_cb(void *arg, char *pdata, uns
 		}
 		clientcon->connect_info.client_id = zero_len_id;
 	    } else {
-		clientcon->connect_info.client_id = (char *)os_zalloc(id_len + 1);
-		if (clientcon->connect_info.client_id != NULL) {
-		    os_memcpy(clientcon->connect_info.client_id, client_id, id_len);
-		    clientcon->connect_info.client_id[id_len] = 0;
-		    MQTT_INFO("MQTT: Client id %s\r\n", clientcon->connect_info.client_id);
-		} else {
+		uint8_t *new_id = (char *)os_zalloc(id_len + 1);
+		if (new_id == NULL) {
 		    MQTT_ERROR("MQTT: Out of mem\r\n");
 		    msg_conn_ret = CONNECTION_REFUSE_SERVER_UNAVAILABLE;
 		    clientcon->connState = TCP_DISCONNECTING;
 		    break;
 		}
+		os_memcpy(new_id, client_id, id_len);
+		new_id[id_len] = '\0';		
+
+		// Delete any existing status for that id
+		delete_client_by_id(client_id);
+
+		clientcon->connect_info.client_id = new_id;
+		MQTT_INFO("MQTT: Client id %s\r\n", clientcon->connect_info.client_id);
 	    }
 	    msg_used_len += 2 + id_len;
 

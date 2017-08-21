@@ -748,7 +748,7 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 	    char *timer_char;
 	    int timer_len;
 	    Value_Type timer_type;
-	    if ((next_token = parse_value(next_token + 2, &timer_char, &timer_len, &timer_type)) == -1)
+	    if ((next_token = parse_expression(next_token + 2, &timer_char, &timer_len, &timer_type, doit)) == -1)
 		return -1;
 
 	    if (doit) {
