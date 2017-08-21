@@ -31,6 +31,8 @@ void config_load_default(sysconfig_p config) {
     config->my_netmask.addr = 0;	// use DHCP   
     config->my_gw.addr = 0;	// use DHCP   
 
+    config->mdns_mode = 0;	// no mDNS
+
     config->clock_speed = 80;
     config->config_port = CONSOLE_SERVER_PORT;
     config->config_access = LOCAL_ACCESS | REMOTE_ACCESS;

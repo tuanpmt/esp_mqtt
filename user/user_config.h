@@ -39,12 +39,19 @@
 #define MAX_TIMESTAMPS	6
 
 //
+// Define this if you want to have GPIO OUT support in scripts.
+//
+#define GPIO	  1
+
+//
 // Define this if you want to have NTP support.
 //
 #define NTP	  1
 
-// Define this if you want to have GPIO OUT support in scripts.
-#define GPIO	  1
+//
+// Define this if you want to have mDNS support in scripts.
+//
+#define MDNS	  1
 
 //
 // Define this to support the "scan" command for AP search

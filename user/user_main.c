@@ -22,6 +22,10 @@
 uint64_t t_ntp_resync = 0;
 #endif
 
+#ifdef MDNS
+static struct mdns_info mdnsinfo;
+#endif
+
 #ifdef SCRIPTED
 #include "lang.h"
 #include "pub_list.h"
@@ -412,7 +416,12 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	    // if static DNS, add it
 	    os_sprintf(response, config.dns_addr.addr ? "DNS: %d.%d.%d.%d\r\n" : "", IP2STR(&config.dns_addr));
 	    to_console(response);
-
+#ifdef MDNS
+	    if (config.mdns_mode) {
+		os_sprintf(response, "mDNS: %s interface\r\n", config.mdns_mode==1 ? "STA": "SoftAP");
+		to_console(response);
+	    }
+#endif
 #ifdef REMOTE_CONFIG
 	    if (config.config_port == 0 || config.config_access == 0) {
 		os_sprintf(response, "No network console access\r\n");
@@ -801,6 +810,11 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 		} else {
 		    if (config.ap_on) {
 			wifi_set_opmode(STATION_MODE);
+#ifdef MDNS
+			if (config.mdns_mode == 2) {
+			    espconn_mdns_close();
+			}
+#endif
 			config.ap_on = false;
 			os_sprintf(response, "AP off\r\n");
 		    } else {
@@ -862,6 +876,13 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 		os_sprintf(response, "Gateway set to %d.%d.%d.%d\r\n", IP2STR(&config.my_gw));
 		goto command_handled;
 	    }
+#ifdef MDNS
+	    if (strcmp(tokens[1], "mdns_mode") == 0) {
+		config.mdns_mode = atoi(tokens[2]);
+		os_sprintf(response, "mDNS mode set to %d\r\n", config.mdns_mode);
+		goto command_handled;
+	    }
+#endif
 #ifdef REMOTE_CONFIG
 	    if (strcmp(tokens[1], "config_port") == 0) {
 		config.config_port = atoi(tokens[2]);
@@ -1073,6 +1094,22 @@ void ICACHE_FLASH_ATTR timer_func(void *arg) {
     // Do we still have to configure the AP netif? 
     if (do_ip_config) {
 	user_set_softap_ip_config();
+#ifdef MDNS
+	if (config.mdns_mode == 2) {
+	    struct mdns_info *info = &mdnsinfo;
+	    struct ip_info ipconfig;
+
+	    wifi_get_ip_info(SOFTAP_IF, &ipconfig);
+
+	    info->host_name = "mqtt";
+	    info->ipAddr = ipconfig.ip.addr; //ESP8266 SoftAP IP
+	    info->server_name = "mqtt";
+	    info->server_port = 1883;
+	    //info->txt_data[0] = "version = now";
+
+	    espconn_mdns_init(info);
+	}
+#endif
 	do_ip_config = false;
     }
 
@@ -1188,6 +1225,11 @@ void wifi_handle_event_cb(System_Event_t * evt) {
 	    MQTT_Disconnect(&mqttClient);
 #endif				/* MQTT_CLIENT */
 
+#ifdef MDNS
+	if (config.mdns_mode == 1) {
+	    espconn_mdns_close();
+	}
+#endif
 	break;
 
     case EVENT_STAMODE_AUTHMODE_CHANGE:
@@ -1209,12 +1251,26 @@ void wifi_handle_event_cb(System_Event_t * evt) {
 #ifdef MQTT_CLIENT
 	if (mqtt_enabled)
 	    MQTT_Connect(&mqttClient);
-#endif				/* MQTT_CLIENT */
+#endif
 
 #ifdef NTP
 	if (os_strcmp(config.ntp_server, "none") != 0)
 	    ntp_set_server(config.ntp_server);
 	set_timezone(config.ntp_timezone);
+#endif
+
+#ifdef MDNS
+	if (config.mdns_mode == 1) {
+	    struct mdns_info *info = &mdnsinfo;
+
+	    info->host_name = "mqtt";
+	    info->ipAddr = evt->event_info.got_ip.ip.addr; //ESP8266 station IP
+	    info->server_name = "mqtt";
+	    info->server_port = 1883;
+	    //info->txt_data[0] = "version = now";
+
+	    espconn_mdns_init(info);
+	}
 #endif
 
 	// Post a Server Start message as the IP has been acquired to Task with priority 0
@@ -1376,6 +1432,11 @@ void  user_init() {
 	wifi_set_ip_info(STATION_IF, &info);
 	espconn_dns_setserver(0, &dns_ip);
     }
+
+#ifdef MDNS
+    wifi_set_broadcast_if(STATIONAP_MODE);
+#endif
+
 #ifdef REMOTE_CONFIG
     if (config.config_port != 0) {
 	os_printf("Starting Console TCP Server on port %d\r\n", config.config_port);

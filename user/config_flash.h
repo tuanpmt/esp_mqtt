@@ -43,6 +43,8 @@ typedef struct
     ip_addr_t	my_netmask;	// Optional (if not DHCP): IP netmask of the uplink side
     ip_addr_t	my_gw;		// Optional (if not DHCP): Gateway of the uplink side
 
+    uint8_t	mdns_mode;	// Selects, which interface should be announced via mDNS (default: none)
+
     uint16_t	clock_speed;	// Freq of the CPU
     uint16_t	config_port;	// Port on which the concole listenes (0 if no access)
     uint8_t	config_access;	// Controls the interfaces that allow config access (default LOCAL_ACCESS | REMOTE_ACCESS)
