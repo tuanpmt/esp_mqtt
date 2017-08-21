@@ -47,13 +47,14 @@ WiFi and network related commands:
 - set ap_on [0|1]: selects, whether the soft-AP is disabled (ap_on=0) or enabled (ap_on=1, default)
 - set ap_open [0|1]: selects, whether the soft-AP uses WPA2 security (ap_open=0,  automatic, if an ap_password is set) or open (ap_open=1)
 - set auto_connect [0|1]: selects, whether the WiFi client should automatically retry to connect to the uplink AP (default: on=1)
-- set network _ip-addr_: sets the IP address of the internal network, network is always /24, router is always x.x.x.1
+- set network _ip-addr_: sets the IP address of the SoftAP's network, network is always /24, esp_uMQTT_broker is always x.x.x.1
 - set dns _dns-addr_: sets a static DNS address
 - set dns dhcp: configures use of the dynamic DNS address from DHCP, default
 - set ip _ip-addr_: sets a static IP address for the ESP in the uplink network
 - set ip dhcp: configures dynamic IP address for the ESP in the uplink network, default
 - set netmask _netmask_: sets a static netmask for the uplink network
 - set gw _gw-addr_: sets a static gateway address in the uplink network
+- set mdns_mode [0|1|2]: selects, which interface should be announced via mDNS (0=none (default), 1 = STA, 2 = SoftAP)
 - scan: does a scan for APs
 
 While the user interface looks similar to my esp_wifi_repeater at https://github.com/martin-ger/esp_wifi_repeater this does NO NAT routing. AP and STA network are stricly separated and there is no routing in between. The only possible connection via both networks is the uMQTT broker that listens on both interfaces.
@@ -220,7 +221,7 @@ In general, scripts have the following BNF:
              setvar $<num> = <expr> |
              gpio_pinmode <num> [pullup]
              gpio_out <num> <expr> |
-             if <expr> then <action> endif |
+             if <expr> then <action> [else <action>] endif |
 	     print <expr> | println <expr> |
 	     system <expr> |
              <action> <action>
@@ -262,7 +263,7 @@ CMD>
 You can examine the currently loaded script using the "show script" command. It only displays about 1KB of a script. If you need to see more, use "show script <line_no>" with a higher starting line. Newly loaded scripts are stored persistently in flash and will be executed after next reset if they contain no syntax errors. "script delete" stops script execution and deleted a script from flash.
 
 # NTP Support
-NTP time is supported and timestamps are only available if the sync with an NTP server is done. By default the NTP client is enabled and set to "1.pool.ntp.org". It can be changed by setting the config parameter "ntp_server" to a hostname or an IP address. An ntp_server of "none" will disable the NTP client. Also you can set the "ntp_timezone" to an offset from GMT in hours. The system time will be synced with the NTP server every "ntp_interval" seconds (default ). Here it uses NOT the full NTP calculation and clock drift compensation. Instead it will just set the local time to the latest received time.
+NTP time is supported and timestamps are only available if the sync with an NTP server is done. By default the NTP client is enabled and set to "1.pool.ntp.org". It can be changed by setting the config parameter "ntp_server" to a hostname or an IP address. An ntp_server of "none" will disable the NTP client. Also you can set the "ntp_timezone" to an offset from GMT in hours. The system time will be synced with the NTP server every "ntp_interval" seconds. Here it uses NOT the full NTP calculation and clock drift compensation. Instead it will just set the local time to the latest received time.
 
 After NTP sync has been completed successfully once, the local time will be published every second under the topic "$SYS/broker/time" in the format "hh:mm:ss". You can also query the NTP time using the "time" command from the commandline and with the variable "$timestamp" from a script. If no NTP sync happened the time will be reported as "99:99:99".
 
@@ -270,6 +271,11 @@ After NTP sync has been completed successfully once, the local time will be publ
 - set ntp_interval _interval_: sets the NTP sync interval in seconds (default 300)
 - set ntp_timezone _tz_: sets the timezone in hours offset (default 0)
 - time: prints the current time as hh:mm:ss
+
+# mDNS
+mDNS is supported and depending on "mdns_mode" the broker responds on the name "mqtt.local" with one of its two addresses:
+
+- set mdns_mode [0|1|2]: selects, which interface address should be announced via mDNS (0=none (default), 1 = STA, 2 = SoftAP)
 
 # Building and Flashing
 The code can be used in any project that is compiled using the NONOS_SDK or the esp-open-sdk. Also the sample code in the user directory can be build using the standard SDKs after adapting the variables in the Makefile.

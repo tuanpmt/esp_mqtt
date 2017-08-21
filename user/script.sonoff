@@ -60,12 +60,13 @@ do
 		setvar $blink = 0
 		gpio_out 12 $relay_status
 		gpio_out 13 not ($relay_status)
-	endif
-	if $this_data = "off" then
+	else
+	    if $this_data = "off" then
 		setvar $relay_status = 0
 		setvar $blink = 0
 		gpio_out 12 $relay_status
 		gpio_out 13 not ($relay_status)
+	    endif
 	endif
 	if $this_data = "toggle" then
 		setvar $relay_status = not ($relay_status)

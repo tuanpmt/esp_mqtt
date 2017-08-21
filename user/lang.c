@@ -395,7 +395,7 @@ int ICACHE_FLASH_ATTR syntax_error(int i, char *message) {
     int j;
 
     os_sprintf(tmp_buffer, "Error (%s) at >>", message);
-    for (j = i; j < i + 5 && j < max_token; j++) {
+    for (j = i; j < i + 8 && j < max_token; j++) {
 	int pos = os_strlen(tmp_buffer);
 	if (sizeof(tmp_buffer) - pos - 2 > os_strlen(my_token[j])) {
 	    os_sprintf(tmp_buffer + pos, "%s ", my_token[j]);
@@ -560,7 +560,8 @@ int ICACHE_FLASH_ATTR parse_event(int next_token, bool * happend) {
 int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 
     while (next_token < max_token && !is_token(next_token, "on")
-	   && !is_token(next_token, "config") && !is_token(next_token, "endif")) {
+	   && !is_token(next_token, "config") && !is_token(next_token, "else")
+	   && !is_token(next_token, "endif")) {
 	bool is_nl = false;
 
 	if (doit) {
@@ -711,8 +712,10 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 	    char *if_char;
 	    int if_len;
 	    Value_Type if_type;
+	    int exp_token;
 
 	    len_check(3);
+	    exp_token = next_token + 1;
 	    if ((next_token = parse_expression(next_token + 1, &if_char, &if_len, &if_type, doit)) == -1)
 		return -1;
 	    if (syn_chk && !is_token(next_token, "then"))
@@ -720,10 +723,19 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 
 	    if (doit) {
 		if_val = atoi(if_char);
-		lang_log("if %s\r\n", if_val != 0 ? "(done)" : "(not done)");
+		if (if_val != 0)
+		    lang_log("if %s %s... (done) \r\n", my_token[exp_token++], my_token[exp_token]);
 	    }
 	    if ((next_token = parse_action(next_token + 1, doit && if_val != 0)) == -1)
 		return -1;
+	    if (is_token(next_token, "else")) {
+		if (doit && if_val == 0)
+		    lang_log("if %s %s... else (done) \r\n", my_token[exp_token++], my_token[exp_token]);
+		if ((next_token = parse_action(next_token + 1, doit && if_val == 0)) == -1)
+		    return -1;
+		if (syn_chk && !is_token(next_token - 1, "endif"))
+		    return syntax_error(next_token - 1, "'endif' expected");
+	    }
 	}
 
 	else if (is_token(next_token, "settimer")) {
@@ -856,8 +868,10 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 	    return syntax_error(next_token, "action command expected");
 
     }
+
     if (is_token(next_token, "endif"))
 	next_token++;
+
     return next_token;
 }
 
