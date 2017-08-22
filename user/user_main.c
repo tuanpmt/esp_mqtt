@@ -368,7 +368,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 
     if (strcmp(tokens[0], "help") == 0) {
 	os_sprintf(response,
-		   "show [config|stats|mqtt|script]\r\n|set [ssid|password|auto_connect|ap_ssid|ap_password|network|dns|ip|netmask|gw|ap_on|ap_open|speed|config_port|config_access|broker_subscriptions|broker_retained_messages|broker_user|broker_password|broker_access] <val>\r\n|quit|save [config]|reset [factory]|lock [<password>]|unlock <password>");
+		   "show [config|stats|mqtt|script]\r\n|set [ssid|password|auto_connect|ap_ssid|ap_password|network|dns|ip|netmask|gw|ap_on|ap_open|speed|config_port|config_access|broker_subscriptions|broker_retained_messages|broker_user|broker_password|broker_access] <val>|\r\npublish [local|remote] <topic> <data>|quit|save [config]|reset [factory]|lock [<password>]|unlock <password>");
 	to_console(response);
 #ifdef SCRIPTED
 	os_sprintf(response, "|script <port>");
@@ -744,6 +744,24 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	} else {
 	    os_sprintf(response, "Unlock failed. Invalid password\r\n");
 	}
+	goto command_handled;
+    }
+
+    if (strcmp(tokens[0], "publish") == 0)
+    {
+	if (nTokens != 4) {
+            os_sprintf(response, INVALID_NUMARGS);
+            goto command_handled;
+	}
+	if (strcmp(tokens[1], "local") == 0) {
+	    MQTT_local_publish(tokens[2], tokens[3], os_strlen(tokens[3]), 0, 0);
+	}
+#ifdef MQTT_CLIENT
+	else if (strcmp(tokens[1], "remote") == 0 && mqtt_connected) {
+	    MQTT_Publish(&mqttClient, tokens[2], tokens[3], os_strlen(tokens[3]), 0, 0);
+	}
+#endif
+	os_sprintf(response, "Published topic\r\n");
 	goto command_handled;
     }
 

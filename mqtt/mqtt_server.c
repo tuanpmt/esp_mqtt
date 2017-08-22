@@ -1,6 +1,12 @@
 #include "user_interface.h"
 #include "mem.h"
 
+#include "mqtt_server.h"
+#include "mqtt_topics.h"
+#include "mqtt_topiclist.h"
+#include "mqtt_retainedlist.h"
+#include "debug.h"
+
 /* Mem Debug
 #undef os_free
 #define os_free(x) {os_printf("F:%d-> %x\r\n", __LINE__,(x));vPortFree(x, "", 0);}
@@ -12,13 +18,9 @@ return _v;
 }
 #undef os_zalloc
 #define os_zalloc(x) my_os_zalloc(x, __LINE__)
+#undef os_malloc
+#define os_malloc(x) my_os_zalloc(x, __LINE__)
 */
-
-#include "mqtt_server.h"
-#include "mqtt_topics.h"
-#include "mqtt_topiclist.h"
-#include "mqtt_retainedlist.h"
-#include "debug.h"
 
 #ifndef QUEUE_BUFFER_SIZE
 #define QUEUE_BUFFER_SIZE     2048

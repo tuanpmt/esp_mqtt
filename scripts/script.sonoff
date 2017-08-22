@@ -1,5 +1,5 @@
 % Config params, overwrite any previous settings from the commandline
-config ap_ssid 		MyAP
+config ap_ssid 		MQTTbroker
 config ap_password	stupidPassword
 config ntp_server	1.de.pool.ntp.org
 config broker_user	Martin

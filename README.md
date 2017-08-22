@@ -78,6 +78,7 @@ By default the "remote" MQTT client is disabled. It can be enabled by setting th
 - set mqtt_user _username_: Username for authentication ("none" if no authentication is required at the broker)
 - set mqtt_user _password_: Password for authentication
 - set mqtt_id _clientId_: Id of the client at the broker (default: "ESPRouter_xxxxxx" derived from the MAC address)
+- publish [local|remote] [topic] [data]: this publishes a topic (mainly for testing)
 
 # Scripting
 The esp_uMQTT_broker comes with a build-in scripting engine. A script enables the ESP not just to act as a passive broker but to react on events (publications and timing events) and to send out its own items.
@@ -147,12 +148,13 @@ do
 		setvar $blink = 0
 		gpio_out 12 $relay_status
 		gpio_out 13 not ($relay_status)
-	endif
-	if $this_data = "off" then
+	else
+	    if $this_data = "off" then
 		setvar $relay_status = 0
 		setvar $blink = 0
 		gpio_out 12 $relay_status
 		gpio_out 13 not ($relay_status)
+	    endif
 	endif
 	if $this_data = "toggle" then
 		setvar $relay_status = not ($relay_status)
@@ -183,7 +185,6 @@ on timer 1
 do
 	if $blink = 1 then
 		publish local $command_topic "toggle"
-
 		settimer 1 500
 	endif
 
@@ -218,8 +219,8 @@ In general, scripts have the following BNF:
 <action> ::= publish (local|remote) <topic-id> <expr> [retained] |
              subscribe (local|remote) <topic-id> |
              unsubscribe (local|remote) <topic-id> |
-             settimer <num> <num> |
-             setvar $<num> = <expr> |
+             settimer <num> <expr> |
+             setvar $[any ASCII]* = <expr> |
              gpio_pinmode <num> [pullup]
              gpio_out <num> <expr> |
              if <expr> then <action> [else <action>] endif |

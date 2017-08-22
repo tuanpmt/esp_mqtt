@@ -8,7 +8,7 @@ void ICACHE_FLASH_ATTR user_init() {
     // Initialize the UART
     uart_div_modify(0, UART_CLK_FREQ / 115200);
 
-    os_printf("\r\n\r\nMQTT Broker starting\r\n", espconn_tcp_get_max_con());
+    os_printf("\r\n\r\nMQTT Broker starting\r\n");
 
     // Setup STA
     wifi_set_opmode(STATIONAP_MODE);
