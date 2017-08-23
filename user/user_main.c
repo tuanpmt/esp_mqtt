@@ -120,8 +120,19 @@ static void ICACHE_FLASH_ATTR mqttDataCb(uint32_t * args, const char *topic,
 #ifdef SCRIPTED
     MQTT_Client *client = (MQTT_Client *) args;
 
-    pub_insert(topic, topic_len, data, data_len, false);
-    system_os_post(user_procTaskPrio, SIG_TOPIC_RECEIVED, 0);
+    char *topic_copy = (char*)os_malloc(topic_len+1);
+    if (topic_copy == NULL)
+	return;
+    os_memcpy(topic_copy, topic, topic_len);
+    topic_copy[topic_len] = '\0';
+
+    interpreter_topic_received(topic_copy, data, data_len, false);
+
+    os_free(topic_copy);
+
+    // Any local topics to process as result?
+    pub_process();
+
 #endif
 }
 #endif				/* MQTT_CLIENT */
@@ -147,6 +158,7 @@ static void ICACHE_FLASH_ATTR script_discon_cb(void *arg) {
     *(uint32_t *) load_script = load_size + 5;
     blob_save(0, (uint32_t *) load_script, load_size + 5);
     os_free(load_script);
+    blob_zero(1, MAX_FLASH_SLOTS * FLASH_SLOT_LEN);
 
     os_sprintf(response, "\rScript upload completed (%d Bytes)\r\n", load_size);
     to_console(response);
@@ -634,6 +646,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 #ifdef SCRIPTED
 	    // clear script
 	    blob_zero(0, MAX_SCRIPT_SIZE);
+	    blob_zero(1, MAX_FLASH_SLOTS * FLASH_SLOT_LEN);
 #endif
 	}
 	os_printf("Restarting ... \r\n");
@@ -672,6 +685,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	    if (my_script != NULL)
 		free_script();
 	    blob_zero(0, MAX_SCRIPT_SIZE);
+	    blob_zero(1, MAX_FLASH_SLOTS * FLASH_SLOT_LEN);
 	    os_sprintf(response, "Script deleted\r\n");
 	    goto command_handled;
 	}
@@ -967,6 +981,21 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	    if (strcmp(tokens[1], "script_logging") == 0) {
 		lang_logging = atoi(tokens[2]);
 		os_sprintf(response, "Script logging set\r\n");
+		goto command_handled;
+	    }
+
+	    if (tokens[1][0] == '@') {
+		uint32_t slot_no = atoi(&tokens[1][1]);
+		if (slot_no == 0 || slot_no > MAX_FLASH_SLOTS) {
+		    os_sprintf(response, "Invalid flash slot number");
+		} else {
+		    slot_no--;
+		    uint8_t slots[MAX_FLASH_SLOTS*FLASH_SLOT_LEN];
+		    blob_load(1, (uint32_t *)slots, sizeof(slots));
+		    os_strcpy(&slots[slot_no*FLASH_SLOT_LEN], tokens[2]);
+		    blob_save(1, (uint32_t *)slots, sizeof(slots));
+		    os_sprintf(response, "%s written to flash", tokens[1]);
+		}
 		goto command_handled;
 	    }
 #endif

@@ -37,6 +37,8 @@
 #define MAX_VARS	10
 #define DEFAULT_VAR_LEN	16
 #define MAX_TIMESTAMPS	6
+#define MAX_FLASH_SLOTS	8
+#define FLASH_SLOT_LEN	64
 
 //
 // Define this if you want to have GPIO OUT support in scripts.

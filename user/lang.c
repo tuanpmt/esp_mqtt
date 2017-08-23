@@ -766,22 +766,36 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 
 	else if (is_token(next_token, "setvar")) {
 	    len_check(3);
-	    if (syn_chk && (my_token[next_token + 1][0] != '$' || my_token[next_token + 1][1] == '\0'))
-		return syntax_error(next_token, "invalid var identifier");
-
+	    bool flash_var = false;
+	    uint32_t slot_no;
 	    var_entry_t *this_var, *free_var;
+	    uint8_t *var_id = my_token[next_token + 1];
 
-	    this_var = find_var(&(my_token[next_token + 1][1]), &free_var);
-	    if (this_var == NULL) {
-		if (free_var == NULL)
-		    return syntax_error(next_token, "too many vars used");
+	    if (var_id[0] == '@') {
+		slot_no = atoi(&var_id[1]);
+		if (syn_chk && (slot_no == 0 || slot_no > MAX_FLASH_SLOTS))
+		    return syntax_error(next_token + 1, "invalid flash var number");
+		flash_var = true;
+	    }
 
-		this_var = free_var;
-		this_var->free = 0;
-		os_strncpy(this_var->name, &(my_token[next_token + 1][1]), 14);
-		this_var->name[14] = '\0';
-		this_var->data = (uint8_t *)os_malloc(DEFAULT_VAR_LEN);
-		this_var->buffer_len = DEFAULT_VAR_LEN;
+	    else if (var_id[0] == '$') {
+		if (syn_chk && var_id[1] == '\0')
+		    return syntax_error(next_token, "invalid var identifier");
+
+		this_var = find_var(&var_id[1], &free_var);
+		if (this_var == NULL) {
+		    if (free_var == NULL)
+			return syntax_error(next_token, "too many vars used");
+
+		    this_var = free_var;
+		    this_var->free = 0;
+		    os_strncpy(this_var->name, &var_id[1], 14);
+		    this_var->name[14] = '\0';
+		    this_var->data = (uint8_t *)os_malloc(DEFAULT_VAR_LEN);
+		    this_var->buffer_len = DEFAULT_VAR_LEN;
+		}
+	    } else {
+		return syntax_error(next_token, "invalid var identifier");
 	    }
 
 	    if (syn_chk && os_strcmp(my_token[next_token + 2], "=") != 0)
@@ -795,26 +809,40 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 
 	    if (doit) {
 		if (var_type == STRING_T) {
-		    lang_log("setvar %s = %s\r\n", this_var->name, var_data);
+		    lang_log("setvar %s = %s\r\n", var_id, var_data);
 		} else {
-		    lang_log("setvar %s = binary (%d bytes)\r\n", this_var->name, var_len);
+		    lang_log("setvar %s = binary (%d bytes)\r\n", var_id, var_len);
 		}
-		lang_debug("setvar $%s\r\n", this_var->name);
-		if (var_len > this_var->buffer_len - 1) {
-		    os_free(this_var->data);
-		    this_var->data = (uint8_t *)os_malloc(var_len+1);
-		    this_var->buffer_len = var_len+1;
-		    if (this_var->data == NULL) {
-			os_printf("Out of mem for var $%s\r\n", this_var->name);
-			this_var->data = (uint8_t *)os_malloc(DEFAULT_VAR_LEN);
-			this_var->buffer_len = DEFAULT_VAR_LEN;
-			return next_token;
+		lang_debug("setvar $%s\r\n", var_id);
+
+		if (flash_var) {
+		    if (var_len > FLASH_SLOT_LEN)
+			var_len = FLASH_SLOT_LEN;
+
+		    slot_no--;
+		    uint8_t slots[MAX_FLASH_SLOTS*FLASH_SLOT_LEN];
+		    blob_load(1, slots, sizeof(slots));
+		    os_memcpy(&slots[slot_no*FLASH_SLOT_LEN], var_data, var_len);
+		    slots[slot_no*FLASH_SLOT_LEN+FLASH_SLOT_LEN-1] = '\0';
+		    blob_save(1, slots, sizeof(slots));
+		} else {
+
+		    if (var_len > this_var->buffer_len - 1) {
+			os_free(this_var->data);
+			this_var->data = (uint8_t *)os_malloc(var_len+1);
+			this_var->buffer_len = var_len+1;
+			if (this_var->data == NULL) {
+			    os_printf("Out of mem for var $%s\r\n", this_var->name);
+			    this_var->data = (uint8_t *)os_malloc(DEFAULT_VAR_LEN);
+			    this_var->buffer_len = DEFAULT_VAR_LEN;
+			    return next_token;
+			}
 		    }
+		    os_memcpy(this_var->data, var_data, var_len);
+		    this_var->data[var_len] = '\0';
+		    this_var->data_len = var_len;
+		    this_var->data_type = var_type;
 		}
-		os_memcpy(this_var->data, var_data, var_len);
-		this_var->data[var_len] = '\0';
-		this_var->data_len = var_len;
-		this_var->data_type = var_type;
 	    }
 	}
 #ifdef GPIO
@@ -864,6 +892,10 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 	    }
 	}
 #endif
+	else if (is_token(next_token, "write_flash")) {
+
+	}
+
 	else
 	    return syntax_error(next_token, "action command expected");
 
@@ -912,7 +944,7 @@ int ICACHE_FLASH_ATTR parse_expression(int next_token, char **data, int *data_le
 	*data = "0";
 	*data_len = 1;
 	*data_type = STRING_T;
-	if (easygpio_inputGet(gpio_no)) {
+	if (doit && easygpio_inputGet(gpio_no)) {
 	    *data = "1";
 	}
     }
@@ -1116,6 +1148,26 @@ int ICACHE_FLASH_ATTR parse_value(int next_token, char **data, int *data_len, Va
 	return next_token + 1;
     }
 
+    else if (my_token[next_token][0] == '@' && my_token[next_token][1] != '\0') {
+	lang_debug("val flashvar %s\r\n", my_token[next_token]);
+
+	uint32_t slot_no = atoi(&my_token[next_token][1]);
+	if (slot_no == 0 || slot_no > MAX_FLASH_SLOTS)
+	    return syntax_error(next_token+2, "invalid flash slot number");
+
+	*data = "0";
+	*data_len = 1;
+	*data_type = STRING_T;
+
+	slot_no--;
+	uint8_t slots[MAX_FLASH_SLOTS*FLASH_SLOT_LEN];
+	blob_load(1, slots, sizeof(slots));
+	os_memcpy(tmp_buffer, &slots[slot_no*FLASH_SLOT_LEN], FLASH_SLOT_LEN);
+	*data = tmp_buffer;
+	*data_len = os_strlen(tmp_buffer);
+	return next_token + 1;
+    }
+
     else {
 	lang_debug("val num/str(%s)\r\n", my_token[next_token]);
 
@@ -1151,9 +1203,26 @@ int ICACHE_FLASH_ATTR interpreter_config() {
 
     while ((next_token = search_token(next_token, "config")) < max_token) {
 	lang_debug("statement config\r\n");
+	uint8_t *val;
 
 	len_check(2);
-	do_command("set", my_token[next_token + 1], my_token[next_token + 2]);
+
+	if (my_token[next_token + 2][0] == '@') {
+	    uint32_t slot_no = atoi(&my_token[next_token + 2][1]);
+	    if (slot_no == 0 || slot_no > MAX_FLASH_SLOTS)
+		return syntax_error(next_token + 1, "invalid flash slot number");
+
+	    slot_no--;
+	    uint8_t slots[MAX_FLASH_SLOTS*FLASH_SLOT_LEN];
+	    blob_load(1, slots, sizeof(slots));
+	    val = &slots[slot_no*FLASH_SLOT_LEN];
+	    if (val[0] == '\0')
+		val = "_undefined_";
+	} else {
+	    val = my_token[next_token + 2];
+	}
+
+	do_command("set", my_token[next_token + 1], val);
 	next_token += 3;
     }
     return next_token;

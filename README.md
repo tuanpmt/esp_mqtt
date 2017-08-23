@@ -101,6 +101,11 @@ do
 	% Device number
 	setvar $device_number = 1
 
+	% @<num> vars are stored in flash and are persistent even after reboot 
+	setvar $run = @1 + 1
+	setvar @1 = $run
+	println "This is boot no "|$run
+
 	% Status of the relay
 	setvar $relay_status=0
 	gpio_out 12 $relay_status
@@ -200,13 +205,13 @@ do
 	publish local $command_topic "off"
 ```
 
-Currently the interpreter is configured for a maximum of 10 variables, with a significant id length of 15. Some (additional) vars contain special status: $this_topic and $this_data are only defined in 'on topic' clauses and contain the current topic and its data. $this_gpio contains the state of the GPIO in an 'on gpio_interrupt' clause and $timestamp contains the current time of day in 'hh:mm:ss' format. 
+Currently the interpreter is configured for a maximum of 10 variables, with a significant id length of 15. Some (additional) vars contain special status: $this_topic and $this_data are only defined in 'on topic' clauses and contain the current topic and its data. $this_gpio contains the state of the GPIO in an 'on gpio_interrupt' clause and $timestamp contains the current time of day in 'hh:mm:ss' format.
 
 In general, scripts have the following BNF:
 
 ```
 <statement> ::= on <event> do <action> |
-		config <param> <value> |
+		config <param> (<value> | @<num>) |
                 <statement> <statement>
 
 <event> ::= init |
@@ -220,7 +225,7 @@ In general, scripts have the following BNF:
              subscribe (local|remote) <topic-id> |
              unsubscribe (local|remote) <topic-id> |
              settimer <num> <expr> |
-             setvar $[any ASCII]* = <expr> |
+             setvar ($[any ASCII]* | @<NUM>) = <expr> |
              gpio_pinmode <num> [pullup]
              gpio_out <num> <expr> |
              if <expr> then <action> [else <action>] endif |
@@ -233,7 +238,7 @@ In general, scripts have the following BNF:
 <op> := '=' | '>' | gte | str_ge | str_gte | '+' | '-' | '*' | '|' | div
 
 <val> := <string> | <const> | #<hex-string> | $[any ASCII]* | gpio_in(<num>) |
-         $this_item | $this_data | $this_gpio | $timestamp
+         @<num> | $this_item | $this_data | $this_gpio | $timestamp
 
 <string> := "[any ASCII]*" | [any ASCII]*
 
