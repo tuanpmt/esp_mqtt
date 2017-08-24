@@ -31,7 +31,7 @@ The console understands the following commands:
 General commands:
 
 - help: prints a short help message
-- show [config|stats|script|mqtt]: prints the current config or some status information and statistics
+- show [config|stats]: prints the current config or some status information and statistics
 - save: saves the current config parameters to flash
 - lock [_password_]: saves and locks the current config, changes are not allowed. Password can be left open if already set before
 - unlock _password_: unlocks the config, requires password from the lock command
@@ -61,6 +61,7 @@ While the user interface looks similar to my esp_wifi_repeater at https://github
 
 MQTT broker related command:
 
+- show [mqtt]: prints the current config or status information of the MQTT broker
 - set broker_user _unsername_: sets the username for authentication of MQTT clients ("none" if no auth, default)
 - set broker_password _password_: sets the password for authentication of MQTT clients ("none" if empty, default)
 - set broker_access _mode_: controls the networks that allow MQTT broker access (0: no access, 1: only internal, 2: only external, 3: both (default))
@@ -68,6 +69,7 @@ MQTT broker related command:
 - set broker_retained_messages _max_: sets the max number of retained messages the broker can store (default: 30)
 - set script_logging [0|1]: switches logging of script execution on or off (not permanently stored in the configuration)
 - script [_portno_|delete]: opens port for upload of scripts or deletes the current script
+- set @[num] _value_: sets the flash variable "num" (for use in scripts) to the given inital value (must be shorter than 63 chars)
 
 # MQTT client/bridging functionality
 The broker comes with a "local" and a "remote" client, which means, the broker itself can publish and subscribe topics. The "local" client is a client to the own broker (without the need of an additional TCP connection).
@@ -205,13 +207,13 @@ do
 	publish local $command_topic "off"
 ```
 
-Currently the interpreter is configured for a maximum of 10 variables, with a significant id length of 15. Some (additional) vars contain special status: $this_topic and $this_data are only defined in 'on topic' clauses and contain the current topic and its data. $this_gpio contains the state of the GPIO in an 'on gpio_interrupt' clause and $timestamp contains the current time of day in 'hh:mm:ss' format.
+Currently the interpreter is configured for a maximum of 10 variables, with a significant id length of 15. Some (additional) vars contain special status: $this_topic and $this_data are only defined in 'on topic' clauses and contain the current topic and its data. $this_gpio contains the state of the GPIO in an 'on gpio_interrupt' clause and $timestamp contains the current time of day in 'hh:mm:ss' format. If no NTP sync happened the time will be reported as "99:99:99". The variable "$weekday" returns the day of week as three letters ("Mon","Tue",...).
 
 In general, scripts have the following BNF:
 
 ```
 <statement> ::= on <event> do <action> |
-		config <param> (<value> | @<num>) |
+		config <param> ([any ASCII]* | @<num>) |
                 <statement> <statement>
 
 <event> ::= init |
@@ -238,7 +240,7 @@ In general, scripts have the following BNF:
 <op> := '=' | '>' | gte | str_ge | str_gte | '+' | '-' | '*' | '|' | div
 
 <val> := <string> | <const> | #<hex-string> | $[any ASCII]* | gpio_in(<num>) |
-         @<num> | $this_item | $this_data | $this_gpio | $timestamp
+         @<num> | $this_item | $this_data | $this_gpio | $timestamp | $weekday
 
 <string> := "[any ASCII]*" | [any ASCII]*
 
@@ -272,7 +274,7 @@ You can examine the currently loaded script using the "show script" command. It 
 # NTP Support
 NTP time is supported and timestamps are only available if the sync with an NTP server is done. By default the NTP client is enabled and set to "1.pool.ntp.org". It can be changed by setting the config parameter "ntp_server" to a hostname or an IP address. An ntp_server of "none" will disable the NTP client. Also you can set the "ntp_timezone" to an offset from GMT in hours. The system time will be synced with the NTP server every "ntp_interval" seconds. Here it uses NOT the full NTP calculation and clock drift compensation. Instead it will just set the local time to the latest received time.
 
-After NTP sync has been completed successfully once, the local time will be published every second under the topic "$SYS/broker/time" in the format "hh:mm:ss". You can also query the NTP time using the "time" command from the commandline and with the variable "$timestamp" from a script. If no NTP sync happened the time will be reported as "99:99:99".
+After NTP sync has been completed successfully once, the local time will be published every second under the topic "$SYS/broker/time" in the format "hh:mm:ss". You can also query the NTP time using the "time" command from the commandline. 
 
 - set ntp_server _IP_or_hostname_: sets the name or IP of an NTP server (default "1.pool.ntp.org", "none" disables NTP)
 - set ntp_interval _interval_: sets the NTP sync interval in seconds (default 300)

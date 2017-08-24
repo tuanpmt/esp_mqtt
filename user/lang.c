@@ -1132,6 +1132,18 @@ int ICACHE_FLASH_ATTR parse_value(int next_token, char **data, int *data_len, Va
 	*data_type = STRING_T;
 	return next_token + 1;
     }
+
+    else if (is_token(next_token, "$weekday")) {
+	lang_debug("val $weekday\r\n");
+
+	if (ntp_sync_done())
+	    *data = get_weekday();
+	else
+	    *data = "xxx";
+	*data_len = os_strlen(*data);
+	*data_type = STRING_T;
+	return next_token + 1;
+    }
 #endif
     else if (my_token[next_token][0] == '$' && my_token[next_token][1] != '\0') {
 	lang_debug("val var %s\r\n", &(my_token[next_token][1]));
@@ -1159,12 +1171,14 @@ int ICACHE_FLASH_ATTR parse_value(int next_token, char **data, int *data_len, Va
 	*data_len = 1;
 	*data_type = STRING_T;
 
-	slot_no--;
-	uint8_t slots[MAX_FLASH_SLOTS*FLASH_SLOT_LEN];
-	blob_load(1, slots, sizeof(slots));
-	os_memcpy(tmp_buffer, &slots[slot_no*FLASH_SLOT_LEN], FLASH_SLOT_LEN);
-	*data = tmp_buffer;
-	*data_len = os_strlen(tmp_buffer);
+	if (!syn_chk) {
+	    slot_no--;
+	    uint8_t slots[MAX_FLASH_SLOTS*FLASH_SLOT_LEN];
+	    blob_load(1, slots, sizeof(slots));
+	    os_memcpy(tmp_buffer, &slots[slot_no*FLASH_SLOT_LEN], FLASH_SLOT_LEN);
+	    *data = tmp_buffer;
+	    *data_len = os_strlen(tmp_buffer);
+	}
 	return next_token + 1;
     }
 

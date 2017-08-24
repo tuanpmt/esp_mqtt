@@ -44,6 +44,16 @@ uint8_t *ICACHE_FLASH_ATTR get_timestr() {
     return buf;
 }
 
+
+uint8_t *ICACHE_FLASH_ATTR get_weekday() {
+    struct timeval tv;
+    static uint8_t *days[] = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
+
+    get_cur_time(&tv);
+    tv.tv_sec += ntp_timezone * 3600;
+    return days[((tv.tv_sec / (3600 * 24)) + 3) % 7];
+}
+
 void ICACHE_FLASH_ATTR ntp_to_tv(uint8_t ntp[8], struct timeval *tv) {
     uint64_t aux = 0;
 
@@ -109,6 +119,7 @@ static void ICACHE_FLASH_ATTR ntp_udp_recv(void *arg, char *pdata, unsigned shor
 	mm = (t_tv.tv_sec/60)%60;
 	hh = (t_tv.tv_sec/3600)%24;
 	os_printf("time: %2d:%02d:%02d\r\n", hh, mm, ss);
+	os_printf("Day: %s\r\n", get_weekday());
 */
     // clean up connection
     if (pCon) {

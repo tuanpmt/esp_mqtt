@@ -10,8 +10,13 @@ config speed		160
 % Now the initialization, this is done once after booting
 on init
 do
-	% Device number
-	setvar $device_number = 1
+	% Device number ("* 1" to make even "" a number)
+	setvar $device_number = @1 * 1
+
+	% @<num> vars are stored in flash and are persistent even after reboot 
+	setvar $run = @2 + 1
+	setvar @2 = $run
+	println "This is reboot no "|$run
 
 	% Status of the relay
 	setvar $relay_status=0

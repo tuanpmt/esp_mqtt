@@ -380,7 +380,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 
     if (strcmp(tokens[0], "help") == 0) {
 	os_sprintf(response,
-		   "show [config|stats|mqtt|script]\r\n|set [ssid|password|auto_connect|ap_ssid|ap_password|network|dns|ip|netmask|gw|ap_on|ap_open|speed|config_port|config_access|broker_subscriptions|broker_retained_messages|broker_user|broker_password|broker_access] <val>|\r\npublish [local|remote] <topic> <data>|quit|save [config]|reset [factory]|lock [<password>]|unlock <password>");
+		   "show [config|stats|mqtt|script|vars]\r\n|set [ssid|password|auto_connect|ap_ssid|ap_password|network|dns|ip|netmask|gw|ap_on|ap_open|speed|config_port|config_access|broker_subscriptions|broker_retained_messages|broker_user|broker_password|broker_access] <val>|\r\npublish [local|remote] <topic> <data>|quit|save [config]|reset [factory]|lock [<password>]|unlock <password>");
 	to_console(response);
 #ifdef SCRIPTED
 	os_sprintf(response, "|script <port>");
@@ -459,7 +459,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	    if (config.mqtt_broker_access == REMOTE_ACCESS)
 		os_sprintf(response, "MQTT broker: remote access only\r\n");
 	    if (config.mqtt_broker_access == 0)
-		os_sprintf(response, "MQTT broker: no access!!\r\n");
+		os_sprintf(response, "MQTT broker: disabled\r\n");
 	    to_console(response);
 #ifdef MQTT_CLIENT
 	    os_sprintf(response, "MQTT client %s\r\n", mqtt_enabled ? "enabled" : "disabled");
@@ -607,6 +607,22 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	    os_free(script);
 	    goto command_handled_2;
 	}
+
+	if (nTokens >= 2 && strcmp(tokens[1], "vars") == 0) {
+	    if (config.locked) {
+		os_sprintf(response, INVALID_LOCKED);
+		goto command_handled;
+	    }
+	    int i;
+	    uint8_t slots[MAX_FLASH_SLOTS*FLASH_SLOT_LEN];
+	    blob_load(1, (uint32_t *)slots, sizeof(slots));
+
+	    for (i = 0; i < MAX_FLASH_SLOTS; i++) {
+		os_sprintf(response, "@%d: %s\r\n", i, &slots[i*FLASH_SLOT_LEN]);
+		to_console(response);
+	    }
+	    goto command_handled_2;
+	}
 #endif
     }
 
@@ -631,7 +647,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 #endif
 #ifdef NTP
     if (strcmp(tokens[0], "time") == 0) {
-	os_sprintf(response, "%s\r\n", get_timestr());
+	os_sprintf(response, "%s %s\r\n", get_weekday(), get_timestr());
 	goto command_handled;
     }
 #endif
@@ -994,7 +1010,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 		    blob_load(1, (uint32_t *)slots, sizeof(slots));
 		    os_strcpy(&slots[slot_no*FLASH_SLOT_LEN], tokens[2]);
 		    blob_save(1, (uint32_t *)slots, sizeof(slots));
-		    os_sprintf(response, "%s written to flash", tokens[1]);
+		    os_sprintf(response, "%s written to flash\r\n", tokens[1]);
 		}
 		goto command_handled;
 	    }
@@ -1559,15 +1575,18 @@ void  user_init() {
 
     system_update_cpu_freq(config.clock_speed);
 
-    espconn_tcp_set_max_con(10);
-    os_printf("Max number of TCP clients: %d\r\n", espconn_tcp_get_max_con());
+    // Start the broker only if it accessible
+    if (config.mqtt_broker_access != 0) {
+	espconn_tcp_set_max_con(10);
+	os_printf("Max number of TCP clients: %d\r\n", espconn_tcp_get_max_con());
 
-    MQTT_server_onData(MQTT_local_DataCallback);
-    MQTT_server_onConnect(mqtt_broker_connect);
-    MQTT_server_onAuth(mqtt_broker_auth);
+	MQTT_server_onData(MQTT_local_DataCallback);
+	MQTT_server_onConnect(mqtt_broker_connect);
+	MQTT_server_onAuth(mqtt_broker_auth);
 
-    MQTT_server_start(1883 /*port */ , config.max_subscriptions,
-		      config.max_retained_messages);
+	MQTT_server_start(1883 /*port */ , config.max_subscriptions,
+			  config.max_retained_messages);
+    }
 
     //Start task
     system_os_task(user_procTask, user_procTaskPrio, user_procTaskQueue, user_procTaskQueueLen);

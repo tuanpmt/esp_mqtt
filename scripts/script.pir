@@ -26,11 +26,16 @@ on init
 do
 	println "Starting the PIR script"
 
-	% Delay constanst in secs
-	setvar $delay = 10;
+	% Device number ("* 1" to make even "" a number)
+	setvar $device_number = @1 * 1
 
-	% Device number
-	setvar $device_number = 2
+	% Read delay constanst in secs from flash @2
+	setvar $delay = @2 * 1;
+	if $delay = 0 then
+		% Write default
+		setvar $delay = 10;
+		setvar @2 = 10;
+	endif
 
 	% Status of the PIR
 	setvar $pir_status=0
