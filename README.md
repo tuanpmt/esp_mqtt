@@ -279,7 +279,7 @@ After NTP sync has been completed successfully once, the local time will be publ
 - set ntp_server _IP_or_hostname_: sets the name or IP of an NTP server (default "1.pool.ntp.org", "none" disables NTP)
 - set ntp_interval _interval_: sets the NTP sync interval in seconds (default 300)
 - set ntp_timezone _tz_: sets the timezone in hours offset (default 0)
-- time: prints the current time as hh:mm:ss
+- time: prints the current time as ddd hh:mm:ss
 
 # mDNS
 mDNS is supported and depending on "mdns_mode" the broker responds on the name "mqtt.local" with one of its two addresses:

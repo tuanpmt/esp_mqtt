@@ -39,7 +39,7 @@ bool timestamps_init;
 
 /* System Task, for signals refer to user_config.h */
 #define user_procTaskPrio        0
-#define user_procTaskQueueLen    1
+#define user_procTaskQueueLen    2
 os_event_t user_procTaskQueue[user_procTaskQueueLen];
 static void user_procTask(os_event_t * events);
 
@@ -379,26 +379,35 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
     }
 
     if (strcmp(tokens[0], "help") == 0) {
-	os_sprintf(response,
-		   "show [config|stats|mqtt|script|vars]\r\n|set [ssid|password|auto_connect|ap_ssid|ap_password|network|dns|ip|netmask|gw|ap_on|ap_open|speed|config_port|config_access|broker_subscriptions|broker_retained_messages|broker_user|broker_password|broker_access] <val>|\r\npublish [local|remote] <topic> <data>|quit|save [config]|reset [factory]|lock [<password>]|unlock <password>");
+	os_sprintf(response, "show [config|stats|mqtt]\r\nsave\r\nreset [factory]\r\nlock [<password>]\r\nunlock <password>\r\nquit\r\n");
 	to_console(response);
-#ifdef SCRIPTED
-	os_sprintf(response, "|script <port>");
+#ifdef ALLOW_SCANNING
+	os_sprintf(response, "scan\r\n");
 	to_console(response);
 #endif
-#ifdef ALLOW_SCANNING
-	os_sprintf(response, "|scan");
+	os_sprintf(response, "set [ssid|password|auto_connect|ap_ssid|ap_password|ap_on|ap_open] <val>\r\n");
+	to_console(response);
+	os_sprintf(response, "set [network|dns|ip|netmask|gw|config_port|config_access] <val>\r\n");
+	to_console(response);
+	os_sprintf(response, "set [broker_user|broker_password|broker_access] <val>\r\n");
+	to_console(response);
+	os_sprintf(response, "set [broker_subscriptions|broker_retained_messages] <val>\r\n");
+	to_console(response);
+	os_sprintf(response, "publish [local|remote] <topic> <data>\r\n");
+	to_console(response);
+#ifdef SCRIPTED
+	os_sprintf(response, "script <port>\r\nshow [script|vars]\r\n");
 	to_console(response);
 #endif
 #ifdef NTP
-	os_sprintf(response, "|time|set ntp_server <ntp_host>|set ntp_interval <secs>|set <ntp_timezone> <hours>\r\n");
+	os_sprintf(response, "time\r\nset [ntp_server|ntp_interval|<ntp_timezone> <val>\r\n");
 	to_console(response);
 #endif
 #ifdef MQTT_CLIENT
-	os_sprintf(response, "|set [mqtt_host|mqtt_port|mqtt_user|mqtt_password|mqtt_id] <val>\r\n");
+	os_sprintf(response, "set [mqtt_host|mqtt_port|mqtt_user|mqtt_password|mqtt_id] <val>\r\n");
 	to_console(response);
 #endif
-	ringbuf_memcpy_into(console_tx_buffer, "\r\n", 2);
+
 	goto command_handled_2;
     }
 
@@ -618,7 +627,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	    blob_load(1, (uint32_t *)slots, sizeof(slots));
 
 	    for (i = 0; i < MAX_FLASH_SLOTS; i++) {
-		os_sprintf(response, "@%d: %s\r\n", i, &slots[i*FLASH_SLOT_LEN]);
+		os_sprintf(response, "@%d: %s\r\n", i+1, &slots[i*FLASH_SLOT_LEN]);
 		to_console(response);
 	    }
 	    goto command_handled_2;
