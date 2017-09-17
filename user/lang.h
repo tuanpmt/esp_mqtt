@@ -3,15 +3,26 @@
 
 #include "mqtt_server.h"
 
+
+typedef enum {SYNTAX_CHECK, CONFIG, INIT, MQTT_CLIENT_CONNECT, TOPIC_LOCAL, TOPIC_REMOTE, TIMER, GPIO_INT, CLOCK} Interpreter_Status;
+typedef enum {STRING_T, DATA_T} Value_Type;
+
+typedef struct _var_entry_t {
+    uint8_t name[15];
+    uint8_t free;
+    uint32_t buffer_len;
+    uint8_t *data;
+    uint32_t data_len;
+    Value_Type data_type;
+} var_entry_t;
+extern var_entry_t vars[];
+
 extern MQTT_Client mqttClient;
 extern bool mqtt_enabled, mqtt_connected;
 extern bool lang_logging;
 
 uint8_t tmp_buffer[128];
 uint32_t loop_time;
-
-typedef enum {SYNTAX_CHECK, CONFIG, INIT, MQTT_CLIENT_CONNECT, TOPIC_LOCAL, TOPIC_REMOTE, TIMER, GPIO_INT, CLOCK} Interpreter_Status;
-typedef enum {STRING_T, DATA_T} Value_Type;
 
 int text_into_tokens(char *str);
 void free_tokens(void);

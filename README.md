@@ -123,7 +123,6 @@ do
 	setvar $status_topic="/martinshome/switch/" | $device_number | "/status"
 
 	publish local $status_topic $relay_status retained
-	publish remote $status_topic $relay_status retained
 
 	% local subscriptions once in 'init'
 	subscribe local $command_topic
@@ -133,6 +132,8 @@ on mqttconnect
 do
 	% remote subscriptions for each connection in 'mqttconnect'
 	subscribe remote $command_topic
+
+	publish remote $status_topic $relay_status retained
 
 % Now the events, checked whenever something happens
 
@@ -313,16 +314,41 @@ The broker does not yet support:
 - many TCP(=MQTT) clients
 - non-clear sessions
 - TLS
+"
+# Using the esp_uMQTT_broker in an Arduino project
+There is a fast-and-dirty hack to add the broker functionality to any ESP Arduino project:
+
+- Go to the install directory of the ESP8266 support package (something like: "<yourArduinoDir>/hardware/esp8266com/esp8266)
+- Look for the file "platform.txt"
+- Search for the line with "compiler.c.elf.libs"
+- Add "-lmqtt" to the libs. Now it should look like:
+```
+compiler.c.elf.libs=-lm -lgcc -lhal -lphy -lpp -lnet80211 -lwpa -lcrypto -lmain -lwps -laxtls -lsmartconfig -lmesh -lwpa2 -lmqtt {build.lwip_lib} -lstdc++
+```
+- For this directory go to "cd tools/sdk/lib".
+- Copy "libmqtt.a" from the "firmware" directory of this repository into that location (where the other C-libs of the SDK are).
+- Now you can use it in your sketch. Just set up the WiFi connection (client or SoftAP, whatever you need) and add these lines:
+```c
+extern "C" {
+bool MQTT_server_start(uint16_t portno, uint16_t max_subscriptions, uint16_t max_retained_topics);
+}
+```
+and at the end of setup() do e.g.:
+```c
+MQTT_server_start(1883, 30, 30);
+```
+
+The MQTT server will now run in the background and you can connect with any MQTT client.
 
 # Using the Source Code
-The complete functionality is included in the mqtt directory and can be integrated into any NONOS SDK program. The broker is started by simply including:
+The complete functionality is included in the mqtt directory and can be integrated into any NONOS SDK program ("make -f Makefile.orig lib" will build the mqtt code as a C library). The broker is started by simply including:
 
 ```c
 #include "mqtt_server.h"
 
 bool MQTT_server_start(uint16_t portno, uint16_t max_subscriptions, uint16_t max_retained_topics);
 
-```
+
 in the user_init() function. Now it is ready for MQTT connections on all activated interfaces (STA and/or AP). Please note, that the lib uses two tasks (with prio 1 and 2) for client and broker. Thus, only task with prio 0 is left for a user application.
 
 You can find a minimal demo in the directory "user_basic". Rename it to "user", adapt "user_config.h", and do the "make" to build a small demo that just starts an MQTT broker without any additional logic.

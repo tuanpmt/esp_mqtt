@@ -623,6 +623,14 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 		goto command_handled;
 	    }
 	    int i;
+
+	    for (i = 0; i < MAX_VARS; i++) {
+		if (!vars[i].free) {
+		    os_sprintf(response, "%s: %s\r\n", vars[i].name, vars[i].data);
+		    to_console(response);
+		}
+	    }
+
 	    uint8_t slots[MAX_FLASH_SLOTS*FLASH_SLOT_LEN];
 	    blob_load(1, (uint32_t *)slots, sizeof(slots));
 

@@ -25,15 +25,6 @@ if (interpreter_status==SYNTAX_CHECK && next_token+(x) >= max_token) \
   return syntax_error(next_token+(x), EOT)
 #define syn_chk (interpreter_status==SYNTAX_CHECK)
 
-typedef struct _var_entry_t {
-    uint8_t name[15];
-    uint8_t free;
-    uint32_t buffer_len;
-    uint8_t *data;
-    uint32_t data_len;
-    Value_Type data_type;
-} var_entry_t;
-
 typedef struct _timestamp_entry_t {
     uint8_t *ts;
     bool happened;
@@ -66,7 +57,7 @@ int ts_counter;
 int gpio_counter;
 
 static os_timer_t timers[MAX_TIMERS];
-static var_entry_t vars[MAX_VARS];
+var_entry_t vars[MAX_VARS];
 static timestamp_entry_t timestamps[MAX_TIMESTAMPS];
 
 var_entry_t ICACHE_FLASH_ATTR *find_var(const uint8_t *name, var_entry_t **free_var) {
