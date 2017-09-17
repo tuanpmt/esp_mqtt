@@ -318,14 +318,14 @@ The broker does not yet support:
 # Using the esp_uMQTT_broker in an Arduino project
 There is a fast-and-dirty hack to add the broker functionality to any ESP Arduino project:
 
-- Go to the install directory of the ESP8266 support package (something like: "<yourArduinoDir>/hardware/esp8266com/esp8266)
+- Go to the install directory of the ESP8266 support package (something like: "<yourArduinoDir>/hardware/esp8266com/esp8266")
 - Look for the file "platform.txt"
 - Search for the line with "compiler.c.elf.libs"
 - Add "-lmqtt" to the libs. Now it should look like:
 ```
 compiler.c.elf.libs=-lm -lgcc -lhal -lphy -lpp -lnet80211 -lwpa -lcrypto -lmain -lwps -laxtls -lsmartconfig -lmesh -lwpa2 -lmqtt {build.lwip_lib} -lstdc++
 ```
-- For this directory go to "cd tools/sdk/lib".
+- From this directory go to "cd tools/sdk/lib".
 - Copy "libmqtt.a" from the "firmware" directory of this repository into that location (where the other C-libs of the SDK are).
 - Now you can use it in your sketch. Just set up the WiFi connection (client or SoftAP, whatever you need) and add these lines:
 ```c
@@ -347,7 +347,7 @@ The complete functionality is included in the mqtt directory and can be integrat
 #include "mqtt_server.h"
 
 bool MQTT_server_start(uint16_t portno, uint16_t max_subscriptions, uint16_t max_retained_topics);
-
+```
 
 in the user_init() function. Now it is ready for MQTT connections on all activated interfaces (STA and/or AP). Please note, that the lib uses two tasks (with prio 1 and 2) for client and broker. Thus, only task with prio 0 is left for a user application.
 
