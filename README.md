@@ -327,7 +327,7 @@ compiler.c.elf.libs=-lm -lgcc -lhal -lphy -lpp -lnet80211 -lwpa -lcrypto -lmain 
 ```
 - From this directory go to "cd tools/sdk/lib".
 - Copy "libmqtt.a" from the "firmware" directory of this repository into that location (where the other C-libs of the SDK are).
-- From this directory go to "cd ../inlude".
+- From this directory go to "cd ../include".
 - Copy "mqtt_server.h" from the "Arduino" directory of this repository into that location (where the other include files of the SDK are).
 - Now you can use it in your sketch. Just include
 ```c
@@ -343,19 +343,20 @@ MQTT_server_start(1883, 30, 30);
 The MQTT server will now run in the background and you can connect with any MQTT client. Your Arduino project might do other application logic in its loop. Let me know, if you need more available APIs to the broker from Adrduino code.
 
 # Using the Source Code
-The complete functionality is included in the mqtt directory and can be integrated into any NONOS SDK (or ESP Arduino) program ("make -f Makefile.orig lib" will build the mqtt code as a C library). The broker is started by simply including:
+The complete broker functionality is included in the mqtt directory and can be integrated into any NONOS SDK (or ESP Arduino) program ("make -f Makefile.orig lib" will build the mqtt code as a C library). You can find a minimal demo in the directory "user_basic". Rename it to "user", adapt "user_config.h", and do the "make" to build a small demo that just starts an MQTT broker without any additional logic.
+
+The broker is started by simply including:
 
 ```c
 #include "mqtt_server.h"
-
+```
+and then calling
+```c
 bool MQTT_server_start(uint16_t portno, uint16_t max_subscriptions, uint16_t max_retained_topics);
 ```
-
 in the "user_init()" (or Arduino "setup()") function. Now it is ready for MQTT connections on all activated interfaces (STA and/or AP). Please note, that the lib uses two tasks (with prio 1 and 2) for client and broker. Thus, only task with prio 0 is left for a user application.
 
-You can find a minimal demo in the directory "user_basic". Rename it to "user", adapt "user_config.h", and do the "make" to build a small demo that just starts an MQTT broker without any additional logic.
-
-Your code can locally interact with the broker using the functions:
+Your code can locally interact with the broker using these functions:
 
 ```c
 bool MQTT_local_publish(uint8_t* topic, uint8_t* data, uint16_t data_length, uint8_t qos, uint8_t retain);
@@ -365,7 +366,7 @@ bool MQTT_local_unsubscribe(uint8_t* topic);
 void MQTT_server_onData(MqttDataCallback dataCb);
 ```
 
-With these functions you can publish and subscribe topics as a local client like you would with a remote MQTT broker.
+With these functions you can publish and subscribe topics as a local client like you would with any remote MQTT broker. The provided dataCb is called on each reception of a matching topic, no matter whether it was published from a remote client or the "MQTT_local_publish()" function.
 
 Username/password authentication is provided with the following interface:
 
