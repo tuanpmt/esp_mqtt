@@ -316,9 +316,9 @@ The broker does not yet support:
 - TLS
 "
 # Using the esp_uMQTT_broker in an Arduino project
-There is a fast-and-dirty hack to add the broker functionality to any ESP Arduino project:
+There is a fast-and-dirty hack to add the pure broker functionality (not the CLI and the scripting) to any ESP Arduino project:
 
-- Go to the install directory of the ESP8266 support package (something like: "<yourArduinoDir>/hardware/esp8266com/esp8266")
+- Go to the install directory of the ESP8266 support package (something like: "[yourArduinoDir]/hardware/esp8266com/esp8266")
 - Look for the file "platform.txt"
 - Search for the line with "compiler.c.elf.libs"
 - Add "-lmqtt" to the libs. Now it should look like:
@@ -338,7 +338,7 @@ and at the end of setup() do e.g.:
 MQTT_server_start(1883, 30, 30);
 ```
 
-The MQTT server will now run in the background and you can connect with any MQTT client.
+The MQTT server will now run in the background and you can connect with any MQTT client. Your Arduino project might do other application logic in its loop. Let me know, if you need more available APIs to the broker from Adrduino code.
 
 # Using the Source Code
 The complete functionality is included in the mqtt directory and can be integrated into any NONOS SDK program ("make -f Makefile.orig lib" will build the mqtt code as a C library). The broker is started by simply including:
