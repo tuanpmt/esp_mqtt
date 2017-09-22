@@ -327,13 +327,15 @@ compiler.c.elf.libs=-lm -lgcc -lhal -lphy -lpp -lnet80211 -lwpa -lcrypto -lmain 
 ```
 - From this directory go to "cd tools/sdk/lib".
 - Copy "libmqtt.a" from the "firmware" directory of this repository into that location (where the other C-libs of the SDK are).
-- Now you can use it in your sketch. Just set up the WiFi connection (client or SoftAP, whatever you need) and add these lines:
+- From this directory go to "cd ../inlude".
+- Copy "mqtt_server.h" from the "Arduino" directory of this repository into that location (where the other include files of the SDK are).
+- Now you can use it in your sketch. Just include
 ```c
-extern "C" {
-bool MQTT_server_start(uint16_t portno, uint16_t max_subscriptions, uint16_t max_retained_topics);
-}
+#include "mqtt_server.h"
 ```
-and at the end of setup() do e.g.:
+Now you can use the API as described in the next subsection.
+
+Sample: in the Arduino setup() initialize the WiFi connection (client or SoftAP, whatever you need) and somewhere at the end add these line:
 ```c
 MQTT_server_start(1883, 30, 30);
 ```
@@ -341,7 +343,7 @@ MQTT_server_start(1883, 30, 30);
 The MQTT server will now run in the background and you can connect with any MQTT client. Your Arduino project might do other application logic in its loop. Let me know, if you need more available APIs to the broker from Adrduino code.
 
 # Using the Source Code
-The complete functionality is included in the mqtt directory and can be integrated into any NONOS SDK program ("make -f Makefile.orig lib" will build the mqtt code as a C library). The broker is started by simply including:
+The complete functionality is included in the mqtt directory and can be integrated into any NONOS SDK (or ESP Arduino) program ("make -f Makefile.orig lib" will build the mqtt code as a C library). The broker is started by simply including:
 
 ```c
 #include "mqtt_server.h"
@@ -349,7 +351,7 @@ The complete functionality is included in the mqtt directory and can be integrat
 bool MQTT_server_start(uint16_t portno, uint16_t max_subscriptions, uint16_t max_retained_topics);
 ```
 
-in the user_init() function. Now it is ready for MQTT connections on all activated interfaces (STA and/or AP). Please note, that the lib uses two tasks (with prio 1 and 2) for client and broker. Thus, only task with prio 0 is left for a user application.
+in the "user_init()" (or Arduino "setup()") function. Now it is ready for MQTT connections on all activated interfaces (STA and/or AP). Please note, that the lib uses two tasks (with prio 1 and 2) for client and broker. Thus, only task with prio 0 is left for a user application.
 
 You can find a minimal demo in the directory "user_basic". Rename it to "user", adapt "user_config.h", and do the "make" to build a small demo that just starts an MQTT broker without any additional logic.
 
