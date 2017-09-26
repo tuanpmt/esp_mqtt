@@ -210,6 +210,10 @@ do
 
 Currently the interpreter is configured for a maximum of 10 variables, with a significant id length of 15. Some (additional) vars contain special status: $this_topic and $this_data are only defined in 'on topic' clauses and contain the current topic and its data. $this_gpio contains the state of the GPIO in an 'on gpio_interrupt' clause and $timestamp contains the current time of day in 'hh:mm:ss' format. If no NTP sync happened the time will be reported as "99:99:99". The variable "$weekday" returns the day of week as three letters ("Mon","Tue",...).
 
+In addition, there are currently 10 flash variables (up to 63 chars long) that do preserve their state even after reset or power down. These variables are named @01 to @10. Writing these variables is very slow as this includes a flash sector clear and rewrite cycle.  Thus, these variables should be written only when relevant state should be saved. Reading these vars is fast and not critical.
+
+They can also be used for handing over parameters from the CLI to a script. Flash variable can be set with the "set @[num] _value_" on the command line and the written values can then be picked up by a script to read e.g. config parameters like DNS names, IPs, node IDs or username/password.
+
 In general, scripts have the following BNF:
 
 ```
@@ -228,7 +232,7 @@ In general, scripts have the following BNF:
              subscribe (local|remote) <topic-id> |
              unsubscribe (local|remote) <topic-id> |
              settimer <num> <expr> |
-             setvar ($[any ASCII]* | @<NUM>) = <expr> |
+             setvar ($[any ASCII]* | @<num>) = <expr> |
              gpio_pinmode <num> [pullup]
              gpio_out <num> <expr> |
              if <expr> then <action> [else <action>] endif |
@@ -340,7 +344,7 @@ Sample: in the Arduino setup() initialize the WiFi connection (client or SoftAP,
 MQTT_server_start(1883, 30, 30);
 ```
 
-The MQTT server will now run in the background and you can connect with any MQTT client. Your Arduino project might do other application logic in its loop. Let me know, if you need more available APIs to the broker from Adrduino code.
+The MQTT server will now run in the background and you can connect with any MQTT client. Your Arduino project might do other application logic in its loop.
 
 # Using the Source Code
 The complete broker functionality is included in the mqtt directory and can be integrated into any NONOS SDK (or ESP Arduino) program ("make -f Makefile.orig lib" will build the mqtt code as a C library). You can find a minimal demo in the directory "user_basic". Rename it to "user", adapt "user_config.h", and do the "make" to build a small demo that just starts an MQTT broker without any additional logic.
