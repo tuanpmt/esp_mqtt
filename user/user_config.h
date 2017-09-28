@@ -16,6 +16,9 @@
 // Define this if you want to have it work as a MQTT client
 #define MQTT_CLIENT 	1	
 
+// Define this if you need SSL for the *MQTT client*
+//#define MQTT_SSL_ENABLE	1
+
 #define MQTT_BUF_SIZE   1024
 #define MQTT_KEEPALIVE    120  /*seconds*/
 #define MQTT_RECONNECT_TIMEOUT  5 /*seconds*/
@@ -34,6 +37,7 @@
 #define MAX_SCRIPT_SIZE 0x1000
 #define MAX_TIMERS	4
 #define MAX_GPIOS	3
+#define PWM_MAX_CHANNELS 8
 #define MAX_VARS	10
 #define DEFAULT_VAR_LEN	16
 #define MAX_TIMESTAMPS	6
@@ -44,6 +48,11 @@
 // Define this if you want to have GPIO OUT support in scripts.
 //
 #define GPIO	  1
+
+//
+// Define this if you want to have additionally GPIO PWM support in scripts.
+//
+#define GPIO_PWM  1
 
 //
 // Define this if you want to have NTP support.

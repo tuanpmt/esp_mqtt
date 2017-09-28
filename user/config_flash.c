@@ -56,6 +56,11 @@ void config_load_default(sysconfig_p config) {
     config->ntp_interval = 300000000;
     config->ntp_timezone = 0;
 #endif
+#ifdef GPIO
+#ifdef GPIO_PWM
+    config->pwm_period = 5000;
+#endif
+#endif
 }
 
 int config_load(sysconfig_p config) {

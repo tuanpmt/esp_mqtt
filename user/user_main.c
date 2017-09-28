@@ -17,6 +17,13 @@
 #include "mqtt_topiclist.h"
 #include "mqtt_retainedlist.h"
 
+#ifdef GPIO
+//#include "easygpio.h"
+#include "pwm.h"
+#define PWM_CHANNELS 5
+const uint32_t period = 5000; // * 200ns ^= 1 kHz
+#endif
+
 #ifdef NTP
 #include "ntp.h"
 uint64_t t_ntp_resync = 0;
@@ -398,6 +405,12 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 #ifdef SCRIPTED
 	os_sprintf(response, "script <port>\r\nshow [script|vars]\r\n");
 	to_console(response);
+#ifdef GPIO
+#ifdef GPIO_PWM
+	os_sprintf(response, "set pwm_period <val>\r\n");
+	to_console(response);
+#endif
+#endif
 #endif
 #ifdef NTP
 	os_sprintf(response, "time\r\nset [ntp_server|ntp_interval|<ntp_timezone> <val>\r\n");
@@ -624,10 +637,12 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	    }
 	    int i;
 
-	    for (i = 0; i < MAX_VARS; i++) {
-		if (!vars[i].free) {
-		    os_sprintf(response, "%s: %s\r\n", vars[i].name, vars[i].data);
-		    to_console(response);
+	    if (script_enabled) {
+		for (i = 0; i < MAX_VARS; i++) {
+		    if (!vars[i].free) {
+			os_sprintf(response, "%s: %s\r\n", vars[i].name, vars[i].data);
+			to_console(response);
+		    }
 		}
 	    }
 
@@ -1031,6 +1046,15 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 		}
 		goto command_handled;
 	    }
+#ifdef GPIO
+#ifdef GPIO_PWM
+	    if (strcmp(tokens[1], "pwm_period") == 0) {
+		config.pwm_period = atoi(tokens[2]);
+		os_sprintf(response, "PWM period set\r\n");
+		goto command_handled;
+	    }
+#endif
+#endif
 #endif
 #ifdef NTP
 	    if (strcmp(tokens[1], "ntp_server") == 0) {
@@ -1611,9 +1635,6 @@ void  user_init() {
 #ifdef SCRIPTED
     timestamps_init = false;
     interpreter_init();
-#ifdef GPIO
-    init_gpios();
-#endif
 #endif
 
     // Start the timer

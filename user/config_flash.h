@@ -68,7 +68,15 @@ typedef struct
     uint32_t	ntp_interval;	// Sync interval in usec
     int16_t	ntp_timezone;	// Timezone (hour offset to GMT)
 #endif
+#ifdef GPIO
+#ifdef GPIO_PWM
+    uint32_t	pwm_period;	// PWM period
+#endif
+#endif
 } sysconfig_t, *sysconfig_p;
+
+// The global config
+extern sysconfig_t config;
 
 int config_load(sysconfig_p config);
 void config_save(sysconfig_p config);

@@ -3,13 +3,19 @@
 #include "osapi.h"
 #include "lang.h"
 #include "user_config.h"
+#include "config_flash.h"
 #include "mqtt_topics.h"
 #ifdef NTP
 #include "ntp.h"
 #endif
+
 #ifdef GPIO
 #include "easygpio.h"
+#ifdef GPIO_PWM
+#include "pwm.h"
 #endif
+#endif
+
 #define lang_debug	//os_printf
 
 #define lang_log(...) 	{if (lang_logging){char log_buffer[256]; os_sprintf (log_buffer, "%s: ", get_timestr()); con_print(log_buffer); os_sprintf (log_buffer, __VA_ARGS__); con_print(log_buffer);}}
@@ -32,11 +38,17 @@ typedef struct _timestamp_entry_t {
 
 #ifdef GPIO
 typedef struct _gpio_entry_t {
-    uint8_t no;
     os_timer_t inttimer;
+    uint8_t no;
     bool val;
 } gpio_entry_t;
 static gpio_entry_t gpios[MAX_GPIOS];
+int gpio_counter;
+
+#ifdef GPIO_PWM
+static uint8_t pwm_channels[PWM_MAX_CHANNELS];
+int pwm_counter;
+#endif
 #endif
 
 bool lang_logging = false;
@@ -54,7 +66,6 @@ char *interpreter_timestamp;
 int interpreter_gpio;
 int interpreter_gpioval;
 int ts_counter;
-int gpio_counter;
 
 static os_timer_t timers[MAX_TIMERS];
 var_entry_t vars[MAX_VARS];
@@ -190,7 +201,35 @@ void ICACHE_FLASH_ATTR stop_gpios() {
 	gpio_pin_intr_state_set(GPIO_ID_PIN(gpios[i].no), GPIO_PIN_INTR_DISABLE);
     }
 }
-#endif
+
+#ifdef GPIO_PWM
+int32_t ICACHE_FLASH_ATTR pwm_channel_from_pin(int pin) {
+
+    int32_t i;
+    for (i = 0; i < pwm_counter; i++) {
+	if (pin == pwm_channels[i])
+	    return i;
+    }
+    return -1;
+}
+
+void ICACHE_FLASH_ATTR init_pwm() {
+    uint32 io_info[pwm_counter][3];
+    int32_t i;
+
+    if (!script_enabled || pwm_counter == 0)
+	return;
+
+    for (i = 0; i < pwm_counter; i++) {
+	io_info[i][2] = pwm_channels[i];
+    }
+
+    // initial duty: all off
+    pwm_init(config.pwm_period, NULL, pwm_counter, io_info);
+    pwm_start();
+}
+#endif /* GPIO_PWM */
+#endif /* GPIO */
 
 void ICACHE_FLASH_ATTR test_tokens(void) {
     int i;
@@ -510,6 +549,10 @@ int ICACHE_FLASH_ATTR parse_event(int next_token, bool * happend) {
 	if (syn_chk) {
 	    if (gpio_no > 16)
 		return syntax_error(next_token + 1, "invalid gpio number");
+#ifdef GPIO_PWM
+	    if (pwm_channel_from_pin(gpio_no) != -1)
+		return syntax_error(next_token, "pin defined as pwm before");	
+#endif
 	    if (!is_token(next_token+2, "pullup") && !is_token(next_token+2, "nopullup"))
 		return syntax_error(next_token + 2, "expected 'pullup' or 'nopullup'");
 	    int pullup = is_token(next_token+2, "pullup") ? EASYGPIO_PULLUP : EASYGPIO_NOPULL;
@@ -812,10 +855,10 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 
 		    slot_no--;
 		    uint8_t slots[MAX_FLASH_SLOTS*FLASH_SLOT_LEN];
-		    blob_load(1, slots, sizeof(slots));
+		    blob_load(1, (uint32_t *)slots, sizeof(slots));
 		    os_memcpy(&slots[slot_no*FLASH_SLOT_LEN], var_data, var_len);
 		    slots[slot_no*FLASH_SLOT_LEN+FLASH_SLOT_LEN-1] = '\0';
-		    blob_save(1, slots, sizeof(slots));
+		    blob_save(1, (uint32_t *)slots, sizeof(slots));
 		} else {
 
 		    if (var_len > this_var->buffer_len - 1) {
@@ -843,7 +886,10 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 	    uint32_t gpio_no = atoi(my_token[next_token + 1]);
 	    if (gpio_no > 16)
 		return syntax_error(next_token + 1, "invalid gpio number");
-
+#ifdef GPIO_PWM
+	    if (syn_chk && pwm_channel_from_pin(gpio_no) != -1)
+		return syntax_error(next_token, "pin defined as pwm before");	
+#endif
 	    int pullup = EASYGPIO_NOPULL;
 	    int inout = EASYGPIO_OUTPUT;
 	    if (is_token(next_token+2, "input")) {
@@ -852,7 +898,7 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 		    pullup = EASYGPIO_PULLUP;
 		    next_token++;
 		}
-	    else if (syn_chk && !is_token(next_token+2, "output"))
+	    } else if (syn_chk && !is_token(next_token+2, "output")) {
 		return syntax_error(next_token + 2, "expected 'input' or 'output'");	
 	    }
 
@@ -882,11 +928,36 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 		    easygpio_outputSet(gpio_no, atoi(gpio_data) != 0);
 	    }
 	}
-#endif
-	else if (is_token(next_token, "write_flash")) {
+#ifdef GPIO_PWM
+	else if (is_token(next_token, "gpio_pwm")) {
+	    len_check(1);
 
+	    uint32_t gpio_no = atoi(my_token[next_token + 1]);
+	    if (gpio_no > 16)
+		return syntax_error(next_token + 1, "invalid gpio number");
+	    if (syn_chk && pwm_channel_from_pin(gpio_no) == -1) {
+		if (pwm_counter >= PWM_MAX_CHANNELS)
+		    return syntax_error(next_token, "too many pwm channels");
+		pwm_channels[pwm_counter] = gpio_no;
+		pwm_counter++;
+	    }
+
+	    char *pwm_data;
+	    int pwm_len;
+	    Value_Type pwm_type;
+	    if ((next_token = parse_expression(next_token + 2, &pwm_data, &pwm_len, &pwm_type, doit)) == -1)
+		return -1;
+
+	    uint32_t pwm_channel = pwm_channel_from_pin(gpio_no);
+
+	    if (doit && pwm_channel != -1) {
+		lang_log("gpio_pwm %d %s\r\n", gpio_no, pwm_data);
+		pwm_set_duty((atoi(pwm_data)*config.pwm_period)/1000, pwm_channel);
+		pwm_start();  
+	    }
 	}
-
+#endif
+#endif
 	else
 	    return syntax_error(next_token, "action command expected");
 
@@ -1165,7 +1236,7 @@ int ICACHE_FLASH_ATTR parse_value(int next_token, char **data, int *data_len, Va
 	if (!syn_chk) {
 	    slot_no--;
 	    uint8_t slots[MAX_FLASH_SLOTS*FLASH_SLOT_LEN];
-	    blob_load(1, slots, sizeof(slots));
+	    blob_load(1, (uint32_t *)slots, sizeof(slots));
 	    os_memcpy(tmp_buffer, &slots[slot_no*FLASH_SLOT_LEN], FLASH_SLOT_LEN);
 	    *data = tmp_buffer;
 	    *data_len = os_strlen(tmp_buffer);
@@ -1199,7 +1270,12 @@ int ICACHE_FLASH_ATTR interpreter_syntax_check() {
     interpreter_data_len = 0;
     os_bzero(&timestamps, sizeof(timestamps));
     ts_counter = 0;
+#ifdef GPIO
     gpio_counter = 0;
+#ifdef GPIO_PWM
+    pwm_counter = 0;
+#endif
+#endif
     return parse_statement(0);
 }
 
@@ -1219,7 +1295,7 @@ int ICACHE_FLASH_ATTR interpreter_config() {
 
 	    slot_no--;
 	    uint8_t slots[MAX_FLASH_SLOTS*FLASH_SLOT_LEN];
-	    blob_load(1, slots, sizeof(slots));
+	    blob_load(1, (uint32_t *)slots, sizeof(slots));
 	    val = &slots[slot_no*FLASH_SLOT_LEN];
 	    if (val[0] == '\0')
 		val = "_undefined_";
@@ -1238,11 +1314,20 @@ int ICACHE_FLASH_ATTR interpreter_init() {
 	return -1;
 
     lang_debug("interpreter_init\r\n");
-
+#ifdef GPIO
+#ifdef GPIO_PWM
+    init_pwm();
+#endif
+#endif
     interpreter_status = INIT;
     interpreter_topic = interpreter_data = "";
     interpreter_data_len = 0;
-    return parse_statement(0);
+    int ret_val = parse_statement(0);
+#ifdef GPIO
+    init_gpios();
+#endif
+
+    return ret_val;
 }
 
 int ICACHE_FLASH_ATTR interpreter_reconnect(void) {
@@ -1261,11 +1346,15 @@ int ICACHE_FLASH_ATTR interpreter_topic_received(const char *topic, const char *
     if (!script_enabled)
 	return -1;
 
+    uint8_t data_null[data_len+1];
+    os_memcpy(data_null, data, data_len);
+    data_null[data_len] = '\0';
+
     lang_debug("interpreter_topic_received\r\n");
 
     interpreter_status = (local) ? TOPIC_LOCAL : TOPIC_REMOTE;
     interpreter_topic = (char *)topic;
-    interpreter_data = (char *)data;
+    interpreter_data = data_null;
     interpreter_data_len = data_len;
 
     return parse_statement(0);

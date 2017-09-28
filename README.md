@@ -1,7 +1,7 @@
 # esp_uMQTT_broker
 An MQTT Broker/Client with scripting support on the ESP8266
 
-This program enables the ESP8266 to become the central node in a small distributed IoT system. It implements an MQTT Broker and a simple scripted rule engine with event/action statements that links together the MQTT sensors and actors. It can act as STA, as AP, or as both and it can connect to another MQTT broker (i.e. in the cloud). Here it can act as bridge and forward and rewrite topics in both directions. Also it can write on local GPIO pins and react on GPIO interrupts.
+This program enables the ESP8266 to become the central node in a small distributed IoT system. It implements an MQTT Broker and a simple scripted rule engine with event/action statements that links together the MQTT sensors and actors. It can act as STA, as AP, or as both and it can connect to another MQTT broker (i.e. in the cloud). Here it can act as bridge and forward and rewrite topics in both directions. Also it can write to local GPIO pins, react on GPIO interrupts, and drive GPIO pins with PWM.
 
 Find a video that explains the ideas and the architecture of the project at: https://www.youtube.com/watch?v=0K9q4IuB_oA
 
@@ -233,8 +233,9 @@ In general, scripts have the following BNF:
              unsubscribe (local|remote) <topic-id> |
              settimer <num> <expr> |
              setvar ($[any ASCII]* | @<num>) = <expr> |
-             gpio_pinmode <num> [pullup]
+             gpio_pinmode <num> (input|output) [pullup] |
              gpio_out <num> <expr> |
+             gpio_pwm <num> <num> |
              if <expr> then <action> [else <action>] endif |
 	     print <expr> | println <expr> |
 	     system <expr> |
