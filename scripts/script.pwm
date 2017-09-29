@@ -1,0 +1,41 @@
+%
+% Let the build-in LED (GPIO 2) glow up and down
+%
+
+% Config params, overwrite any previous settings from the commandline
+% Nothing here
+
+% Initialization, this is done once after booting
+on init
+do
+	% PWM
+	setvar $pwm_val = 1000
+	setvar $pwm_inc = "-10"
+
+	gpio_pwm 2 $pwm_val 
+
+	settimer 1 10
+
+% Now the events, checked whenever something happens
+
+% Timer (every 10ms)
+on timer 1
+do
+	setvar $pwm_val = $pwm_val + $pwm_inc
+
+	% Under 0 (lower limit)? Reverse increment
+	if 0 > $pwm_val then
+		setvar $pwm_inc = 0 - $pwm_inc
+		setvar $pwm_val = $pwm_inc
+	endif
+
+	% Over 1000 (upper limit)? Reverse increment
+	if $pwm_val > 1000 then
+		setvar $pwm_inc = 0 - $pwm_inc
+		setvar $pwm_val = 1000 + $pwm_inc
+	endif
+
+	gpio_pwm 2 $pwm_val
+
+	settimer 1 10
+
