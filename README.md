@@ -67,9 +67,6 @@ MQTT broker related command:
 - set broker_access _mode_: controls the networks that allow MQTT broker access (0: no access, 1: only internal, 2: only external, 3: both (default))
 - set broker_subscriptions _max_: sets the max number of subscription the broker can store (default: 30)
 - set broker_retained_messages _max_: sets the max number of retained messages the broker can store (default: 30)
-- set script_logging [0|1]: switches logging of script execution on or off (not permanently stored in the configuration)
-- script [_portno_|delete]: opens port for upload of scripts or deletes the current script
-- set @[num] _value_: sets the flash variable "num" (for use in scripts) to the given inital value (must be shorter than 63 chars)
 
 # MQTT client/bridging functionality
 The broker comes with a "local" and a "remote" client, which means, the broker itself can publish and subscribe topics. The "local" client is a client to the own broker (without the need of an additional TCP connection).
@@ -83,7 +80,14 @@ By default the "remote" MQTT client is disabled. It can be enabled by setting th
 - publish [local|remote] [topic] [data]: this publishes a topic (mainly for testing)
 
 # Scripting
-The esp_uMQTT_broker comes with a build-in scripting engine. A script enables the ESP not just to act as a passive broker but to react on events (publications and timing events) and to send out its own items.
+The esp_uMQTT_broker comes with a build-in scripting engine. A script enables the ESP not just to act as a passive broker but to react on events (publications and timing events), to send out its own items and handle local I/O. The script specific CLI commands are:
+
+- script [_portno_|delete]: opens port for upload of scripts or deletes the current script
+- show script [_line_no_]: dumps the currently active script starting with the given line (dumpy only about 1 KB, repeat command for more lines)
+- set @[num] _value_: sets the flash variable "num" (for use in scripts) to the given inital value (must be shorter than 63 chars)
+- set pwm_period _period_: sets the PWM period in terms of 200ns slots (default: 5000, = 0.1ms ^= 1KHz)
+- show vars: dumps all variables of the current program incl. the persistent flash variables
+- set script_logging [0|1]: switches logging of script execution on or off (not permanently stored in the configuration)
 
 Here is a demo of a script to give you an idea of the power of the scripting feature. This script controls a Sonoff switch module. It connects to a remote MQTT broker and in parallel offers locally its own. The device has a number stored in the variable $device_number. On both brokers it subscribes to a topic named '/martinshome/switch/($device_number)/command', where it receives commands, and it publishes the topic '/martinshome/switch/($device_number)/status' with the current state of the switch relay. It understands the commands 'on','off', 'toggle', and 'blink'. Blinking is realized via a timer event. Local status is stored in the two variables $relay_status and $blink (blinking on/off). The 'on gpio_interrupt' clause reacts on pressing the pushbutton of the Sonoff and simply toggles the switch (and stops blinking). The last two 'on clock' clauses implement a daily on and off period:
 
@@ -388,3 +392,11 @@ void MQTT_server_onConnect(MqttConnectCallback connectCb);
 If an *MqttAuthCallback* function is registered with MQTT_server_onAuth(), it is called on each connect request. Based on username, password, and optionally the connection info (e.g. the IP address) the function has to return *true* for authenticated or *false* for rejected. If a request provides no username and/or password these parameter strings are empty. If no *MqttAuthCallback* function is set, each request will be admitted.
 
 The *MqttConnectCallback* function does a similar check for the connection, but it is called right after the connect request before any internal status is allocated. This is done in order to reject requests from unautorized clients in an early stage.
+
+# Thanks
+- pfalcon for esp_open_sdk (https://github.com/martin-ger/esp-open-sdk)
+- tuanpmt for esp_mqtt (https://github.com/tuanpmt/esp_mqtt )
+- eadf for esp8266_easygpio (https://github.com/eadf/esp8266_easygpio )
+- Stefan Brüns for ESP8266_new_pwm (https://github.com/StefanBruens/ESP8266_new_pwm )
+- Ian Craggs for mqtt_topic
+- many others contributing to open software (for the ESP8266)
