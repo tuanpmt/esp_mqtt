@@ -16,7 +16,7 @@ An action can be a sequence of:
 - manipulation of variables, and
 - output on the command line.
 
-The scripting language assumes that there *can* be two MQTT brokers: the _local_ one on the ESP8266 and/or a _remote_ one another node. The connection to the local broker is always present, the connection to the remote broker must be established via the configuration of the esp_uMQTT_broker. Neither one must be used, scripts can also work without MQTT, but the real intention of the language is to provide an easy way to react on received topic and, if required, to forward or rewrite topic from one broker to the other.
+The scripting language assumes that there *can* be two MQTT brokers: the _local_ one on the ESP8266 and/or a _remote_ one another node. The connection to the local broker is always present, the connection to the remote broker must be established via the configuration of the esp_uMQTT_broker. Neither one must be used, scripts can also work without MQTT, but the real intention of the language is to provide an easy way to react on received topics and, if required, to forward or rewrite topics from one broker to the other.
 
 # Syntax
 In general, scripts conform to the following BNF:
@@ -163,7 +163,7 @@ Classic "if then else" expression. Sequences of actions must be terminated with 
 Expressions evaluate to a (string) value. A single constant, a string, or a variable are the basic expressions. Expressions can be combined by operators. If more than one operator is used in an expression, all expressions are stricly evaluated from left to right. CAUTION: arithmetical preceedence does not (yet) apply automatically like in other programming languages. However, the preceedence can be fully controlled by brackets. "not(_expr_)" interpretes the expr as boolean and inverts the result.
 
 # Values
-A constant, a string, or a variable are values. Optionally, strings and constans can be put in quotes, like e.g. "A String" or "-10". This is especially useful for strings containing a whitespace or an operator. Any single character can be quotet using the '\' escape character, like e.g. A\ String (equals "A String").
+A constant, a string, or a variable are values. Optionally, strings and constans can be put in quotes, like e.g. "A String" or "-10". This is especially useful for strings containing a whitespace or an operator. Any single character can be quotet using the '\\' escape character, like e.g. A\ String (equals "A String").
 
 Other value terms are:
 
