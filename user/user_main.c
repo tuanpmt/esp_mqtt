@@ -106,7 +106,7 @@ static void ICACHE_FLASH_ATTR mqttConnectedCb(uint32_t * args) {
     MQTT_Client *client = (MQTT_Client *) args;
     mqtt_connected = true;
 #ifdef SCRIPTED
-    interpreter_reconnect();
+    interpreter_mqtt_connect();
 #endif
     os_printf("MQTT client connected\r\n");
 }
@@ -1260,7 +1260,7 @@ static void ICACHE_FLASH_ATTR user_procTask(os_event_t * events) {
 
     switch (events->sig) {
     case SIG_START_SERVER:
-	// Anything else to do here, when the repeater has received its IP?
+	// Anything else to do here, when the broker has received its IP?
 	break;
 #ifdef SCRIPTED
     case SIG_TOPIC_RECEIVED:
@@ -1365,6 +1365,10 @@ void wifi_handle_event_cb(System_Event_t * evt) {
 
 	my_ip = evt->event_info.got_ip.ip;
 	connected = true;
+
+#ifdef SCRIPTED
+	interpreter_wifi_connect();
+#endif
 
 #ifdef MQTT_CLIENT
 	if (mqtt_enabled)

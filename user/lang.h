@@ -4,7 +4,7 @@
 #include "mqtt_server.h"
 
 
-typedef enum {SYNTAX_CHECK, CONFIG, INIT, MQTT_CLIENT_CONNECT, TOPIC_LOCAL, TOPIC_REMOTE, TIMER, GPIO_INT, CLOCK} Interpreter_Status;
+typedef enum {SYNTAX_CHECK, CONFIG, INIT, MQTT_CLIENT_CONNECT, WIFI_CONNECT, TOPIC_LOCAL, TOPIC_REMOTE, TIMER, GPIO_INT, CLOCK, HTTP_RESPONSE} Interpreter_Status;
 typedef enum {STRING_T, DATA_T} Value_Type;
 
 typedef struct _var_entry_t {
@@ -40,7 +40,8 @@ extern bool script_enabled;
 int interpreter_syntax_check();
 int interpreter_config();
 int interpreter_init();
-int interpreter_reconnect(void);
+int interpreter_mqtt_connect(void);
+int interpreter_wifi_connect(void);
 int interpreter_topic_received(const char *topic, const char *data, int data_len, bool local);
 
 void init_timestamps(uint8_t *curr_time);

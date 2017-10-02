@@ -80,7 +80,7 @@ By default the "remote" MQTT client is disabled. It can be enabled by setting th
 - publish [local|remote] [topic] [data]: this publishes a topic (mainly for testing)
 
 # Scripting
-The esp_uMQTT_broker comes with a build-in scripting engine. A script enables the ESP not just to act as a passive broker but to react on events (publications and timing events), to send out its own items and handle local I/O. Details on syntax and semantics of the scripting language can be found here: https://github.com/martin-ger/esp_mqtt/blob/master/SCRIPTING.md . Examples of scripts are in the "scripts" directory
+The esp_uMQTT_broker comes with a build-in scripting engine. A script enables the ESP not just to act as a passive broker but to react on events (publications and timing events), to send out its own items and handle local I/O. Details on syntax and semantics of the scripting language can be found here: https://github.com/martin-ger/esp_mqtt/blob/master/SCRIPTING.md . Examples of scripts are in the "scripts" directory.
 
 The script specific CLI commands are:
 
@@ -231,4 +231,5 @@ The *MqttConnectCallback* function does a similar check for the connection, but 
 - eadf for esp8266_easygpio (https://github.com/eadf/esp8266_easygpio )
 - Stefan Brüns for ESP8266_new_pwm (https://github.com/StefanBruens/ESP8266_new_pwm )
 - Ian Craggs for mqtt_topic
+- Martin d'Allens for esphttpclient
 - many others contributing to open software (for the ESP8266)

@@ -13,10 +13,11 @@
 // Here the MQTT stuff
 //
 
+//
 // Define this if you want to have it work as a MQTT client
-#define MQTT_CLIENT 	1	
-
-// Define this if you need SSL for the *MQTT client*
+// Define MQTT_SSL_ENABLE if you need SSL for the *MQTT client*
+//
+#define MQTT_CLIENT 	1
 //#define MQTT_SSL_ENABLE	1
 
 #define MQTT_BUF_SIZE   1024
@@ -58,6 +59,13 @@
 // Define this if you want to have NTP support.
 //
 #define NTP	  1
+
+//
+// Define this if you want to have HTTP client support.
+// Define HTTPCS if you want to have additional HTTPS support.
+//
+#define HTTPC	  1
+//#define HTTPCS	  1
 
 //
 // Define this if you want to have mDNS support in scripts.

@@ -2,10 +2,12 @@
 
 The scripting language of the esp_uMQTT_broker is stricly event based. It mainly consists of "on _event_ do _action_" clauses. An event can be:
 - the reception of an MQTT item,
-- the sucessful connection to an external MQTT broker, 
+- the sucessful connection to an external MQTT broker,
+- the sucessful connect to the WiFi network
 - an expiring timer, 
 - a predefined time-of-day,
-- a GPIO interrupt, and
+- a GPIO interrupt, 
+- an HTTP response, and
 - the initialization of the system.
 
 An action can be a sequence of:
@@ -27,17 +29,20 @@ In general, scripts conform to the following BNF:
                 <statement> <statement>
 
 <event> ::= init |
+            wificonnect |
 	    mqttconnect |
             timer <num> |
             clock <timestamp> |
             gpio_interrupt <num> (pullup|nopullup) |
-            topic (local|remote) <topic-id>
+            topic (local|remote) <topic-id> |
+            http_response
 
 <action> ::= publish (local|remote) <topic-id> <expr> [retained] |
              subscribe (local|remote) <topic-id> |
              unsubscribe (local|remote) <topic-id> |
              settimer <num> <expr> |
              setvar ($[any ASCII]* | @<num>) = <expr> |
+             http_get <expr> |
              gpio_pinmode <num> (input|output) [pullup] |
              gpio_out <num> <expr> |
              gpio_pwm <num> <num> |
@@ -46,12 +51,13 @@ In general, scripts conform to the following BNF:
 	     system <expr> |
              <action> <action>
 
-<expr> ::= <val> <op> <expr> | (<expr>) | not (<expr>)
+<expr> ::= <val> | <val> <op> <expr> | (<expr>) | not (<expr>)
 
 <op> := '=' | '>' | gte | str_ge | str_gte | '+' | '-' | '*' | '|' | div
 
 <val> := <string> | <const> | #<hex-string> | $[any ASCII]* | @<num> |
-         gpio_in(<num>) | $this_item | $this_data | $this_gpio | $timestamp | $weekday
+         gpio_in(<num>) | $this_item | $this_data | $this_gpio | 
+         $this_http_code | $this_http_body | $timestamp | $weekday
 
 <string> := "[any ASCII]*" | [any ASCII]*
 
@@ -78,6 +84,11 @@ init
 This event happens once after restart of the script. All "config" parameters are applied, but typically WiFi is not yet up and no external nodes are connected. This is typically the clause where the initalization of variables and timers as well as subscriptions to topics on the local broker take place.
 
 ```
+wificonnect
+```
+This event happens each time, the esp_uMQTT_broker (re-)connects as client to the WiFi and has received an IP address.
+
+```
 mqttconnect
 ```
 This event happens each time, the MQTT *client* module (re-)connects to an external broker. This is typically the clause where subscriptions to topics on this broker are done (must be re-done after a connection loss anyway).
@@ -101,6 +112,11 @@ This event happens when the time-of-day value given in the event has been reache
 gpio_interrupt <num> (pullup|nopullup)
 ```
 This event happens when the GPIO pin with the given number generates an interrupt. An interrupt happens on each state change, i.e. a 0-1-0 sequence will cause two events. Use the special variable _$this_gpio_ to access the actual state of the pin. This variable is only defined inside the "on topic" clause. The interrupt mechanism uses a 50ms delay for debouncing the input. This means this event is suitable for switches, not for high-frequency signals. The "pullup" or "nopullup" defines whether the input pin is free floating or internally pulled to high level.
+
+```
+http_response
+```
+This event happens when an HTTP-request has been sent with "http_get" and a response arrives. The actual body of the response can be accessed in the actions via the special variable _$this_http_body_, the HTTP return code via the special variable _$this_http_code_. These variables are only defined inside the "on http_response" clause.
 
 # Action
 ```
@@ -129,6 +145,11 @@ Currently the interpreter is configured for a maximum of 10 variables, with a si
 Flash variables can also be used for storing config parameters or handing them over from the CLI to a script. They can be set with the "set @[num] _value_" on the CLI and the written values can then be picked up by a script to read e.g. config parameters like DNS names, IPs, node IDs or username/password.
 
 ```
+http_get <expr>
+```
+Sends an HTTP request to the URL given in the expression.
+
+```
 gpio_pinmode <num> (input|output) [pullup]
 ```
 Defines the status of a GPIO pin. This is only required for input pins, that are not used in "gpio_interrupt" events. The status of these pins can be accessed via the "gpio_in()" expression. It is optional for output and PWM pins as these are configured automatically as soon as an output command is given. The optional "pullup" defines whether the input pin is free floating or internally pulled to high level.
@@ -146,7 +167,7 @@ Defines the GPIO pin num as PWM output and sets the PWM duty cycle to the given 
 ```
 system <expr>
 ```
-Executes the given expression as if it has been issued on the CLI. Useful e.g. for cnditional "save", "lock" or "set" commands.
+Executes the given expression as if it has been issued on the CLI. Useful e.g. for "save", "lock" or "reset" commands.
 
 ```
 print <expr> | 
@@ -180,9 +201,13 @@ gpio_in(<num>)
 Reads the current boolean input value of the given GPIO pin. This pin has to be defined as input before using the "gpio_pinmode" action.
 
 ```
-$this_item | $this_data | $this_gpio | $timestamp | $weekday
+$this_item | $this_data | $this_gpio | $timestamp | $weekday | $this_http_body | $this_http_code
 ```
-Special variables: $this_topic and $this_data are only defined in "on topic" clauses and contain the current topic and its data. $this_gpio contains the state of the GPIO in an "on gpio_interrupt" clause and $timestamp contains the current time of day in "hh:mm:ss" format. If no NTP sync happened the time will be reported as "99:99:99". The variable "$weekday" returns the day of week as three letters ("Mon","Tue",...).
+Special variables:
+$this_topic and $this_data are only defined in "on topic" clauses and contain the current topic and its data.
+$this_gpio contains the state of the GPIO in an "on gpio_interrupt" clause.
+$timestamp contains the current time of day in "hh:mm:ss" format. If no NTP sync happened the time will be reported as "99:99:99". $weekday returns the day of week as three letters ("Mon","Tue",...). 
+$this_http_body and $this_http_code are only defined inside the "on http_response" clause and contain the body of an HTTP response and the HTTP return code.
 
 # Operators
 Operators are used to combine values and expressions.
@@ -201,6 +226,9 @@ These operators are the arithmetical operations. CAUTION: arithmetical preceeden
 '|'
 ```
 This operator concatenates the left and the right operator as strings. Useful e.g. in "print" actions or when putting together MQTT topics.
+
+# Comments
+Comments start with a ’%' anywhere in a line and reach until the end of this line.
 
 # Sample
 Here is a demo of a script to give you an idea of the power of the scripting feature. This script controls a Sonoff switch module. It connects to a remote MQTT broker and in parallel offers locally its own. The device has a number stored in the variable $device_number. On both brokers it subscribes to a topic named '/martinshome/switch/($device_number)/command', where it receives commands, and it publishes the topic '/martinshome/switch/($device_number)/status' with the current state of the switch relay. It understands the commands 'on','off', 'toggle', and 'blink'. Blinking is realized via a timer event. Local status is stored in the two variables $relay_status and $blink (blinking on/off). The 'on gpio_interrupt' clause reacts on pressing the pushbutton of the Sonoff and simply toggles the switch (and stops blinking). The last two 'on clock' clauses implement a daily on and off period:

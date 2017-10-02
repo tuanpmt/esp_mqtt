@@ -1,0 +1,16 @@
+% Config params, overwrite any previous settings from the commandline
+% Nothing here
+
+% Now the events, checked whenever something happens
+
+on wificonnect
+do
+	println "get http://wtfismyip.com/text"
+	http_get "http://wtfismyip.com/text"
+
+on http_response
+do
+	println "return code: " | $this_http_code
+	println $this_http_body
+	
+

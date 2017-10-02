@@ -56,16 +56,24 @@ char **my_token;
 int max_token;
 bool script_enabled = false;
 bool in_topic_statement;
-bool in_gpio_statement;
 Interpreter_Status interpreter_status;
 char *interpreter_topic;
 char *interpreter_data;
 int interpreter_data_len;
 int interpreter_timer;
 char *interpreter_timestamp;
+int ts_counter;
+#ifdef GPIO
+bool in_gpio_statement;
 int interpreter_gpio;
 int interpreter_gpioval;
-int ts_counter;
+#endif
+#ifdef HTTPC
+bool in_http_statement;
+int interpreter_http_status;
+
+void interpreter_http_reply(char *response_body, int http_status, char *response_headers, int body_size);
+#endif
 
 static os_timer_t timers[MAX_TIMERS];
 var_entry_t vars[MAX_VARS];
@@ -164,7 +172,7 @@ void ICACHE_FLASH_ATTR inttimer_func(void *arg){
 }
 
 // Interrupt handler - this function will be executed on any edge of a GPIO
-LOCAL void  gpio_intr_handler(void *arg)
+LOCAL void gpio_intr_handler(void *arg)
 {
     gpio_entry_t *my_gpio_entry = (gpio_entry_t *)arg;
 
@@ -442,7 +450,13 @@ int ICACHE_FLASH_ATTR parse_statement(int next_token) {
 
     while ((next_token = syn_chk ? next_token : search_token(next_token, "on")) < max_token) {
 
-	in_topic_statement = in_gpio_statement = false;
+	in_topic_statement = false;
+#ifdef GPIO
+	in_gpio_statement = false;
+#endif
+#ifdef HTTPC
+	in_http_statement = false;
+#endif
 
 	if (is_token(next_token, "on")) {
 	    lang_debug("statement on\r\n");
@@ -489,7 +503,16 @@ int ICACHE_FLASH_ATTR parse_event(int next_token, bool * happend) {
 
 	*happend = (interpreter_status == MQTT_CLIENT_CONNECT);
 	if (*happend)
-	    lang_log("on init\r\n");
+	    lang_log("on mqttconnect\r\n");
+	return next_token + 1;
+    }
+
+    if (is_token(next_token, "wificonnect")) {
+	lang_debug("event wificonnect\r\n");
+
+	*happend = (interpreter_status == WIFI_CONNECT);
+	if (*happend)
+	    lang_log("on wificonnect\r\n");
 	return next_token + 1;
     }
 
@@ -587,8 +610,18 @@ int ICACHE_FLASH_ATTR parse_event(int next_token, bool * happend) {
 	    lang_log("on clock %s\r\n", my_token[next_token + 1]);
 	return next_token + 2;
     }
+#ifdef HTTPC
+    if (is_token(next_token, "http_response")) {
+	lang_debug("event http_response\r\n");
+	in_http_statement = true;
 
-    return syntax_error(next_token, "'init', 'mqttconnect', 'topic', 'gpio_interrupt', 'clock', or 'timer' expected");
+	*happend = (interpreter_status == HTTP_RESPONSE);
+	if (*happend)
+	    lang_log("on http_response\r\n");
+	return next_token + 1;
+    }
+#endif
+    return syntax_error(next_token, "'init', 'mqttconnect', 'topic', 'gpio_interrupt', 'clock', 'http_response', or 'timer' expected");
 }
 
 int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
@@ -879,6 +912,21 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 		}
 	    }
 	}
+#ifdef HTTPC
+	else if (is_token(next_token, "http_get")) {
+	    len_check(2);
+
+	    char *url_data;
+	    int url_len;
+	    Value_Type url_type;
+	    if ((next_token = parse_expression(next_token + 1, &url_data, &url_len, &url_type, doit)) == -1)
+		return -1;
+
+	    if (doit) {
+		http_get(url_data, "", interpreter_http_reply);
+	    }
+	}
+#endif
 #ifdef GPIO
 	else if (is_token(next_token, "gpio_pinmode")) {
 	    len_check(2);
@@ -1182,6 +1230,32 @@ int ICACHE_FLASH_ATTR parse_value(int next_token, char **data, int *data_len, Va
 	return next_token + 1;
     }
 #endif
+#ifdef HTTPC
+    else if (is_token(next_token, "$this_http_body")) {
+	lang_debug("val $this_http_body\r\n");
+
+	if (!in_http_statement)
+	    return syntax_error(next_token, "undefined $this_http_body");
+	*data = interpreter_data;
+	*data_len = interpreter_data_len;
+	*data_type = STRING_T;
+	return next_token + 1;
+    }
+
+    else if (is_token(next_token, "$this_http_code")) {
+	static char codebuf[4];
+	lang_debug("val $this_http_code\r\n");
+
+	if (!in_http_statement)
+	    return syntax_error(next_token, "undefined $this_http_code");
+	
+	os_sprintf(codebuf, "%3d", interpreter_http_status);
+	*data = codebuf;
+	*data_len = os_strlen(codebuf);
+	*data_type = STRING_T;
+	return next_token + 1;
+    }
+#endif
 #ifdef NTP
     else if (is_token(next_token, "$timestamp")) {
 	lang_debug("val $timestamp\r\n");
@@ -1330,11 +1404,23 @@ int ICACHE_FLASH_ATTR interpreter_init() {
     return ret_val;
 }
 
-int ICACHE_FLASH_ATTR interpreter_reconnect(void) {
+int ICACHE_FLASH_ATTR interpreter_wifi_connect(void) {
     if (!script_enabled)
 	return -1;
 
-    lang_debug("interpreter_init_reconnect\r\n");
+    lang_debug("interpreter_wifi_connect\r\n");
+
+    interpreter_status = WIFI_CONNECT;
+    interpreter_topic = interpreter_data = "";
+    interpreter_data_len = 0;
+    return parse_statement(0);
+}
+
+int ICACHE_FLASH_ATTR interpreter_mqtt_connect(void) {
+    if (!script_enabled)
+	return -1;
+
+    lang_debug("interpreter_mqtt_connect\r\n");
 
     interpreter_status = MQTT_CLIENT_CONNECT;
     interpreter_topic = interpreter_data = "";
@@ -1359,4 +1445,21 @@ int ICACHE_FLASH_ATTR interpreter_topic_received(const char *topic, const char *
 
     return parse_statement(0);
 }
+
+#ifdef HTTPC
+void ICACHE_FLASH_ATTR interpreter_http_reply(char *response_body, int http_status, char *response_headers, int body_size) {
+    if (!script_enabled)
+	return;
+
+    lang_debug("interpreter_http_reply\r\n");
+
+    interpreter_status = HTTP_RESPONSE;
+    interpreter_topic = response_headers;
+    interpreter_http_status = http_status;
+    interpreter_data = response_body;
+    interpreter_data_len = body_size;
+
+    parse_statement(0);
+}
+#endif
 
