@@ -1,7 +1,7 @@
 # esp_uMQTT_broker
 An MQTT Broker/Client with scripting support on the ESP8266
 
-This program enables the ESP8266 to become the central node in a small distributed IoT system. It implements an MQTT Broker and a simple scripted rule engine with event/action statements that links together the MQTT sensors and actors. It can act as STA, as AP, or as both and it can connect to another MQTT broker (i.e. in the cloud). Here it can act as bridge and forward and rewrite topics in both directions. Also it can write to local GPIO pins, react on GPIO interrupts, and drive GPIO pins with PWM.
+This program enables the ESP8266 to become the central node in a small distributed IoT system. It implements an MQTT Broker and a simple scripted rule engine with event/action statements that links together the MQTT sensors and actors. It can act as STA, as AP, or as both and it can connect to another MQTT broker (i.e. in the cloud). Here it can act as bridge and forward and rewrite topics in both directions. Also it can parse JSON structures, write to local GPIO pins, react on timers and GPIO interrupts, drive GPIO pins with PWM, and do basic HTTP GET requests.
 
 Find a video that explains the ideas and the architecture of the project at: https://www.youtube.com/watch?v=0K9q4IuB_oA
 
@@ -230,6 +230,6 @@ The *MqttConnectCallback* function does a similar check for the connection, but 
 - tuanpmt for esp_mqtt (https://github.com/tuanpmt/esp_mqtt )
 - eadf for esp8266_easygpio (https://github.com/eadf/esp8266_easygpio )
 - Stefan Brüns for ESP8266_new_pwm (https://github.com/StefanBruens/ESP8266_new_pwm )
+- Martin d'Allens for esphttpclient (https://github.com/Caerbannog/esphttpclient )
 - Ian Craggs for mqtt_topic
-- Martin d'Allens for esphttpclient
 - many others contributing to open software (for the ESP8266)

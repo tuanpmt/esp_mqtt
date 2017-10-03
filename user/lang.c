@@ -16,6 +16,10 @@
 #endif
 #endif
 
+#ifdef JSON_PARSE
+#include "json_path.h"
+#endif
+
 #define lang_debug	//os_printf
 
 #define lang_log(...) 	{if (lang_logging){char log_buffer[256]; os_sprintf (log_buffer, "%s: ", get_timestr()); con_print(log_buffer); os_sprintf (log_buffer, __VA_ARGS__); con_print(log_buffer);}}
@@ -303,6 +307,9 @@ int ICACHE_FLASH_ATTR text_into_tokens(char *str) {
 	} else if (*p == ')' && !in_token) {
 	    // mark this as bracket close
 	    *q++ = 9;
+	} else if (*p == ',' && !in_token) {
+	    // mark this as colon
+	    *q++ = 10;
 	} else {
 	    *q++ = *p;
 	}
@@ -394,6 +401,11 @@ int ICACHE_FLASH_ATTR text_into_tokens(char *str) {
 	}
 	else if (*p == 9) {
 	    my_token[token_count++] = ")";
+	    *p = '\0';
+	    in_token = false;
+	}
+	else if (*p == 10) {
+	    my_token[token_count++] = ",";
 	    *p = '\0';
 	    in_token = false;
 	}
@@ -1056,6 +1068,54 @@ int ICACHE_FLASH_ATTR parse_expression(int next_token, char **data, int *data_le
 	*data_type = STRING_T;
 	if (doit && easygpio_inputGet(gpio_no)) {
 	    *data = "1";
+	}
+    }
+#endif
+#ifdef JSON_PARSE
+    else if (is_token(next_token, "json_parse")) {
+	lang_debug("val json_parse\r\n");
+
+	len_check(5);
+	if (syn_chk && !is_token(next_token+1, "("))
+	    return syntax_error(next_token+1, "expected '('");
+
+	char *path_data;
+	int path_data_len;
+	Value_Type path_data_type;
+	// parse path string
+	if ((next_token = parse_expression(next_token + 2, &path_data, &path_data_len, &path_data_type, doit)) == -1)
+	    return -1;
+	if (!doit)
+	    path_data_len = 0;
+	char path[path_data_len+1];
+	if (doit)
+	    os_strcpy(path, path_data);
+
+	if (syn_chk && !is_token(next_token, ","))
+	    return syntax_error(next_token, "expected ','");
+
+	char *json_data;
+	int json_data_len;
+	Value_Type json_data_type;
+	// parse json string
+	if ((next_token = parse_expression(next_token + 1, &json_data, &json_data_len, &json_data_type, doit)) == -1)
+	    return -1;
+	if (!doit)
+	    json_data_len = 0;
+	char json[json_data_len+1];
+	if (doit)
+	    os_strcpy(json, json_data);
+
+	if (syn_chk && !is_token(next_token, ")"))
+	    return syntax_error(next_token, "expected ')'");
+
+	next_token += 1;
+
+	if (doit) {
+	    *data_len = sizeof(tmp_buffer);
+	    json_path(json, path, tmp_buffer, data_len);
+	    *data = tmp_buffer;
+	    *data_type = STRING_T;
 	}
     }
 #endif

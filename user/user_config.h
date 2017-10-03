@@ -68,6 +68,11 @@
 //#define HTTPCS	  1
 
 //
+// Define this if you want to have JSON parse support in scripts.
+//
+#define JSON_PARSE	  1
+
+//
 // Define this if you want to have mDNS support in scripts.
 //
 #define MDNS	  1

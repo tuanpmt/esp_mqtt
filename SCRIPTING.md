@@ -51,7 +51,7 @@ In general, scripts conform to the following BNF:
 	     system <expr> |
              <action> <action>
 
-<expr> ::= <val> | <val> <op> <expr> | (<expr>) | not (<expr>)
+<expr> ::= <val> | <val> <op> <expr> | (<expr>) | not (<expr>) | json_parse (<expr>,<expr>)
 
 <op> := '=' | '>' | gte | str_ge | str_gte | '+' | '-' | '*' | '|' | div
 
@@ -181,7 +181,29 @@ if <expr> then <action> [else <action>] endif
 Classic "if then else" expression. Sequences of actions must be terminated with the (optional) "else" and the "endif". Can be nested.
 
 # Expressions
-Expressions evaluate to a (string) value. A single constant, a string, or a variable are the basic expressions. Expressions can be combined by operators. If more than one operator is used in an expression, all expressions are stricly evaluated from left to right. CAUTION: arithmetical preceedence does not (yet) apply automatically like in other programming languages. However, the preceedence can be fully controlled by brackets. "not(_expr_)" interpretes the expr as boolean and inverts the result.
+Expressions evaluate to a (string) value. A single constant, a string, or a variable are the basic expressions. Expressions can be combined by operators. If more than one operator is used in an expression, all expressions are stricly evaluated from left to right. CAUTION: arithmetical preceedence does not (yet) apply automatically like in other programming languages. However, the preceedence can be fully controlled by brackets. 
+
+```
+not(<expr>)
+```
+Interpretes the argument expression as boolean and inverts the result.
+
+```
+json_parse (<expr>,<expr>)
+```
+Parses a JSON structure. The first argument expression is interpreted as JSON path, i.g. a string with names or numbers separated by "." characters. The second argument expression is interpreted as a JSON structure and the result of the expression is the data field of the JSON structure that is identified by the path (or an empty string if not found).
+
+Example - give in the variable $json the following JSON structure:
+```
+{
+"name":
+	{ "first":"John",
+          "last":"Snow" }
+"age":30,
+"cars":[ "Ford", "BMW", "Fiat" ]
+}
+```
+"json_parse("name.first", $json)" results in "John", "json_parse("cars.1", $json)" results in "BMW".
 
 # Values
 A constant, a string, or a variable are values. Optionally, strings and constans can be put in quotes, like e.g. "A String" or "-10". This is especially useful for strings containing a whitespace or an operator. Any single character can be quotet using the '\\' escape character, like e.g. A\ String (equals "A String").

@@ -924,7 +924,6 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	    if (strcmp(tokens[1], "network") == 0) {
 		config.network_addr.addr = ipaddr_addr(tokens[2]);
 		ip4_addr4(&config.network_addr) = 0;
-		os_sprintf(response, "Network set to %d.%d.%d.%d/24\r\n", IP2STR(&config.network_addr));
 		goto command_handled;
 	    }
 
