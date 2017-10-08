@@ -73,7 +73,7 @@
 #define JSON_PARSE	  1
 
 //
-// Define this if you want to have mDNS support in scripts.
+// Define this if you want to have mDNS support.
 //
 #define MDNS	  1
 

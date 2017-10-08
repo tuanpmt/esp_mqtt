@@ -692,7 +692,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	    config_load_default(&config);
 	    config_save(&config);
 #ifdef SCRIPTED
-	    // clear script
+	    // Clear script and vars
 	    blob_zero(0, MAX_SCRIPT_SIZE);
 	    blob_zero(1, MAX_FLASH_SLOTS * FLASH_SLOT_LEN);
 #endif
@@ -1528,10 +1528,11 @@ void  user_init() {
     os_printf("\r\n\r\nWiFi Router/MQTT Broker V2.0 starting\r\n");
 
     // Load config
-    config_load(&config);
+    int config_res = config_load(&config);
+
 #ifdef SCRIPTED
     script_enabled = false;
-    if (read_script()) {
+    if ((config_res == 0) && read_script()) {
 	if (interpreter_syntax_check() != -1) {
 	    bool lockstat = config.locked;
 	    config.locked = false;
@@ -1543,6 +1544,10 @@ void  user_init() {
 	} else {
 	    os_printf("ERROR in script: %s\r\nScript disabled\r\n", tmp_buffer);
 	}
+    } else {
+	// Clear script and vars
+	blob_zero(0, MAX_SCRIPT_SIZE);
+	blob_zero(1, MAX_FLASH_SLOTS * FLASH_SLOT_LEN);
     }
 #endif
 
