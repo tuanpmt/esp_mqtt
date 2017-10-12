@@ -16,6 +16,10 @@
 #endif
 #endif
 
+#ifdef ADC
+#include "adc.h"
+#endif
+
 #ifdef JSON_PARSE
 #include "json_path.h"
 #endif
@@ -1336,6 +1340,18 @@ int ICACHE_FLASH_ATTR parse_value(int next_token, char **data, int *data_len, Va
 	    *data = get_weekday();
 	else
 	    *data = "xxx";
+	*data_len = os_strlen(*data);
+	*data_type = STRING_T;
+	return next_token + 1;
+    }
+#endif
+#ifdef ADC
+    else if (is_token(next_token, "$adc")) {
+	static char adcbuf[8];
+	lang_debug("val $adc\r\n");
+
+	os_sprintf(adcbuf, "%d", adc_read());
+	*data = adcbuf;
 	*data_len = os_strlen(*data);
 	*data_type = STRING_T;
 	return next_token + 1;

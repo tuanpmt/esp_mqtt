@@ -1626,7 +1626,7 @@ void  user_init() {
 
     // Start the broker only if it accessible
     if (config.mqtt_broker_access != 0) {
-	espconn_tcp_set_max_con(10);
+	espconn_tcp_set_max_con(15);
 	os_printf("Max number of TCP clients: %d\r\n", espconn_tcp_get_max_con());
 
 	MQTT_server_onData(MQTT_local_DataCallback);

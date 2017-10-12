@@ -1,4 +1,5 @@
-# Scripting Language
+Scripting Language
+==================
 
 The scripting language of the esp_uMQTT_broker is stricly event based. It mainly consists of "on _event_ do _action_" clauses. An event can be:
 - the reception of an MQTT item,
@@ -56,7 +57,7 @@ In general, scripts conform to the following BNF:
 <op> := '=' | '>' | gte | str_ge | str_gte | '+' | '-' | '*' | '|' | div
 
 <val> := <string> | <const> | #<hex-string> | $[any ASCII]* | @<num> |
-         gpio_in(<num>) | $this_item | $this_data | $this_gpio | 
+         gpio_in(<num>) | $adc | $this_item | $this_data | $this_gpio | 
          $this_http_code | $this_http_body | $timestamp | $weekday
 
 <string> := "[any ASCII]*" | [any ASCII]*
@@ -223,13 +224,14 @@ gpio_in(<num>)
 Reads the current boolean input value of the given GPIO pin. This pin has to be defined as input before using the "gpio_pinmode" action.
 
 ```
-$this_item | $this_data | $this_gpio | $timestamp | $weekday | $this_http_body | $this_http_code
+$adc | $this_item | $this_data | $this_gpio | $timestamp | $weekday | $this_http_body | $this_http_code
 ```
 Special variables:
-$this_topic and $this_data are only defined in "on topic" clauses and contain the current topic and its data.
-$this_gpio contains the state of the GPIO in an "on gpio_interrupt" clause.
-$timestamp contains the current time of day in "hh:mm:ss" format. If no NTP sync happened the time will be reported as "99:99:99". $weekday returns the day of week as three letters ("Mon","Tue",...). 
-$this_http_body and $this_http_code are only defined inside the "on http_response" clause and contain the body of an HTTP response and the HTTP return code.
+- $adc gives you the current value of the ADC (analog to digital input pin)
+- $this_topic and $this_data are only defined in "on topic" clauses and contain the current topic and its data.
+- $this_gpio contains the state of the GPIO in an "on gpio_interrupt" clause.
+- $timestamp contains the current time of day in "hh:mm:ss" format. If no NTP sync happened the time will be reported as "99:99:99". $weekday returns the day of week as three letters ("Mon","Tue",...). 
+- $this_http_body and $this_http_code are only defined inside the "on http_response" clause and contain the body of an HTTP response and the HTTP return code.
 
 # Operators
 Operators are used to combine values and expressions.
@@ -242,7 +244,7 @@ These operators result in boolean values and are typically used in comparisons i
 ```
 '+' | '-' | '*' | div
 ```
-These operators are the arithmetical operations. CAUTION: arithmetical preceedence does not (yet) apply automatically, all expressions are evaluated from left to right. I.e. "2+3*4" evaluates to 20 instead of 14. However, the preceedence can be fully controlled by brackets. Write "2+(3*4)" instead.
+These operators are the arithmetical operations. CAUTION: arithmetical preceedence does not (yet) apply automatically, all expressions are evaluated from left to right. I.e. "2+3\*4" evaluates to 20 instead of 14. However, the preceedence can be fully controlled by brackets. Write "2+(3\*4)" instead.
 
 ```
 '|'
@@ -375,4 +377,5 @@ on clock 01:00:00
 do
 	publish local $command_topic "off"
 ```
+
 

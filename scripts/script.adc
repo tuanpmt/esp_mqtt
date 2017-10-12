@@ -1,0 +1,15 @@
+% Config params, overwrite any previous settings from the commandline
+% Nothing here
+
+% Now the events, checked whenever something happens
+
+on init
+do
+	settimer 1 1000
+
+on timer 1
+do
+	println "ADC value: " | $adc
+	settimer 1 1000
+	
+

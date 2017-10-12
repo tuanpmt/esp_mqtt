@@ -22,10 +22,6 @@ return _v;
 #define os_malloc(x) my_os_zalloc(x, __LINE__)
 */
 
-#ifndef QUEUE_BUFFER_SIZE
-#define QUEUE_BUFFER_SIZE     2048
-#endif
-
 #define MAX_SUBS_PER_REQ      16
 
 #define MQTT_SERVER_TASK_PRIO        1
@@ -125,6 +121,8 @@ bool ICACHE_FLASH_ATTR activate_next_client() {
     return true;
 }
 
+static uint8_t shared_out_buffer[MQTT_BUF_SIZE];
+
 bool ICACHE_FLASH_ATTR MQTT_InitClientCon(MQTT_ClientCon * mqttClientCon) {
     uint32_t temp;
     MQTT_INFO("MQTT:InitClientCon\r\n");
@@ -138,7 +136,8 @@ bool ICACHE_FLASH_ATTR MQTT_InitClientCon(MQTT_ClientCon * mqttClientCon) {
 
     mqttClientCon->mqtt_state.in_buffer = (uint8_t *) os_zalloc(MQTT_BUF_SIZE);
     mqttClientCon->mqtt_state.in_buffer_length = MQTT_BUF_SIZE;
-    mqttClientCon->mqtt_state.out_buffer = (uint8_t *) os_zalloc(MQTT_BUF_SIZE);
+    // mqttClientCon->mqtt_state.out_buffer = (uint8_t *) os_zalloc(MQTT_BUF_SIZE);
+    mqttClientCon->mqtt_state.out_buffer = shared_out_buffer;
     mqttClientCon->mqtt_state.out_buffer_length = MQTT_BUF_SIZE;
     mqttClientCon->mqtt_state.connect_info = &mqttClientCon->connect_info;
 
@@ -182,18 +181,20 @@ bool ICACHE_FLASH_ATTR MQTT_DeleteClientCon(MQTT_ClientCon * mqttClientCon) {
 	mqttClientCon->mqtt_state.in_buffer = NULL;
     }
 
-    if (mqttClientCon->mqtt_state.out_buffer != NULL) {
-	os_free(mqttClientCon->mqtt_state.out_buffer);
-	mqttClientCon->mqtt_state.out_buffer = NULL;
-    }
+/* We use one static buffer for all connections
+//    if (mqttClientCon->mqtt_state.out_buffer != NULL) {
+//	os_free(mqttClientCon->mqtt_state.out_buffer);
+//	mqttClientCon->mqtt_state.out_buffer = NULL;
+//    }
 
     if (mqttClientCon->mqtt_state.outbound_message != NULL) {
 	if (mqttClientCon->mqtt_state.outbound_message->data != NULL) {
-	    os_free(mqttClientCon->mqtt_state.outbound_message->data);
+	    // Don't think, this is has ever been allocated separately
+	    // os_free(mqttClientCon->mqtt_state.outbound_message->data);
 	    mqttClientCon->mqtt_state.outbound_message->data = NULL;
 	}
     }
-
+*/
     if (mqttClientCon->mqtt_state.mqtt_connection.buffer != NULL) {
 	// Already freed but not NULL
 	mqttClientCon->mqtt_state.mqtt_connection.buffer = NULL;

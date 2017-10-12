@@ -20,7 +20,14 @@
 #define MQTT_CLIENT 	1
 //#define MQTT_SSL_ENABLE	1
 
+//
+// Change this to adjust memory consuption of one MQTT connection
+// MQTT_BUF_SIZE is the max. size of pending inbound messages for one connection
+// QUEUE_BUFFER_SIZE is the max. size of all pending outbound messages for one connection 
+//
 #define MQTT_BUF_SIZE   1024
+#define QUEUE_BUFFER_SIZE 2048
+
 #define MQTT_KEEPALIVE    120  /*seconds*/
 #define MQTT_RECONNECT_TIMEOUT  5 /*seconds*/
 //#define PROTOCOL_NAMEv31  /*MQTT version 3.1 compatible with Mosquitto v0.15*/
@@ -47,21 +54,18 @@
 
 //
 // Define this if you want to have GPIO OUT support in scripts.
+// Define GPIO_PWM if you want to have additionally GPIO PWM support in scripts.
 //
 #define GPIO	  1
-
-//
-// Define this if you want to have additionally GPIO PWM support in scripts.
-//
 #define GPIO_PWM  1
 
 //
-// Define this if you want to have NTP support.
+// Define this if you want to have ADC support.
 //
-#define NTP	  1
+#define ADC	  1
 
 //
-// Define this if you want to have HTTP client support.
+// Define this if you want to have HTTP client support in scripts.
 // Define HTTPCS if you want to have additional HTTPS support.
 //
 #define HTTPC	  1
@@ -71,6 +75,11 @@
 // Define this if you want to have JSON parse support in scripts.
 //
 #define JSON_PARSE	  1
+
+//
+// Define this if you want to have NTP support.
+//
+#define NTP	  1
 
 //
 // Define this if you want to have mDNS support.

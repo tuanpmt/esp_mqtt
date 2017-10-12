@@ -1,7 +1,7 @@
 # esp_uMQTT_broker
 An MQTT Broker/Client with scripting support on the ESP8266
 
-This program enables the ESP8266 to become the central node in a small distributed IoT system. It implements an MQTT Broker and a simple scripted rule engine with event/action statements that links together the MQTT sensors and actors. It can act as STA, as AP, or as both and it can connect to another MQTT broker (i.e. in the cloud). Here it can act as bridge and forward and rewrite topics in both directions. Also it can parse JSON structures, write to local GPIO pins, react on timers and GPIO interrupts, drive GPIO pins with PWM, and do basic HTTP GET requests.
+This program enables the ESP8266 to become the central node in a small distributed IoT system. It implements an MQTT Broker and a simple scripted rule engine with event/action statements that links together the MQTT sensors and actors. It can act as STA, as AP, or as both and it can connect to another MQTT broker (i.e. in the cloud). Here it can act as bridge and forward and rewrite topics in both directions. Also it can parse JSON structures, send basic HTTP GET requests and do basic I/O: i.e. read and write to local GPIO pins, react on timers and GPIO interrupts, drive GPIO pins with PWM, and read the ADC.
 
 Find a video that explains the ideas and the architecture of the project at: https://www.youtube.com/watch?v=0K9q4IuB_oA
 
@@ -226,6 +226,11 @@ void MQTT_server_onConnect(MqttConnectCallback connectCb);
 If an *MqttAuthCallback* function is registered with MQTT_server_onAuth(), it is called on each connect request. Based on username, password, and optionally the connection info (e.g. the IP address) the function has to return *true* for authenticated or *false* for rejected. If a request provides no username and/or password these parameter strings are empty. If no *MqttAuthCallback* function is set, each request will be admitted.
 
 The *MqttConnectCallback* function does a similar check for the connection, but it is called right after the connect request before any internal status is allocated. This is done in order to reject requests from unautorized clients in an early stage.
+
+# Limitations on the number of clients
+To adjust memory consumption of one MQTT connection and thus the max number of concurrent connections you can redefine MQTT_BUF_SIZE and QUEUE_BUFFER_SIZE in "user_config.h". MQTT_BUF_SIZE is the max. size of pending inbound messages for one connection (and thus also the max. size of a single MQTT message) and QUEUE_BUFFER_SIZE is the max. size of all pending outbound messages for one connection. Currently these parameters are set to 1024 resp. 2048 bytes, resulting in a memory consumption of about 4 KB per connection and a max number of connections of about 8-9 (depending on the memory usage of the rest of the program). When you reduce buffer sizes, e.g. to 512 and 1024 bytes, a single connection requires only about 2.5 KB resulting in up to 13 possible concurrent MQTT connections. In any case you have to increase the number of TCP connections (default 5) first by calling "espconn_tcp_set_max_con(n)" with n, the max. number of concurrent TCP connections, less or equal to 15.
+
+Also there is a hard limitation on the number of STAs connected to the SoftAP, which is 8. I.e. when using the esp_uMQTT_broker only with clients via the SoftAP interface, even with reduced memory consumtion, the limit of different client nodes is still 8, as it is imposed by the binary WiFi driver. Only when used via the STA interface and an external AP you can connect more than 8 MQTT clients.
 
 # Thanks
 - pfalcon for esp_open_sdk (https://github.com/martin-ger/esp-open-sdk)
