@@ -96,25 +96,25 @@ Scripts with size up to 4KB are uploaded to the esp_uMQTT_broker using a network
 There are two options to upload a script:
 
 ## Script Pull (http)
-For this you first have to make the scripts available a web server. A quite simple way to do that, is to start a minimal web server in the scripts directory, i.g. on Linux you can start a server on port 8080 on the delevopment machine with:
+For this, you first have to make the scripts available via a web server. A quite simple way to do that is to start a minimal web server in the "scripts" directory, i.g. on Linux you can start a server on port 8080 on the delevopment machine with:
 ```
 $ cd scripts
 python -m SimpleHTTPServer 8080
 ```
-Another way of course is to upload the script to a real server somewhere on the  web. 
+Another way of course is to upload the script to a real server somewhere on the web. 
 
 Then start the download with the command "script <url>" on the concole of the ESP, e.g. like this with the correct hostname and port:
 ```
-CMD>script http://myserver:8080/scripts/script.new"
+CMD>script http://myserver:8080/scripts/script.new
 HTTP request to myserver:8080/scripts/script.new started
 HTTP script download completed (330 Bytes)
 Syntax okay
 CMD>
 ```
-The ESP tries to download the script from the given URL and upon success or failure gives a report on the command line. Currently the download only works via plain HTTP and no redirects are followed.
+The ESP tries to download the script from the given URL and prints upon success or failure a report on the console. Currently the download only works via plain HTTP and no redirects are followed.
 
 ## Script Push (netcat)
-Another option is to upload the script as plain TCP stream. Start the upload with "script <portno>" on the concole of the ESP, e.g.:
+Another option is to upload the script as plain TCP stream. Start the upload with "script <portno>" on the console of the ESP, e.g.:
 ```
 CMD>script 2000
 Waiting for script upload on port 2000
