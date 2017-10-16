@@ -158,6 +158,41 @@ static void ICACHE_FLASH_ATTR script_recv_cb(void *arg, char *data, unsigned sho
     }
 }
 
+void ICACHE_FLASH_ATTR http_script_cb(char *response_body, int http_status, char *response_headers, int body_size) {
+    char response[64];
+
+    if (http_status != 200) {
+	os_sprintf(response, "\rHTTP script upload failed (error code %d)\r\n", http_status);
+	to_console(response);
+	return;
+    }
+
+    if (body_size > MAX_SCRIPT_SIZE-5) {
+	os_sprintf(response, "\rHTTP script upload failed (script too long)\r\n");
+	to_console(response);
+	return;
+    }
+
+    char *load_script = (char *)os_malloc(body_size+5);
+    if (load_script == NULL) {
+	os_sprintf(response, "\rHTTP script upload failed (out of memory)\r\n");
+	to_console(response);
+	return;
+    }
+    //os_printf("LOAD: %d %x::%s\r\n", body_size, load_script, response_body);
+    os_memcpy(&load_script[4], response_body, body_size);
+    load_script[4 + body_size] = '\0';
+    *(uint32_t *) load_script = body_size + 5;
+    blob_save(0, (uint32_t *) load_script, body_size + 5);;
+    os_free(load_script);
+    blob_zero(1, MAX_FLASH_SLOTS * FLASH_SLOT_LEN);
+
+    os_sprintf(response, "\rHTTP script download completed (%d Bytes)\r\n", body_size);
+    to_console(response);
+
+    system_os_post(user_procTaskPrio, SIG_SCRIPT_HTTP_LOADED, (ETSParam) scriptcon);
+}
+
 static void ICACHE_FLASH_ATTR script_discon_cb(void *arg) {
     char response[64];
 
@@ -403,7 +438,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	os_sprintf(response, "publish [local|remote] <topic> <data>\r\n");
 	to_console(response);
 #ifdef SCRIPTED
-	os_sprintf(response, "script <port>\r\nshow [script|vars]\r\n");
+	os_sprintf(response, "script <port>|<url>|delete\r\nshow [script|vars]\r\n");
 	to_console(response);
 #ifdef GPIO
 #ifdef GPIO_PWM
@@ -736,6 +771,13 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	    blob_zero(1, MAX_FLASH_SLOTS * FLASH_SLOT_LEN);
 	    os_sprintf(response, "Script deleted\r\n");
 	    goto command_handled;
+	}
+
+	if (!isdigit(tokens[1][0])) {
+	    scriptcon = pespconn;
+	    http_get(tokens[1], "", http_script_cb);
+	    os_sprintf(response, "HTTP request to %s started\r\n", tokens[1]);
+	    goto command_handled;  
 	}
 
 	port = atoi(tokens[1]);
@@ -1275,7 +1317,10 @@ static void ICACHE_FLASH_ATTR user_procTask(os_event_t * events) {
 	    espconn_delete(downloadCon);
 	    os_free(downloadCon->proto.tcp);
 	    os_free(downloadCon);
-
+	    // continue to next case and check syntax...
+	}
+    case SIG_SCRIPT_HTTP_LOADED:
+	{
 	    if (read_script()) {
 		interpreter_syntax_check();
 		ringbuf_memcpy_into(console_tx_buffer, tmp_buffer, os_strlen(tmp_buffer));
