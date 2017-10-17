@@ -841,7 +841,7 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 		timer_no--;
 		os_timer_disarm(&timers[timer_no]);
 		if (timer_val != 0) {
-		    os_timer_setfn(&timers[timer_no], (os_timer_func_t *) lang_timers_timeout, timer_no);
+		    os_timer_setfn(&timers[timer_no], (os_timer_func_t *) lang_timers_timeout, (void *)timer_no);
 		    os_timer_arm(&timers[timer_no], timer_val, 0);
 		}
 	    }
