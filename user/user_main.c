@@ -886,7 +886,8 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	    // atleast 3 tokens, proceed
 	    if (strcmp(tokens[1], "ssid") == 0) {
 		os_sprintf(config.ssid, "%s", tokens[2]);
-		os_sprintf(response, "SSID set\r\n");
+		config.auto_connect = 1;
+		os_sprintf(response, "SSID set (auto_connect = 1)\r\n");
 		goto command_handled;
 	    }
 

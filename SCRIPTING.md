@@ -21,7 +21,7 @@ An action can be a sequence of:
 
 The scripting language assumes that there *can* be two MQTT brokers: the _local_ one on the ESP8266 and/or a _remote_ one another node. The connection to the local broker is always present, the connection to the remote broker must be established via the configuration of the esp_uMQTT_broker. Neither one must be used, scripts can also work without MQTT, but the real intention of the language is to provide an easy way to react on received topics and, if required, to forward or rewrite topics from one broker to the other.
 
-# Syntax
+## Syntax
 In general, scripts conform to the following BNF:
 
 ```
@@ -67,7 +67,7 @@ In general, scripts conform to the following BNF:
 <timestamp> := hh:mm:ss
 ```
 
-# Statements
+## Statements
 ```
 on <event> do <action>
 ```
@@ -78,7 +78,7 @@ config <param> ([any ASCII]* | @<num>)
 ```
 These aditional statements are executed once right after startup. Typically, they should be located at the beginning of a script, but this is not required. The _param_ is any configuration parameter that can be set via the CLI of the esp_uMQTT_broker, e.g. the _ssid_ or the _password_ of the uplink WiFi AP. Basically, "config _x_ _y_" means the same as "set _x_ _y_" on the CLI. But all parameters defined  in _config_ statements override the manually configured values in the CLI. Thus a script can contain its own network, MQTT, and security configuration. Instead of constant values also flash variables are allowed (see below). This can be used to configure node specific values, like an id or an address.
 
-# Events
+## Events
 ```
 init
 ```
@@ -119,7 +119,7 @@ http_response
 ```
 This event happens when an HTTP-request has been sent with "http_get" and a response arrives. The actual body of the response can be accessed in the actions via the special variable _$this_http_body_, the HTTP return code via the special variable _$this_http_code_. These variables are only defined inside the "on http_response" clause.
 
-# Action
+## Actions
 ```
 publish (local|remote) <topic-id> <expr> [retained]
 ```
@@ -141,7 +141,7 @@ setvar ($[any ASCII]* | @<num>) = <expr>
 ```
 Sets a variable to a given value. All variable names start with a '$'. Variables are not typed and a handled like strings. Whenever a numerical value is need, the contents of a variable is interpreted as an integer number. If a boolean value is required, it tested, whether the string evaluates to zero (= false) or any other value (= true).
 
-Currently the interpreter is configured for a maximum of 10 variables, with a significant id length of 15. In addition, there are currently 10 flash variables (up to 63 chars long) that do preserve their state even after reset or power down. These variables are named @1 to @10. Writing these variables is very slow as this includes a flash sector clear and rewrite cycle.  Thus, these variables should be written only when relevant state should be saved. Reading these vars is faster.
+Currently the interpreter is configured for a maximum of 10 variables, with a significant id length of 15. In addition, there are currently 8 flash variables (up to 63 chars long) that do preserve their state even after reset or power down. These variables are named @1 to @8. Writing these variables is very slow as this includes a flash sector clear and rewrite cycle.  Thus, these variables should be written only when relevant state should be saved. Reading these vars is faster.
 
 Flash variables can also be used for storing config parameters or handing them over from the CLI to a script. They can be set with the "set @[num] _value_" on the CLI and the written values can then be picked up by a script to read e.g. config parameters like DNS names, IPs, node IDs or username/password.
 
@@ -181,7 +181,7 @@ if <expr> then <action> [else <action>] endif
 ```
 Classic "if then else" expression. Sequences of actions must be terminated with the (optional) "else" and the "endif". Can be nested.
 
-# Expressions
+## Expressions
 Expressions evaluate to a (string) value. A single constant, a string, or a variable are the basic expressions. Expressions can be combined by operators. If more than one operator is used in an expression, all expressions are stricly evaluated from left to right. CAUTION: arithmetical preceedence does not (yet) apply automatically like in other programming languages. However, the preceedence can be fully controlled by brackets. 
 
 ```
@@ -206,7 +206,7 @@ Example - give in the variable $json the following JSON structure:
 ```
 "json_parse("name.first", $json)" results in "John", "json_parse("cars.1", $json)" results in "BMW".
 
-# Values
+## Values
 A constant, a string, or a variable are values. Optionally, strings and constans can be put in quotes, like e.g. "A String" or "-10". This is especially useful for strings containing a whitespace or an operator. Any single character can be quotet using the '\\' escape character, like e.g. A\ String (equals "A String").
 
 Other value terms are:
@@ -233,7 +233,7 @@ Special variables:
 - $timestamp contains the current time of day in "hh:mm:ss" format. If no NTP sync happened the time will be reported as "99:99:99". $weekday returns the day of week as three letters ("Mon","Tue",...). 
 - $this_http_body and $this_http_code are only defined inside the "on http_response" clause and contain the body of an HTTP response and the HTTP return code.
 
-# Operators
+## Operators
 Operators are used to combine values and expressions.
 
 ```
@@ -251,10 +251,10 @@ These operators are the arithmetical operations. CAUTION: arithmetical preceeden
 ```
 This operator concatenates the left and the right operator as strings. Useful e.g. in "print" actions or when putting together MQTT topics.
 
-# Comments
+## Comments
 Comments start with a ’%' anywhere in a line and reach until the end of this line.
 
-# Sample
+## Sample
 Here is a demo of a script to give you an idea of the power of the scripting feature. This script controls a Sonoff switch module. It connects to a remote MQTT broker and in parallel offers locally its own. The device has a number stored in the variable $device_number. On both brokers it subscribes to a topic named '/martinshome/switch/($device_number)/command', where it receives commands, and it publishes the topic '/martinshome/switch/($device_number)/status' with the current state of the switch relay. It understands the commands 'on','off', 'toggle', and 'blink'. Blinking is realized via a timer event. Local status is stored in the two variables $relay_status and $blink (blinking on/off). The 'on gpio_interrupt' clause reacts on pressing the pushbutton of the Sonoff and simply toggles the switch (and stops blinking). The last two 'on clock' clauses implement a daily on and off period:
 
 ```

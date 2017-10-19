@@ -8,11 +8,10 @@ Find a video that explains the ideas and the architecture of the project at: htt
 # Usage
 In the user directory there is the main program that serves as a stand-alone MQTT broker, client and bridge. The program starts with the following default configuration:
 
-- ssid: ssid, password: password
 - ap_ssid: MyAP, ap_password: none, ap_on: 1, ap_open: 1
 - network: 192.168.4.0/24
 
-This means it connects to the internet via AP ssid,password and offers an open AP with ap_ssid MyAP. This default can be changed in the file user_config.h. The default can be overwritten and persistenly saved to flash by using a console interface. This console is available either via the serial port at 115200 baud or via tcp port 7777 (e.g. "telnet 192.168.4.1 7777" from a connected STA).
+This means it starts an open AP with ap_ssid MyAP. This default can be changed in the file user_config.h. The default can be overwritten and persistenly saved to flash by using a console interface. This console is available either via the serial port at 115200 baud or via tcp port 7777 (e.g. "telnet 192.168.4.1 7777" from a connected STA). It does not yet try to automatically re-connect to an uplink AP (as it does not know a valid ssid or password).
 
 Use the following commands for an initial setup:
 
@@ -24,7 +23,7 @@ Use the following commands for an initial setup:
 - save
 - reset
 
-After reboot it will connect to your home router and itself is ready for stations to connect.
+After reboot it will try to automatically connect to your home router and itself as AP is ready for stations to connect.
 
 The console understands the following commands:
 
