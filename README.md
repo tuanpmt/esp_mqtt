@@ -3,6 +3,8 @@ An MQTT Broker/Client with scripting support on the ESP8266
 
 This program enables the ESP8266 to become the central node in a small distributed IoT system. It implements an MQTT Broker and a simple scripted rule engine with event/action statements that links together the MQTT sensors and actors. It can act as STA, as AP, or as both and it can connect to another MQTT broker (i.e. in the cloud). Here it can act as bridge and forward and rewrite topics in both directions. Also it can parse JSON structures, send basic HTTP GET requests and do basic I/O: i.e. read and write to local GPIO pins, react on timers and GPIO interrupts, drive GPIO pins with PWM, and read the ADC.
 
+If you need the plain MQTT broker functionality in an Arduino project. look here: https://github.com/martin-ger/esp_mqtt/blob/master/README.md#using-the-esp_umqtt_broker-in-an-arduino-project
+
 Find a video that explains the ideas and the architecture of the project at: https://www.youtube.com/watch?v=0K9q4IuB_oA
 
 # Usage
