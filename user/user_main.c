@@ -479,7 +479,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	to_console(response);
 #endif
 #ifdef MQTT_CLIENT
-	os_sprintf(response, "set [mqtt_host|mqtt_port|mqtt_user|mqtt_password|mqtt_id] <val>\r\n");
+	os_sprintf(response, "set [mqtt_host|mqtt_port|mqtt_ssl|mqtt_user|mqtt_password|mqtt_id] <val>\r\n");
 	to_console(response);
 #endif
 
@@ -551,9 +551,10 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 
 	    if (os_strcmp(config.mqtt_host, "none") != 0) {
 		os_sprintf(response,
-			   "MQTT client host: %s\r\nMQTT client port: %d\r\nMQTT client user: %s\r\nMQTT client password: %s\r\nMQTT client id: %s\r\n",
+			   "MQTT client host: %s\r\nMQTT client port: %d\r\nMQTT client user: %s\r\nMQTT client password: %s\r\nMQTT client id: %s\r\nMQTT SSL: %s\r\n",
 			   config.mqtt_host, config.mqtt_port, config.mqtt_user,
-			   config.locked ? "***" : (char *)config.mqtt_password, config.mqtt_id);
+			   config.locked ? "***" : (char *)config.mqtt_password, config.mqtt_id,
+			   config.mqtt_ssl ? "on" : "off");
 		to_console(response);
 	    }
 #endif
@@ -1201,6 +1202,12 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 		goto command_handled;
 	    }
 
+	    if (strcmp(tokens[1], "mqtt_ssl") == 0) {
+		config.mqtt_ssl = atoi(tokens[2]);
+		os_sprintf(response, "MQTT ssl %s\r\n", config.mqtt_ssl?"on":"off");
+		goto command_handled;
+	    }
+
 	    if (strcmp(tokens[1], "mqtt_user") == 0) {
 		os_strncpy(config.mqtt_user, tokens[2], 32);
 		config.mqtt_user[31] = 0;
@@ -1488,8 +1495,11 @@ void wifi_handle_event_cb(System_Event_t * evt) {
 #endif
 
 #ifdef NTP
-	if (os_strcmp(config.ntp_server, "none") != 0)
+	if (os_strcmp(config.ntp_server, "none") != 0) {
 	    ntp_set_server(config.ntp_server);
+	    sntp_setservername(1, config.ntp_server);
+	    sntp_init();
+	}
 	set_timezone(config.ntp_timezone);
 #endif
 
@@ -1719,7 +1729,7 @@ void  user_init() {
     mqtt_connected = false;
     mqtt_enabled = (os_strcmp(config.mqtt_host, "none") != 0);
     if (mqtt_enabled) {
-	MQTT_InitConnection(&mqttClient, config.mqtt_host, config.mqtt_port, 0);
+	MQTT_InitConnection(&mqttClient, config.mqtt_host, config.mqtt_port, config.mqtt_ssl);
 
 	if (os_strcmp(config.mqtt_user, "none") == 0) {
 	    MQTT_InitClient(&mqttClient, config.mqtt_id, 0, 0, 120, 1);

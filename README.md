@@ -3,7 +3,7 @@ An MQTT Broker/Client with scripting support on the ESP8266
 
 This program enables the ESP8266 to become the central node in a small distributed IoT system. It implements an MQTT Broker and a simple scripted rule engine with event/action statements that links together the MQTT sensors and actors. It can act as STA, as AP, or as both and it can connect to another MQTT broker (i.e. in the cloud). Here it can act as bridge and forward and rewrite topics in both directions. Also it can parse JSON structures, send basic HTTP GET requests and do basic I/O: i.e. read and write to local GPIO pins, react on timers and GPIO interrupts, drive GPIO pins with PWM, and read the ADC.
 
-If you need the plain MQTT broker functionality in an Arduino project. look here: https://github.com/martin-ger/esp_mqtt/blob/master/README.md#using-the-esp_umqtt_broker-in-an-arduino-project
+If you need the plain MQTT broker functionality in an Arduino project look here: https://github.com/martin-ger/esp_mqtt/blob/master/README.md#using-the-esp_umqtt_broker-in-an-arduino-project
 
 Find a video that explains the ideas and the architecture of the project at: https://www.youtube.com/watch?v=0K9q4IuB_oA
 
@@ -79,8 +79,19 @@ By default the "remote" MQTT client is disabled. It can be enabled by setting th
 - set mqtt_host _IP_or_hostname_: IP or hostname of the MQTT broker ("none" disables the MQTT client)
 - set mqtt_user _username_: Username for authentication ("none" if no authentication is required at the broker)
 - set mqtt_user _password_: Password for authentication
+- set mqtt_ssl [0|1]: Use SSL for connection to the remote broker (default: 0 = off)
 - set mqtt_id _clientId_: Id of the client at the broker (default: "ESPRouter_xxxxxx" derived from the MAC address)
 - publish [local|remote] [topic] [data]: this publishes a topic (mainly for testing)
+
+The remote MQTT server can be accessed via SSL, e.g. a secure test connection to test.mosquitto.org can be configured as following:
+```
+CMD>set mqtt_host test.mosquitto.org
+CMD>set mqtt_port 8883
+CMD>set mqtt_ssl 1
+CMD>save
+CMD>reset
+```
+Certificate check is not yet implemented.
 
 # Scripting
 The esp_uMQTT_broker comes with a build-in scripting engine. A script enables the ESP not just to act as a passive broker but to react on events (publications and timing events), to send out its own items and handle local I/O. Details on syntax and semantics of the scripting language can be found here: https://github.com/martin-ger/esp_mqtt/blob/master/SCRIPTING.md . Examples of scripts are in the "scripts" directory.
@@ -114,7 +125,15 @@ HTTP script download completed (330 Bytes)
 Syntax okay
 CMD>
 ```
-The ESP tries to download the script from the given URL and prints upon success or failure a report on the console. Currently the download only works via plain HTTP and no redirects are followed.
+You can also download over the internet, e.g. directly from github:
+```
+CMD>script https://raw.githubusercontent.com/martin-ger/esp_mqtt/master/scripts/script.pwm
+HTTP request to https://raw.githubusercontent.com/martin-ger/esp_mqtt/master/scripts/script.pwm started
+HTTP script download completed (749 Bytes)
+Syntax okay
+CMD>
+```
+The ESP tries to download the script from the given URL and prints upon success or failure a report on the console.
 
 ## Script Push (netcat)
 Another option is to upload the script as plain TCP stream. Start the upload with "script <portno>" on the console of the ESP, e.g.:

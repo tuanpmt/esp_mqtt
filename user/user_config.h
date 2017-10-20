@@ -18,7 +18,7 @@
 // Define MQTT_SSL_ENABLE if you need SSL for the *MQTT client*
 //
 #define MQTT_CLIENT 	1
-//#define MQTT_SSL_ENABLE	1
+#define MQTT_SSL_ENABLE	1
 
 //
 // Change this to adjust memory consuption of one MQTT connection
@@ -69,7 +69,7 @@
 // Define HTTPCS if you want to have additional HTTPS support.
 //
 #define HTTPC	  1
-//#define HTTPCS	  1
+#define HTTPCS	  1
 
 //
 // Define this if you want to have JSON parse support in scripts.

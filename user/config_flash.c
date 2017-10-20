@@ -39,6 +39,7 @@ void config_load_default(sysconfig_p config) {
 
     config->max_subscriptions = 30;
     config->max_retained_messages = 30;
+    config->auto_retained = 0;
     os_sprintf(config->mqtt_broker_user, "%s", "none");
     config->mqtt_broker_password[0] = 0;
     config->mqtt_broker_access = LOCAL_ACCESS | REMOTE_ACCESS;
@@ -46,6 +47,7 @@ void config_load_default(sysconfig_p config) {
 #ifdef MQTT_CLIENT
     os_sprintf(config->mqtt_host, "%s", "none");
     config->mqtt_port = 1883;
+    config->mqtt_ssl = false;
     os_sprintf(config->mqtt_user, "%s", "none");
     config->mqtt_password[0] = 0;
     wifi_get_macaddr(0, mac);

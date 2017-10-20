@@ -51,6 +51,7 @@ typedef struct
 
     uint16_t	max_subscriptions;	// Upper limit of subscribed topics
     uint16_t	max_retained_messages;	// Upper limit of stored retained messages
+    uint8_t	auto_retained;	// Automatically save retained messages to flash (default: off)
     uint8_t     mqtt_broker_user[32];	// Username for client login, "none" if empty
     uint8_t     mqtt_broker_password[32]; // Password for client login
     uint8_t	mqtt_broker_access;	// Controls the interfaces that allow MQTT access (default LOCAL_ACCESS | REMOTE_ACCESS)
@@ -58,6 +59,7 @@ typedef struct
 #ifdef MQTT_CLIENT
     uint8_t     mqtt_host[32];	// IP or hostname of the MQTT broker, "none" if empty
     uint16_t	mqtt_port;	// Port of the MQTT broker
+    uint8_t	mqtt_ssl;	// Use SSL (default: no)
 
     uint8_t     mqtt_user[32];	// Username for broker login, "none" if empty
     uint8_t     mqtt_password[32]; // Password for broker login
