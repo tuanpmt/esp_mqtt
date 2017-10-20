@@ -183,9 +183,9 @@ void ICACHE_FLASH_ATTR http_script_cb(char *response_body, int http_status, char
     os_memcpy(&load_script[4], response_body, body_size);
     load_script[4 + body_size] = '\0';
     *(uint32_t *) load_script = body_size + 5;
-    blob_save(0, (uint32_t *) load_script, body_size + 5);;
+    blob_save(SCRIPT_SLOT, (uint32_t *) load_script, body_size + 5);;
     os_free(load_script);
-    blob_zero(1, MAX_FLASH_SLOTS * FLASH_SLOT_LEN);
+    blob_zero(VARS_SLOT, MAX_FLASH_SLOTS * FLASH_SLOT_LEN);
 
     os_sprintf(response, "\rHTTP script download completed (%d Bytes)\r\n", body_size);
     to_console(response);
@@ -198,9 +198,9 @@ static void ICACHE_FLASH_ATTR script_discon_cb(void *arg) {
 
     load_script[4 + load_size] = '\0';
     *(uint32_t *) load_script = load_size + 5;
-    blob_save(0, (uint32_t *) load_script, load_size + 5);
+    blob_save(SCRIPT_SLOT, (uint32_t *) load_script, load_size + 5);
     os_free(load_script);
-    blob_zero(1, MAX_FLASH_SLOTS * FLASH_SLOT_LEN);
+    blob_zero(VARS_SLOT, MAX_FLASH_SLOTS * FLASH_SLOT_LEN);
 
     os_sprintf(response, "\rScript upload completed (%d Bytes)\r\n", load_size);
     to_console(response);
@@ -225,7 +225,7 @@ static void ICACHE_FLASH_ATTR script_connected_cb(void *arg) {
 uint32_t ICACHE_FLASH_ATTR get_script_size(void) {
     uint32_t size;
 
-    blob_load(0, &size, 4);
+    blob_load(SCRIPT_SLOT, &size, 4);
     return size;
 }
 
@@ -242,7 +242,7 @@ uint32_t ICACHE_FLASH_ATTR read_script(void) {
 	return 0;
     }
 
-    blob_load(0, (uint32_t *) my_script, size);
+    blob_load(SCRIPT_SLOT, (uint32_t *) my_script, size);
 
     uint32_t num_token = text_into_tokens(my_script + 4);
 
@@ -383,6 +383,31 @@ bool ICACHE_FLASH_ATTR printf_retainedtopic(retained_entry * entry, void *user_d
     return false;
 }
 
+bool ICACHE_FLASH_ATTR delete_retainedtopics() {
+    clear_retainedtopics();
+    blob_zero(RETAINED_SLOT, MAX_RETAINED_LEN);
+}
+
+bool ICACHE_FLASH_ATTR save_retainedtopics() {
+    uint8_t buffer[MAX_RETAINED_LEN];
+    int len = sizeof(buffer);
+    len = serialize_retainedtopics(buffer, len);
+
+    if (len) {
+	blob_save(RETAINED_SLOT, (uint32_t *)buffer, len);
+	return true;
+    }
+    return false;
+}
+
+bool ICACHE_FLASH_ATTR load_retainedtopics() {
+    uint8_t buffer[MAX_RETAINED_LEN];
+    int len = sizeof(buffer);
+
+    blob_load(RETAINED_SLOT, (uint32_t *)buffer, len);
+    return deserialize_retainedtopics(buffer, len);
+}
+
 void MQTT_local_DataCallback(uint32_t * args, const char *topic, uint32_t topic_len, const char *data, uint32_t length) {
     //os_printf("Received: \"%s\" len: %d\r\n", topic, length);
 #ifdef SCRIPTED
@@ -434,6 +459,8 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	os_sprintf(response, "set [broker_user|broker_password|broker_access] <val>\r\n");
 	to_console(response);
 	os_sprintf(response, "set [broker_subscriptions|broker_retained_messages] <val>\r\n");
+	to_console(response);
+	os_sprintf(response, "delete_retained|save_retained\r\n");
 	to_console(response);
 	os_sprintf(response, "publish [local|remote] <topic> <data>\r\n");
 	to_console(response);
@@ -634,7 +661,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 		goto command_handled;
 	    }
 
-	    blob_load(0, (uint32_t *) script, size);
+	    blob_load(SCRIPT_SLOT, (uint32_t *) script, size);
 
 	    p = script + 4;
 	    for (line_count = 1; line_count < start_line && *p != 0; p++) {
@@ -682,7 +709,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	    }
 
 	    uint8_t slots[MAX_FLASH_SLOTS*FLASH_SLOT_LEN];
-	    blob_load(1, (uint32_t *)slots, sizeof(slots));
+	    blob_load(VARS_SLOT, (uint32_t *)slots, sizeof(slots));
 
 	    for (i = 0; i < MAX_FLASH_SLOTS; i++) {
 		os_sprintf(response, "@%d: %s\r\n", i+1, &slots[i*FLASH_SLOT_LEN]);
@@ -727,9 +754,10 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	    config_load_default(&config);
 	    config_save(&config);
 #ifdef SCRIPTED
-	    // Clear script and vars
-	    blob_zero(0, MAX_SCRIPT_SIZE);
-	    blob_zero(1, MAX_FLASH_SLOTS * FLASH_SLOT_LEN);
+	    // Clear script, vars, and retained topics
+	    blob_zero(SCRIPT_SLOT, MAX_SCRIPT_SIZE);
+	    blob_zero(VARS_SLOT, MAX_FLASH_SLOTS * FLASH_SLOT_LEN);
+	    blob_zero(RETAINED_SLOT, MAX_RETAINED_LEN);
 #endif
 	}
 	os_printf("Restarting ... \r\n");
@@ -869,6 +897,45 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	goto command_handled;
     }
 
+    if (strcmp(tokens[0], "delete_retained") == 0)
+    {
+	if (nTokens != 1) {
+            os_sprintf(response, INVALID_NUMARGS);
+            goto command_handled;
+	}
+
+	delete_retainedtopics();
+
+	os_sprintf(response, "Deleted retained topics\r\n");
+	goto command_handled;
+    }
+
+    if (strcmp(tokens[0], "save_retained") == 0)
+    {
+	if (nTokens != 1) {
+            os_sprintf(response, INVALID_NUMARGS);
+            goto command_handled;
+	}
+
+	bool success = save_retainedtopics();
+
+	os_sprintf(response, "Saved retained topics %ssuccessfully\r\n", success?"":"un");
+	goto command_handled;
+    }
+/*
+    if (strcmp(tokens[0], "load_retained") == 0)
+    {
+	if (nTokens != 1) {
+            os_sprintf(response, INVALID_NUMARGS);
+            goto command_handled;
+	}
+
+	bool success = load_retainedtopics();
+
+	os_sprintf(response, "Loaded retained topics %ssuccessfully\r\n", success?"":"un");
+	goto command_handled;
+    }
+*/
     if (strcmp(tokens[0], "set") == 0) {
 	if (config.locked) {
 	    os_sprintf(response, INVALID_LOCKED);
@@ -1081,9 +1148,9 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 		} else {
 		    slot_no--;
 		    uint8_t slots[MAX_FLASH_SLOTS*FLASH_SLOT_LEN];
-		    blob_load(1, (uint32_t *)slots, sizeof(slots));
+		    blob_load(VARS_SLOT, (uint32_t *)slots, sizeof(slots));
 		    os_strcpy(&slots[slot_no*FLASH_SLOT_LEN], tokens[2]);
-		    blob_save(1, (uint32_t *)slots, sizeof(slots));
+		    blob_save(VARS_SLOT, (uint32_t *)slots, sizeof(slots));
 		    os_sprintf(response, "%s written to flash\r\n", tokens[1]);
 		}
 		goto command_handled;
@@ -1576,6 +1643,11 @@ void  user_init() {
     // Load config
     int config_res = config_load(&config);
 
+    if (config_res != 0) {
+	// Clear retained topics slot
+	blob_zero(RETAINED_SLOT, MAX_RETAINED_LEN);
+    }
+
 #ifdef SCRIPTED
     script_enabled = false;
     if ((config_res == 0) && read_script()) {
@@ -1592,8 +1664,8 @@ void  user_init() {
 	}
     } else {
 	// Clear script and vars
-	blob_zero(0, MAX_SCRIPT_SIZE);
-	blob_zero(1, MAX_FLASH_SLOTS * FLASH_SLOT_LEN);
+	blob_zero(SCRIPT_SLOT, MAX_SCRIPT_SIZE);
+	blob_zero(VARS_SLOT, MAX_FLASH_SLOTS * FLASH_SLOT_LEN);
     }
 #endif
 
@@ -1681,6 +1753,7 @@ void  user_init() {
 
 	MQTT_server_start(1883 /*port */ , config.max_subscriptions,
 			  config.max_retained_messages);
+	load_retainedtopics();
     }
 
     //Start task

@@ -19,7 +19,7 @@ bool ICACHE_FLASH_ATTR create_retainedlist(uint16_t num_entires) {
     return retained_list != NULL;
 }
 
-bool update_retainedtopic(uint8_t * topic, uint8_t * data, uint16_t data_len, uint8_t qos) {
+bool ICACHE_FLASH_ATTR update_retainedtopic(uint8_t * topic, uint8_t * data, uint16_t data_len, uint8_t qos) {
     uint16_t i;
 
     if (retained_list == NULL)
@@ -119,4 +119,58 @@ void ICACHE_FLASH_ATTR iterate_retainedtopics(iterate_retainedtopic_cb cb, void 
 		return;
 	}
     }
+}
+
+bool ICACHE_FLASH_ATTR clear_cb(retained_entry *entry, void *user_data) {
+    update_retainedtopic(entry->topic, "", 0, entry->qos);
+    return false;
+}
+
+void ICACHE_FLASH_ATTR clear_retainedtopics() {
+    iterate_retainedtopics(clear_cb, NULL);
+}
+
+int ICACHE_FLASH_ATTR serialize_retainedtopics(char *buf, int len) {
+    uint16_t i;
+    uint16_t pos = 0;
+
+    if (retained_list == NULL)
+	return 0;
+
+    for (i = 0; i < max_entry; i++) {
+	if (retained_list[i].topic != NULL) {
+	    uint16_t data_len = retained_list[i].data_len;
+	    if (pos + os_strlen(retained_list[i].topic) + 4 + data_len + 1 >= len-1)
+		return 0;
+	    os_strcpy(&buf[pos], retained_list[i].topic);
+	    pos += os_strlen(retained_list[i].topic) + 1;
+	    
+	    buf[pos++] = data_len & 0xff;
+	    buf[pos++] = (data_len >> 8) & 0xff;
+	    os_memcpy(&buf[pos], retained_list[i].data, data_len);
+	    pos += data_len;
+	    buf[pos++] = retained_list[i].qos;
+	    buf[pos] = '\0';
+	}
+    }
+    return pos;
+}
+
+bool ICACHE_FLASH_ATTR deserialize_retainedtopics(char *buf, int len) {
+    uint16_t pos = 0;
+
+    while (pos < len && buf[pos] != '\0') {
+	uint8_t *topic = &buf[pos];
+	pos += os_strlen(topic) + 1;
+	if (pos >= len) return false;
+	uint16_t data_len = buf[pos++] + (buf[pos++] << 8);
+	uint8_t *data = &buf[pos];
+	pos += data_len;
+	if (pos >= len) return false;
+	uint8_t qos = buf[pos++];
+
+	if (update_retainedtopic(topic, data, data_len, qos) == false)
+	    return false;
+    }
+    return true;
 }

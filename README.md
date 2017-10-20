@@ -68,6 +68,8 @@ MQTT broker related command:
 - set broker_access _mode_: controls the networks that allow MQTT broker access (0: no access, 1: only internal, 2: only external, 3: both (default))
 - set broker_subscriptions _max_: sets the max number of subscription the broker can store (default: 30)
 - set broker_retained_messages _max_: sets the max number of retained messages the broker can store (default: 30)
+- save_retained: saves the current state of all retained topics (max. 4096 Bytes in sum) to flash, so they will persist a reboot
+- delete_retained: deletes the state of all retained topics in RAM and flash
 
 # MQTT client/bridging functionality
 The broker comes with a "local" and a "remote" client, which means, the broker itself can publish and subscribe topics. The "local" client is a client to the own broker (without the need of an additional TCP connection).
