@@ -882,6 +882,11 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 
     if (strcmp(tokens[0], "publish") == 0)
     {
+	if (config.locked) {
+	    os_sprintf(response, INVALID_LOCKED);
+	    goto command_handled;
+	}
+
 	uint8_t retained = 0;
 
 	if (nTokens < 4 || nTokens > 5) {
@@ -914,6 +919,11 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 
     if (strcmp(tokens[0], "delete_retained") == 0)
     {
+	if (config.locked) {
+	    os_sprintf(response, INVALID_LOCKED);
+	    goto command_handled;
+	}
+
 	if (nTokens != 1) {
             os_sprintf(response, INVALID_NUMARGS);
             goto command_handled;
@@ -927,6 +937,11 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 
     if (strcmp(tokens[0], "save_retained") == 0)
     {
+	if (config.locked) {
+	    os_sprintf(response, INVALID_LOCKED);
+	    goto command_handled;
+	}
+
 	if (nTokens != 1) {
             os_sprintf(response, INVALID_NUMARGS);
             goto command_handled;

@@ -1,7 +1,7 @@
 # esp_uMQTT_broker
 An MQTT Broker/Client with scripting support on the ESP8266
 
-This program enables the ESP8266 to become the central node in a small distributed IoT system. It implements an MQTT Broker and a simple scripted rule engine with event/action statements that links together the MQTT sensors and actors. It can act as STA, as AP, or as both and it can connect to another MQTT broker (i.e. in the cloud). Here it can act as bridge and forward and rewrite topics in both directions. Also it can parse JSON structures, send basic HTTP GET requests and do basic I/O: i.e. read and write to local GPIO pins, react on timers and GPIO interrupts, drive GPIO pins with PWM, and read the ADC.
+This program enables the ESP8266 to become the central node in a small distributed IoT system. It implements an MQTT Broker and a simple scripted rule engine with event/action statements that links together the MQTT sensors and actors. It can act as STA, as AP, or as both and it can connect to another MQTT broker (i.e. in the cloud). Here it can also be bridge that forwards and rewrites topics in both directions. Also it can parse JSON structures, send basic HTTP GET requests and do basic I/O: i.e. read and write to local GPIO pins, react on timers and GPIO interrupts, drive GPIO pins with PWM, and read the ADC.
 
 If you need the plain MQTT broker functionality in an Arduino project look here: https://github.com/martin-ger/esp_mqtt/blob/master/README.md#using-the-esp_umqtt_broker-in-an-arduino-project
 
@@ -70,7 +70,7 @@ MQTT broker related command:
 - set broker_retained_messages _max_: sets the max number of retained messages the broker can store (default: 30)
 - save_retained: saves the current state of all retained topics (max. 4096 Bytes in sum) to flash, so they will persist a reboot
 - delete_retained: deletes the state of all retained topics in RAM and flash
-- set broker_autoretain [0|1]: selects, whether the broker should do a "save_retained" automatically each time it receives a new retained message (thus, the broker can be resetted at any time without loosing state. However, slow and too many writes may damage flash)
+- set broker_autoretain [0|1]: selects, whether the broker should do a "save_retained" automatically each time it receives a new retained message (default off). With this option on the broker can be resetted at any time without loosing state. However, this is slow and too many writes may damage flash mem.
 
 # MQTT client/bridging functionality
 The broker comes with a "local" and a "remote" client, which means, the broker itself can publish and subscribe topics. The "local" client is a client to the own broker (without the need of an additional TCP connection).
@@ -92,7 +92,7 @@ CMD>set mqtt_ssl 1
 CMD>save
 CMD>reset
 ```
-Certificate check is not yet implemented.
+Certificate checks are not yet implemented.
 
 # Scripting
 The esp_uMQTT_broker comes with a build-in scripting engine. A script enables the ESP not just to act as a passive broker but to react on events (publications and timing events), to send out its own items and handle local I/O. Details on syntax and semantics of the scripting language can be found here: https://github.com/martin-ger/esp_mqtt/blob/master/SCRIPTING.md . Examples of scripts are in the "scripts" directory.
