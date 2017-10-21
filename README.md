@@ -70,6 +70,7 @@ MQTT broker related command:
 - set broker_retained_messages _max_: sets the max number of retained messages the broker can store (default: 30)
 - save_retained: saves the current state of all retained topics (max. 4096 Bytes in sum) to flash, so they will persist a reboot
 - delete_retained: deletes the state of all retained topics in RAM and flash
+- set broker_autoretain [0|1]: selects, whether the broker should do a "save_retained" automatically each time it receives a new retained message (thus, the broker can be resetted at any time without loosing state. However, slow and too many writes may damage flash)
 
 # MQTT client/bridging functionality
 The broker comes with a "local" and a "remote" client, which means, the broker itself can publish and subscribe topics. The "local" client is a client to the own broker (without the need of an additional TCP connection).
@@ -81,7 +82,7 @@ By default the "remote" MQTT client is disabled. It can be enabled by setting th
 - set mqtt_user _password_: Password for authentication
 - set mqtt_ssl [0|1]: Use SSL for connection to the remote broker (default: 0 = off)
 - set mqtt_id _clientId_: Id of the client at the broker (default: "ESPRouter_xxxxxx" derived from the MAC address)
-- publish [local|remote] [topic] [data]: this publishes a topic (mainly for testing)
+- publish [local|remote] _topic_ _data_ [retained]: this publishes a topic (mainly for testing)
 
 The remote MQTT server can be accessed via SSL, e.g. a secure test connection to test.mosquitto.org can be configured as following:
 ```

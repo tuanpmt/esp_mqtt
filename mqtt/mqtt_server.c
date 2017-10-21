@@ -76,8 +76,9 @@ bool ICACHE_FLASH_ATTR publish_topic(topic_entry * topic_e, uint8_t * topic, uin
     return true;
 }
 
-bool ICACHE_FLASH_ATTR publish_retainedtopic(retained_entry * entry, MQTT_ClientCon * clientcon) {
+bool ICACHE_FLASH_ATTR publish_retainedtopic(retained_entry * entry, void* user_data) {
     uint16_t message_id = 0;
+    MQTT_ClientCon *clientcon = (MQTT_ClientCon *)user_data;
 
     MQTT_INFO("MQTT: Client: %s Topic: \"%s\" QoS: %d\r\n", clientcon->connect_info.client_id, entry->topic,
 	      entry->qos);

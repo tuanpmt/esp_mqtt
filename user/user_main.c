@@ -423,7 +423,7 @@ static char INVALID_NUMARGS[] = "Invalid number of arguments\r\n";
 static char INVALID_ARG[] = "Invalid argument\r\n";
 
 void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
-#define MAX_CMD_TOKENS 4
+#define MAX_CMD_TOKENS 6
 
     char cmd_line[MAX_CON_CMD_SIZE + 1];
     char response[256];
@@ -458,11 +458,11 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	to_console(response);
 	os_sprintf(response, "set [broker_user|broker_password|broker_access] <val>\r\n");
 	to_console(response);
-	os_sprintf(response, "set [broker_subscriptions|broker_retained_messages] <val>\r\n");
+	os_sprintf(response, "set [broker_subscriptions|broker_retained_messages|broker_autoretain] <val>\r\n");
 	to_console(response);
 	os_sprintf(response, "delete_retained|save_retained\r\n");
 	to_console(response);
-	os_sprintf(response, "publish [local|remote] <topic> <data>\r\n");
+	os_sprintf(response, "publish [local|remote] <topic> <data> [retained]\r\n");
 	to_console(response);
 #ifdef SCRIPTED
 	os_sprintf(response, "script <port>|<url>|delete\r\nshow [script|vars]\r\n");
@@ -527,8 +527,8 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	    to_console(response);
 #endif
 
-	    os_sprintf(response, "MQTT broker max. subscription: %d\r\nMQTT broker max. retained messages: %d\r\n",
-		       config.max_subscriptions, config.max_retained_messages);
+	    os_sprintf(response, "MQTT broker max. subscription: %d\r\nMQTT broker max. retained messages: %d%s\r\n",
+		       config.max_subscriptions, config.max_retained_messages, config.auto_retained?" (auto saved)":"");
 		to_console(response);
 	    if (os_strcmp(config.mqtt_broker_user, "none") != 0) {
 		os_sprintf(response,
@@ -882,18 +882,32 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 
     if (strcmp(tokens[0], "publish") == 0)
     {
-	if (nTokens != 4) {
+	uint8_t retained = 0;
+
+	if (nTokens < 4 || nTokens > 5) {
             os_sprintf(response, INVALID_NUMARGS);
             goto command_handled;
 	}
+	if (nTokens == 5) {
+	    if (strcmp(tokens[4], "retained")==0) {
+		retained = 1;
+	    } else {
+        	os_sprintf(response, "Invalid arg %s\r\n", tokens[4]);
+        	goto command_handled;
+	    }
+	}
 	if (strcmp(tokens[1], "local") == 0) {
-	    MQTT_local_publish(tokens[2], tokens[3], os_strlen(tokens[3]), 0, 0);
+	    MQTT_local_publish(tokens[2], tokens[3], os_strlen(tokens[3]), 0, retained);
 	}
 #ifdef MQTT_CLIENT
 	else if (strcmp(tokens[1], "remote") == 0 && mqtt_connected) {
-	    MQTT_Publish(&mqttClient, tokens[2], tokens[3], os_strlen(tokens[3]), 0, 0);
+	    MQTT_Publish(&mqttClient, tokens[2], tokens[3], os_strlen(tokens[3]), 0, retained);
 	}
 #endif
+	else {
+            os_sprintf(response, "Invalid arg %s\r\n", tokens[1]);
+            goto command_handled;
+	}
 	os_sprintf(response, "Published topic\r\n");
 	goto command_handled;
     }
@@ -1133,6 +1147,12 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	    if (strcmp(tokens[1], "broker_access") == 0) {
 		config.mqtt_broker_access = atoi(tokens[2]) & (LOCAL_ACCESS | REMOTE_ACCESS);
 		os_sprintf(response, "Broker access set\r\n", config.config_port);
+		goto command_handled;
+	    }
+
+	    if (strcmp(tokens[1], "broker_autoretain") == 0) {
+		config.auto_retained = atoi(tokens[2]) != 0;
+		os_sprintf(response, "Broker autoretain set\r\n", config.config_port);
 		goto command_handled;
 	    }
 #ifdef SCRIPTED
@@ -1631,6 +1651,12 @@ bool ICACHE_FLASH_ATTR mqtt_broker_connect(struct espconn *pesp_conn) {
 }
 
 
+void ICACHE_FLASH_ATTR mqtt_got_retained(retained_entry *topic) {
+    if (config.auto_retained)
+	save_retainedtopics();
+}
+
+
 void  user_init() {
     struct ip_info info;
 
@@ -1764,6 +1790,7 @@ void  user_init() {
 	MQTT_server_start(1883 /*port */ , config.max_subscriptions,
 			  config.max_retained_messages);
 	load_retainedtopics();
+	set_on_retainedtopic_cb(mqtt_got_retained);
     }
 
     //Start task

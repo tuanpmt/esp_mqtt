@@ -5,6 +5,7 @@
 #include "user_config.h"
 #include "config_flash.h"
 #include "mqtt_topics.h"
+#include "mqtt_retainedlist.h"
 #ifdef NTP
 #include "ntp.h"
 #endif
@@ -1033,6 +1034,11 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
     return next_token;
 }
 
+bool ICACHE_FLASH_ATTR retained_cb(retained_entry *topic, void *user_data) {
+    *(retained_entry **)user_data = topic;
+    return true;
+}
+
 int ICACHE_FLASH_ATTR parse_expression(int next_token, char **data, int *data_len, Value_Type * data_type, bool doit) {
 
     if (is_token(next_token, "not")) {
@@ -1050,6 +1056,38 @@ int ICACHE_FLASH_ATTR parse_expression(int next_token, char **data, int *data_le
 	*data = atoi(*data) ? "0" : "1";
 	*data_len = 1;
 	*data_type = STRING_T;
+    }
+
+    else if (is_token(next_token, "retained_topic")) {
+	lang_debug("val retained_topic\r\n");
+
+	len_check(3);
+	if (syn_chk && !is_token(next_token+1, "("))
+	    return syntax_error(next_token, "expected '('");
+
+	char *topic_data;
+	int topic_data_len;
+	Value_Type topic_data_type;
+	// parse path string
+	if ((next_token = parse_expression(next_token + 2, &topic_data, &topic_data_len, &topic_data_type, doit)) == -1)
+	    return -1;
+
+	if (syn_chk && !is_token(next_token, ")"))
+	    return syntax_error(next_token, "expected ')'");
+	next_token += 1;
+
+	*data = "";
+	*data_len = 0;
+	*data_type = DATA_T;
+	if (doit) {
+	    retained_entry *retained_entry_p;
+	    if (find_retainedtopic(topic_data, retained_cb, &retained_entry_p)) {
+		*data_len = retained_entry_p->data_len > sizeof(tmp_buffer)-1? sizeof(tmp_buffer)-1 : retained_entry_p->data_len;
+		os_memcpy(tmp_buffer, retained_entry_p->data, *data_len);
+		tmp_buffer[*data_len] = '\0';
+		*data = tmp_buffer;
+	    }
+	}
     }
 #ifdef GPIO
     else if (is_token(next_token, "gpio_in")) {

@@ -12,10 +12,12 @@
 
 static retained_entry *retained_list = NULL;
 static uint16_t max_entry;
+static on_retainedtopic_cb retained_cb = NULL;
 
 bool ICACHE_FLASH_ATTR create_retainedlist(uint16_t num_entires) {
     max_entry = num_entires;
     retained_list = (retained_entry *) os_zalloc(num_entires * sizeof(retained_entry));
+    retained_cb = NULL;
     return retained_list != NULL;
 }
 
@@ -61,6 +63,8 @@ bool ICACHE_FLASH_ATTR update_retainedtopic(uint8_t * topic, uint8_t * data, uin
 	os_free(retained_list[i].data);
 	retained_list[i].data = NULL;
 	retained_list[i].data_len = 0;
+	if (retained_cb != NULL)
+	    retained_cb(NULL);
 	return true;
     }
 
@@ -85,11 +89,13 @@ bool ICACHE_FLASH_ATTR update_retainedtopic(uint8_t * topic, uint8_t * data, uin
     os_memcpy(retained_list[i].data, data, data_len);
     retained_list[i].data_len = data_len;
     retained_list[i].qos = qos;
+    if (retained_cb != NULL)
+	retained_cb(&retained_list[i]);
 
     return true;
 }
 
-bool ICACHE_FLASH_ATTR find_retainedtopic(uint8_t * topic, find_retainedtopic_cb cb, MQTT_ClientCon * clientcon) {
+bool ICACHE_FLASH_ATTR find_retainedtopic(uint8_t * topic, find_retainedtopic_cb cb, void *user_data) {
     uint16_t i;
     bool retval = false;
 
@@ -99,7 +105,7 @@ bool ICACHE_FLASH_ATTR find_retainedtopic(uint8_t * topic, find_retainedtopic_cb
     for (i = 0; i < max_entry; i++) {
 	if (retained_list[i].topic != NULL) {
 	    if (Topics_matches(topic, 1, retained_list[i].topic)) {
-		(*cb) (&retained_list[i], clientcon);
+		(*cb) (&retained_list[i], user_data);
 		retval = true;
 	    }
 	}
@@ -153,6 +159,11 @@ int ICACHE_FLASH_ATTR serialize_retainedtopics(char *buf, int len) {
 	    buf[pos] = '\0';
 	}
     }
+
+    if (pos == 0) {
+	buf[pos++] = '\0';
+    }
+
     return pos;
 }
 
@@ -173,4 +184,8 @@ bool ICACHE_FLASH_ATTR deserialize_retainedtopics(char *buf, int len) {
 	    return false;
     }
     return true;
+}
+
+void ICACHE_FLASH_ATTR set_on_retainedtopic_cb(on_retainedtopic_cb cb) {
+    retained_cb = cb;
 }

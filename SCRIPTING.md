@@ -52,7 +52,8 @@ In general, scripts conform to the following BNF:
 	     system <expr> |
              <action> <action>
 
-<expr> ::= <val> | <val> <op> <expr> | (<expr>) | not (<expr>) | json_parse (<expr>,<expr>)
+<expr> ::= <val> | <val> <op> <expr> | (<expr>) | not (<expr>) | |
+           retained_topic(<expr>) | json_parse (<expr>,<expr>)
 
 <op> := '=' | '>' | gte | str_ge | str_gte | '+' | '-' | '*' | '|' | div
 
@@ -188,6 +189,11 @@ Expressions evaluate to a (string) value. A single constant, a string, or a vari
 not(<expr>)
 ```
 Interpretes the argument expression as boolean and inverts the result.
+
+```
+retained_topic(<expr>)
+```
+Interpretes the argument as topic name (incl. wildcards) and searches the first local retained topic that matches this name. The stored value of this topic is returned (empty, if nothing found). Can be used to check the status of the system synchronously without the need to subscribe for that retained topic, wait for status changes and store them in a variable.
 
 ```
 json_parse (<expr>,<expr>)
