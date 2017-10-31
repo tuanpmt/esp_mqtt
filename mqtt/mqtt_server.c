@@ -37,6 +37,7 @@ LOCAL MqttDataCallback local_data_cb = NULL;
 LOCAL MqttConnectCallback local_connect_cb = NULL;
 LOCAL MqttAuthCallback local_auth_cb = NULL;
 
+//#undef MQTT_INFO
 //#define MQTT_INFO os_printf
 #define MQTT_WARNING os_printf
 #define MQTT_ERROR os_printf
@@ -101,8 +102,8 @@ bool ICACHE_FLASH_ATTR delete_client_by_id(const uint8_t *id) {
     for (clientcon = clientcon_list; clientcon != NULL; clientcon = clientcon->next) {
 	if (os_strcmp(id, clientcon->connect_info.client_id) == 0) {
 	    MQTT_INFO("MQTT: Disconnect client: %s\r\n", clientcon->connect_info.client_id);
-	    clientcon->connState = TCP_DISCONNECTED;
-	    espconn_disconnect(clientcon->pCon);
+	    clientcon->connState = TCP_DISCONNECT;
+	    system_os_post(MQTT_SERVER_TASK_PRIO, 0, (os_param_t) clientcon);
 	    return true;
 	}
     }
@@ -254,7 +255,7 @@ void ICACHE_FLASH_ATTR MQTT_ServerDisconnect(MQTT_ClientCon * mqttClientCon) {
     MQTT_INFO("MQTT:ServerDisconnect\r\n");
 
     mqttClientCon->mqtt_state.message_length_read = 0;
-    mqttClientCon->connState = TCP_DISCONNECTED;
+    mqttClientCon->connState = TCP_DISCONNECT;
     system_os_post(MQTT_SERVER_TASK_PRIO, 0, (os_param_t) mqttClientCon);
     os_timer_disarm(&mqttClientCon->mqttTimer);
 }
@@ -531,6 +532,11 @@ static void ICACHE_FLASH_ATTR MQTT_ClientCon_recv_cb(void *arg, char *pdata, uns
 			      clientcon->connect_info.password==NULL?"":clientcon->connect_info.password,
 			      clientcon->pCon) == false) {
 		MQTT_WARNING("MQTT: Authorization failed\r\n");
+
+		if (clientcon->connect_info.will_topic != NULL) {
+		    os_free(clientcon->connect_info.will_topic);
+		    clientcon->connect_info.will_topic = NULL;
+		}
 		msg_conn_ret = CONNECTION_REFUSE_NOT_AUTHORIZED;
 		clientcon->connState = TCP_DISCONNECTING;
 		break;
@@ -776,8 +782,8 @@ static void ICACHE_FLASH_ATTR MQTT_ClientCon_sent_cb(void *arg) {
     clientcon->sendTimeout = 0;
 
     if (clientcon->connState == TCP_DISCONNECTING) {
-	clientcon->connState = TCP_DISCONNECTED;
-	espconn_disconnect(clientcon->pCon);
+	clientcon->connState = TCP_DISCONNECT;
+	system_os_post(MQTT_SERVER_TASK_PRIO, 0, (os_param_t) clientcon);
     }
 
     activate_next_client();
@@ -790,12 +796,6 @@ static void ICACHE_FLASH_ATTR MQTT_ClientCon_connected_cb(void *arg) {
     pespconn->reverse = NULL;
 
     MQTT_INFO("MQTT_ClientCon_connected_cb(): Client connected\r\n");
-
-    if (local_connect_cb != NULL && local_connect_cb(pespconn) == false) {
-	MQTT_INFO("Connected not allowed\r\n");
-	espconn_disconnect(pespconn);
-	return;
-    }
 
     espconn_regist_sentcb(pespconn, MQTT_ClientCon_sent_cb);
     espconn_regist_disconcb(pespconn, MQTT_ClientCon_discon_cb);
@@ -814,6 +814,12 @@ static void ICACHE_FLASH_ATTR MQTT_ClientCon_connected_cb(void *arg) {
 
     os_timer_setfn(&mqttClientCon->mqttTimer, (os_timer_func_t *) mqtt_server_timer, mqttClientCon);
     os_timer_arm(&mqttClientCon->mqttTimer, 1000, 1);
+
+    if (local_connect_cb != NULL && local_connect_cb(pespconn) == false) {
+	mqttClientCon->connState = TCP_DISCONNECT;
+	system_os_post(MQTT_SERVER_TASK_PRIO, 0, (os_param_t) mqttClientCon);
+	return;
+    }
 }
 
 void ICACHE_FLASH_ATTR MQTT_ServerTask(os_event_t * e) {
@@ -827,7 +833,7 @@ void ICACHE_FLASH_ATTR MQTT_ServerTask(os_event_t * e) {
 
     switch (clientcon->connState) {
 
-    case TCP_DISCONNECTED:
+    case TCP_DISCONNECT:
 	MQTT_INFO("MQTT: Disconnect\r\n");
 	espconn_disconnect(clientcon->pCon);
 	break;
