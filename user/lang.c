@@ -943,6 +943,33 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 		http_get(url_data, "", interpreter_http_reply);
 	    }
 	}
+
+	else if (is_token(next_token, "http_post")) {
+	    len_check(2);
+
+	    char *url_data;
+	    int url_len;
+	    Value_Type url_type;
+	    if ((next_token = parse_expression(next_token + 1, &url_data, &url_len, &url_type, doit)) == -1)
+		return -1;
+
+	    // Copy, in case it is in tmp_buffer
+	    if (!doit)
+		url_len = 0;
+	    char post_url[url_len+1];
+	    os_memcpy(post_url, url_data, url_len);
+	    post_url[url_len] = '\0';
+
+	    char *post_data;
+	    int post_len;
+	    Value_Type post_type;
+	    if ((next_token = parse_expression(next_token + 1, &post_data, &post_len, &post_type, doit)) == -1)
+		return -1;
+
+	    if (doit) {
+		http_post(post_url, post_data, "", interpreter_http_reply);
+	    }
+	}
 #endif
 #ifdef GPIO
 	else if (is_token(next_token, "gpio_pinmode")) {

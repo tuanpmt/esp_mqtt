@@ -44,6 +44,7 @@ In general, scripts conform to the following BNF:
              settimer <num> <expr> |
              setvar ($[any ASCII]* | @<num>) = <expr> |
              http_get <expr> |
+             http_post <expr> <expr> |
              gpio_pinmode <num> (input|output) [pullup] |
              gpio_out <num> <expr> |
              gpio_pwm <num> <num> |
@@ -149,7 +150,12 @@ Flash variables can also be used for storing config parameters or handing them o
 ```
 http_get <expr>
 ```
-Sends an HTTP request to the URL given in the expression.
+Sends an HTTP GET request to the URL given in the expression.
+
+```
+http_post <expr> <expr>
+```
+Sends an HTTP POST request to the URL given in the first expression with the post data from the second expression.
 
 ```
 gpio_pinmode <num> (input|output) [pullup]
