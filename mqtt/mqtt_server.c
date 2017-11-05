@@ -154,6 +154,13 @@ bool ICACHE_FLASH_ATTR MQTT_InitClientCon(MQTT_ClientCon * mqttClientCon) {
     return true;
 }
 
+uint16_t ICACHE_FLASH_ATTR MQTT_CountClientCon() {
+    MQTT_ClientCon *p;
+    uint16_t count = 0;
+    for (p = clientcon_list; p != NULL; p = p->next, count++);
+    return count;
+}
+
 bool ICACHE_FLASH_ATTR MQTT_DeleteClientCon(MQTT_ClientCon * mqttClientCon) {
     MQTT_INFO("MQTT:DeleteClientCon\r\n");
 
@@ -815,7 +822,7 @@ static void ICACHE_FLASH_ATTR MQTT_ClientCon_connected_cb(void *arg) {
     os_timer_setfn(&mqttClientCon->mqttTimer, (os_timer_func_t *) mqtt_server_timer, mqttClientCon);
     os_timer_arm(&mqttClientCon->mqttTimer, 1000, 1);
 
-    if (local_connect_cb != NULL && local_connect_cb(pespconn) == false) {
+    if (local_connect_cb != NULL && local_connect_cb(pespconn, MQTT_CountClientCon()) == false) {
 	mqttClientCon->connState = TCP_DISCONNECT;
 	system_os_post(MQTT_SERVER_TASK_PRIO, 0, (os_param_t) mqttClientCon);
 	return;

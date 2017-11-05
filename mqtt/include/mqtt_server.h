@@ -15,7 +15,7 @@
 #define LOCAL_MQTT_CLIENT ((void*)-1)
 
 typedef bool (*MqttAuthCallback)(const char* username, const char *password, struct espconn *pesp_conn);
-typedef bool (*MqttConnectCallback)(struct espconn *pesp_conn);
+typedef bool (*MqttConnectCallback)(struct espconn *pesp_conn, uint16_t client_count);
 
 typedef struct _MQTT_ClientCon {
   struct espconn *pCon;
@@ -39,6 +39,7 @@ typedef struct _MQTT_ClientCon {
 } MQTT_ClientCon;
 
 extern MQTT_ClientCon *clientcon_list;
+uint16_t MQTT_CountClientCon();
 
 bool MQTT_server_start(uint16_t portno, uint16_t max_subscriptions, uint16_t max_retained_topics);
 void MQTT_server_onConnect(MqttConnectCallback connectCb);

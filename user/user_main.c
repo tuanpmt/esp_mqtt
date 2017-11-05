@@ -456,7 +456,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	to_console(response);
 	os_sprintf(response, "set [network|dns|ip|netmask|gw|config_port|config_access] <val>\r\n");
 	to_console(response);
-	os_sprintf(response, "set [broker_user|broker_password|broker_access] <val>\r\n");
+	os_sprintf(response, "set [broker_user|broker_password|broker_access|broker_clients] <val>\r\n");
 	to_console(response);
 	os_sprintf(response, "set [broker_subscriptions|broker_retained_messages|broker_autoretain] <val>\r\n");
 	to_console(response);
@@ -529,7 +529,11 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 
 	    os_sprintf(response, "MQTT broker max. subscription: %d\r\nMQTT broker max. retained messages: %d%s\r\n",
 		       config.max_subscriptions, config.max_retained_messages, config.auto_retained?" (auto saved)":"");
-		to_console(response);
+	    to_console(response);
+
+	    os_sprintf(response, "MQTT broker max. clients: %d\r\n", config.max_clients);
+	    to_console(response);
+
 	    if (os_strcmp(config.mqtt_broker_user, "none") != 0) {
 		os_sprintf(response,
 			   "MQTT broker username: %s\r\nMQTT broker password: %s\r\n",
@@ -616,7 +620,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	    MQTT_ClientCon *clientcon;
 	    int ccnt = 0;
 
-	    os_sprintf(response, "Current clients:\r\n");
+	    os_sprintf(response, "Current clients: %d\r\n", MQTT_CountClientCon());
 	    to_console(response);
 	    for (clientcon = clientcon_list; clientcon != NULL; clientcon = clientcon->next, ccnt++) {
 		os_sprintf(response, "%s%s", clientcon->connect_info.client_id, clientcon->next != NULL ? ", " : "");
@@ -1144,6 +1148,12 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 		goto command_handled;
 	    }
 
+	    if (strcmp(tokens[1], "broker_clients") == 0) {
+		config.max_clients = atoi(tokens[2]);
+		os_sprintf(response, "Broker max clients set\r\n");
+		goto command_handled;
+	    }
+
 	    if (strcmp(tokens[1], "broker_user") == 0) {
 		os_strncpy(config.mqtt_broker_user, tokens[2], 32);
 		config.mqtt_broker_user[31] = '\0';
@@ -1656,12 +1666,17 @@ bool ICACHE_FLASH_ATTR mqtt_broker_auth(const char* username, const char *passwo
 }
 
 
-bool ICACHE_FLASH_ATTR mqtt_broker_connect(struct espconn *pesp_conn) {
+bool ICACHE_FLASH_ATTR mqtt_broker_connect(struct espconn *pesp_conn, uint16_t client_count) {
     //os_printf("connect from " IPSTR "\r\n", IP2STR((ip_addr_t *)&(pesp_conn->proto.tcp->remote_ip)));
 
     if (!check_connection_access(pesp_conn, config.mqtt_broker_access)) {
 	os_printf("Client disconnected - no mqtt access from the address " IPSTR "\r\n",
 		  IP2STR((ip_addr_t *)&(pesp_conn->proto.tcp->remote_ip)));
+	return false;
+    }
+
+    if (client_count > config.max_clients) {
+	os_printf("Client disconnected - too many concurrent clients\r\n");
 	return false;
     }
 

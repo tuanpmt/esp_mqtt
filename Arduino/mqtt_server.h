@@ -12,7 +12,7 @@ bool MQTT_server_start(uint16_t portno, uint16_t max_subscriptions, uint16_t max
 
 typedef void (*MqttDataCallback)(uint32_t *args, const char* topic, uint32_t topic_len, const char *data, uint32_t lengh);
 typedef bool (*MqttAuthCallback)(const char* username, const char *password, struct espconn *pesp_conn);
-typedef bool (*MqttConnectCallback)(struct espconn *pesp_conn);
+typedef bool (*MqttConnectCallback)(struct espconn *pesp_conn, uint16_t client_count);
 
 void MQTT_server_onData(MqttDataCallback dataCb);
 void MQTT_server_onAuth(MqttAuthCallback authCb);

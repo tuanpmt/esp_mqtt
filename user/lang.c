@@ -931,7 +931,7 @@ int ICACHE_FLASH_ATTR parse_action(int next_token, bool doit) {
 	}
 #ifdef HTTPC
 	else if (is_token(next_token, "http_get")) {
-	    len_check(2);
+	    len_check(1);
 
 	    char *url_data;
 	    int url_len;
