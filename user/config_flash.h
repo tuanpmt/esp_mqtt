@@ -51,7 +51,7 @@ typedef struct
 
     uint16_t	max_subscriptions;	// Upper limit on subscribed topics
     uint16_t	max_retained_messages;	// Upper limit on stored retained messages
-    uint16_t	max_clients;	// Upper limit on concurrently connected clients
+    uint16_t	max_clients;	// Upper limit on concurrently connected clients (0: mem is the limit)
     uint8_t	auto_retained;	// Automatically save retained messages to flash (default: off)
     uint8_t     mqtt_broker_user[32];	// Username for client login, "none" if empty
     uint8_t     mqtt_broker_password[32]; // Password for client login

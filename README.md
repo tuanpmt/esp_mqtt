@@ -68,7 +68,7 @@ MQTT broker related command:
 - set broker_access _mode_: controls the networks that allow MQTT broker access (0: no access, 1: only internal, 2: only external, 3: both (default))
 - set broker_subscriptions _max_: sets the max number of subscription the broker can store (default: 30)
 - set broker_retained_messages _max_: sets the max number of retained messages the broker can store (default: 30)
-- set broker_clients _clients_max_: sets the max number of concurrent client connections (default: 8)
+- set broker_clients _clients_max_: sets the max number of concurrent client connections (default: 0 = mem is the only limit)
 - save_retained: saves the current state of all retained topics (max. 4096 Bytes in sum) to flash, so they will persist a reboot
 - delete_retained: deletes the state of all retained topics in RAM and flash
 - set broker_autoretain [0|1]: selects, whether the broker should do a "save_retained" automatically each time it receives a new retained message (default off). With this option on the broker can be resetted at any time without loosing state. However, this is slow and too many writes may damage flash mem.

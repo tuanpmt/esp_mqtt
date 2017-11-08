@@ -39,7 +39,10 @@ typedef struct _MQTT_ClientCon {
 } MQTT_ClientCon;
 
 extern MQTT_ClientCon *clientcon_list;
-uint16_t MQTT_CountClientCon();
+
+uint16_t MQTT_server_countClientCon();
+void MQTT_server_disconnectClientCon(MQTT_ClientCon *mqttClientCon);
+bool MQTT_server_deleteClientCon(MQTT_ClientCon *mqttClientCon);
 
 bool MQTT_server_start(uint16_t portno, uint16_t max_subscriptions, uint16_t max_retained_topics);
 void MQTT_server_onConnect(MqttConnectCallback connectCb);

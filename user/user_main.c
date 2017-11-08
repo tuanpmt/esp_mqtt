@@ -620,7 +620,7 @@ void ICACHE_FLASH_ATTR console_handle_command(struct espconn *pespconn) {
 	    MQTT_ClientCon *clientcon;
 	    int ccnt = 0;
 
-	    os_sprintf(response, "Current clients: %d\r\n", MQTT_CountClientCon());
+	    os_sprintf(response, "Current clients: %d\r\n", MQTT_server_countClientCon());
 	    to_console(response);
 	    for (clientcon = clientcon_list; clientcon != NULL; clientcon = clientcon->next, ccnt++) {
 		os_sprintf(response, "%s%s", clientcon->connect_info.client_id, clientcon->next != NULL ? ", " : "");
@@ -1505,8 +1505,18 @@ void wifi_handle_event_cb(System_Event_t * evt) {
 		  evt->event_info.disconnected.ssid, evt->event_info.disconnected.reason);
 	connected = false;
 
+	MQTT_ClientCon *clientcon, *clientcon_tmp;
+	for (clientcon = clientcon_list; clientcon != NULL; ) {
+	    clientcon_tmp = clientcon;
+	    clientcon = clientcon->next;
+	    if (clientcon_tmp->pCon->state == ESPCONN_CLOSE) {
+		MQTT_server_deleteClientCon(clientcon_tmp);
+	    }
+	}
+
 #ifdef MQTT_CLIENT
 	if (mqtt_enabled)
+// Missing test for local
 	    MQTT_Disconnect(&mqttClient);
 #endif				/* MQTT_CLIENT */
 
@@ -1675,7 +1685,7 @@ bool ICACHE_FLASH_ATTR mqtt_broker_connect(struct espconn *pesp_conn, uint16_t c
 	return false;
     }
 
-    if (client_count > config.max_clients) {
+    if (config.max_clients != 0 && client_count > config.max_clients) {
 	os_printf("Client disconnected - too many concurrent clients\r\n");
 	return false;
     }
