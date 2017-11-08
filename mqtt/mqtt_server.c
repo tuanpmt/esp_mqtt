@@ -114,7 +114,7 @@ bool ICACHE_FLASH_ATTR activate_next_client() {
     MQTT_ClientCon *clientcon = clientcon_list;
 
     for (clientcon = clientcon_list; clientcon != NULL; clientcon = clientcon->next) {
-	if (!QUEUE_IsEmpty(&clientcon->msgQueue)) {
+	if ((!QUEUE_IsEmpty(&clientcon->msgQueue)) && clientcon->pCon->state != ESPCONN_CLOSE) {
 	    MQTT_INFO("MQTT: Next message to client: %s\r\n", clientcon->connect_info.client_id);
 	    system_os_post(MQTT_SERVER_TASK_PRIO, 0, (os_param_t) clientcon);
 	    return true;
