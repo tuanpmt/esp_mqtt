@@ -258,6 +258,17 @@ bool ICACHE_FLASH_ATTR MQTT_server_deleteClientCon(MQTT_ClientCon * mqttClientCo
     return true;
 }
 
+void ICACHE_FLASH_ATTR MQTT_server_cleanupClientCons() {
+    MQTT_ClientCon *clientcon, *clientcon_tmp;
+    for (clientcon = clientcon_list; clientcon != NULL; ) {
+	clientcon_tmp = clientcon;
+	clientcon = clientcon->next;
+	if (clientcon_tmp->pCon->state == ESPCONN_CLOSE) {
+	    MQTT_server_deleteClientCon(clientcon_tmp);
+	}
+    }
+}
+
 void ICACHE_FLASH_ATTR MQTT_server_disconnectClientCon(MQTT_ClientCon * mqttClientCon) {
     MQTT_INFO("MQTT:ServerDisconnect\r\n");
 

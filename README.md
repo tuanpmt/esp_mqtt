@@ -279,6 +279,12 @@ If an *MqttAuthCallback* function is registered with MQTT_server_onAuth(), it is
 
 The *MqttConnectCallback* function does a similar check for the connection, but it is called right after the connect request before the MQTT connect request is processed. This is done in order to reject requests from unautorized clients in an early stage. The number of currently connected clients (incl. the current one) is given in the *client_count* paramater. With this info you can reject too many concurrent connections.
 
+If you want to force a cleanup when the broker as a WiFi client (WIFI_STA mode) has lost connectivity to the AP, call:
+```c
+void MQTT_server_cleanupClientCons();
+```
+This will remove all broken connections, publishing LWT if defined.
+
 # Limitations on the number of clients
 To adjust memory consumption of one MQTT connection and thus the max number of concurrent connections you can redefine MQTT_BUF_SIZE and QUEUE_BUFFER_SIZE in "user_config.h". MQTT_BUF_SIZE is the max. size of pending inbound messages for one connection (and thus also the max. size of a single MQTT message) and QUEUE_BUFFER_SIZE is the max. size of all pending outbound messages for one connection. Currently these parameters are set to 1024 resp. 2048 bytes, resulting in a memory consumption of about 4 KB per connection and a max number of connections of about 8-9 (depending on the memory usage of the rest of the program). When you reduce buffer sizes, e.g. to 512 and 1024 bytes, a single connection requires only about 2.5 KB resulting in up to 13 possible concurrent MQTT connections. In any case you have to increase the number of TCP connections (default 5) first by calling "espconn_tcp_set_max_con(n)" with n, the max. number of concurrent TCP connections, less or equal to 15.
 

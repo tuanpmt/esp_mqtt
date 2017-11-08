@@ -1505,14 +1505,7 @@ void wifi_handle_event_cb(System_Event_t * evt) {
 		  evt->event_info.disconnected.ssid, evt->event_info.disconnected.reason);
 	connected = false;
 
-	MQTT_ClientCon *clientcon, *clientcon_tmp;
-	for (clientcon = clientcon_list; clientcon != NULL; ) {
-	    clientcon_tmp = clientcon;
-	    clientcon = clientcon->next;
-	    if (clientcon_tmp->pCon->state == ESPCONN_CLOSE) {
-		MQTT_server_deleteClientCon(clientcon_tmp);
-	    }
-	}
+	MQTT_server_cleanupClientCons();
 
 #ifdef MQTT_CLIENT
 	if (mqtt_enabled)

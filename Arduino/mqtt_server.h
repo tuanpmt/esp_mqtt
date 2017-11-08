@@ -24,6 +24,10 @@ bool MQTT_local_publish(uint8_t* topic, uint8_t* data, uint16_t data_length, uin
 bool MQTT_local_subscribe(uint8_t* topic, uint8_t qos);
 bool MQTT_local_unsubscribe(uint8_t* topic);
 
+// Interface to cleanup after STA disconnect
+
+void MQTT_server_cleanupClientCons();
+
 // Interface for persistence of retained topics
 // Topics can be serialized to a buffer and reinitialized later after reboot
 // Application is responsible for saving and restoring that buffer (i.e. to/from flash)
