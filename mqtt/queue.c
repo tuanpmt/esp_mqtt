@@ -44,7 +44,7 @@ void ICACHE_FLASH_ATTR QUEUE_Init(QUEUE *queue, int bufferSize)
   queue->buf = (uint8_t*)os_zalloc(bufferSize);
   RINGBUF_Init(&queue->rb, queue->buf, bufferSize);
 }
-int32_t ICACHE_FLASH_ATTR QUEUE_Puts(QUEUE *queue, uint8_t* buffer, uint16_t len)
+int32_t ICACHE_FLASH_ATTR QUEUE_Puts(QUEUE *queue, const uint8_t* buffer, uint16_t len)
 {
   uint32_t ret;
   

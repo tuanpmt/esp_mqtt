@@ -38,7 +38,7 @@
 #include "utils.h"
 
 
-uint8_t ICACHE_FLASH_ATTR UTILS_IsIPV4 (int8_t *str)
+uint8_t ICACHE_FLASH_ATTR UTILS_IsIPV4 (const int8_t *str)
 {
   uint8_t segs = 0;   /* Segment count. */
   uint8_t chcnt = 0;  /* Character count within segment. */
