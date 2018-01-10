@@ -38,7 +38,7 @@
 #include "debug.h"
 #include "user_config.h"
 #include "mqtt.h"
-#include "queue.h"
+#include "mqtt_queue.h"
 
 #define MQTT_TASK_PRIO            2
 #define MQTT_TASK_QUEUE_SIZE      1
