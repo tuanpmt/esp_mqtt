@@ -132,7 +132,7 @@ void ICACHE_FLASH_ATTR mqtt_msg_init(mqtt_connection_t* connection, uint8_t* buf
   connection->buffer_length = buffer_length;
 }
 
-int ICACHE_FLASH_ATTR mqtt_get_total_length(uint8_t* buffer, uint16_t length)
+int ICACHE_FLASH_ATTR mqtt_get_total_length(const uint8_t* buffer, uint16_t length)
 {
   int i;
   int totlen = 0;
@@ -151,7 +151,7 @@ int ICACHE_FLASH_ATTR mqtt_get_total_length(uint8_t* buffer, uint16_t length)
   return totlen;
 }
 
-const char* ICACHE_FLASH_ATTR mqtt_get_publish_topic(uint8_t* buffer, uint16_t* length)
+const char* ICACHE_FLASH_ATTR mqtt_get_publish_topic(const uint8_t* buffer, uint16_t* length)
 {
   int i;
   int totlen = 0;
@@ -180,7 +180,7 @@ const char* ICACHE_FLASH_ATTR mqtt_get_publish_topic(uint8_t* buffer, uint16_t* 
   return (const char*)(buffer + i);
 }
 
-const char* ICACHE_FLASH_ATTR mqtt_get_publish_data(uint8_t* buffer, uint16_t* length)
+const char* ICACHE_FLASH_ATTR mqtt_get_publish_data(const uint8_t* buffer, uint16_t* length)
 {
   int i;
   int totlen = 0;
@@ -226,7 +226,7 @@ const char* ICACHE_FLASH_ATTR mqtt_get_publish_data(uint8_t* buffer, uint16_t* l
   return (const char*)(buffer + i);
 }
 
-uint16_t ICACHE_FLASH_ATTR mqtt_get_id(uint8_t* buffer, uint16_t length)
+uint16_t ICACHE_FLASH_ATTR mqtt_get_id(const uint8_t* buffer, uint16_t length)
 {
   if (length < 1)
     return 0;

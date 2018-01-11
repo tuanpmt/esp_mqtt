@@ -27,7 +27,7 @@
 * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 * POSSIBILITY OF SUCH DAMAGE.
 */
-#include "queue.h"
+#include "mqtt_queue.h"
 
 #include "user_interface.h"
 #include "osapi.h"
@@ -44,7 +44,7 @@ void ICACHE_FLASH_ATTR QUEUE_Init(QUEUE *queue, int bufferSize)
   queue->buf = (uint8_t*)os_zalloc(bufferSize);
   RINGBUF_Init(&queue->rb, queue->buf, bufferSize);
 }
-int32_t ICACHE_FLASH_ATTR QUEUE_Puts(QUEUE *queue, uint8_t* buffer, uint16_t len)
+int32_t ICACHE_FLASH_ATTR QUEUE_Puts(QUEUE *queue, const uint8_t* buffer, uint16_t len)
 {
   uint32_t ret;
   
