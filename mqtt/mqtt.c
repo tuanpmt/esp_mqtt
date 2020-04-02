@@ -297,7 +297,6 @@ mqtt_tcpclient_recv(void *arg, char *pdata, unsigned short len)
   struct espconn *pCon = (struct espconn*)arg;
   MQTT_Client *client = (MQTT_Client *)pCon->reverse;
 
-READPACKET:
   MQTT_INFO("TCP: data received %d bytes\r\n", len);
   // MQTT_INFO("STATE: %d\r\n", client->connState);
   if (len < MQTT_BUF_SIZE && len > 0) {
@@ -426,15 +425,16 @@ READPACKET:
 
           if (client->mqtt_state.message_length < client->mqtt_state.message_length_read)
           {
-            //client->connState = MQTT_PUBLISH_RECV;
-            //Not Implement yet
+            INFO("Get another published message\r\n");
             len -= client->mqtt_state.message_length;
             pdata += client->mqtt_state.message_length;
 
-            MQTT_INFO("Get another published message\r\n");
-            goto READPACKET;
-          }
+            // save rest of data to buffer so it can be processed via task function
+            client->mqtt_state.in_buffer_length = len;
+            memcpy(client->mqtt_state.in_buffer, pdata, len);
 
+            client->connState = MQTT_PUBLISH_RECV;
+          }
         }
         break;
     }
@@ -760,6 +760,13 @@ MQTT_Task(os_event_t *e)
         client->mqtt_state.outbound_message = NULL;
         break;
       }
+      break;
+    case MQTT_PUBLISH_RECV:
+      INFO("MQTT: processing next mqtt packet in tcp packet\r\n");
+      client->connState = MQTT_MSG_TYPE_PUBLISH;
+      memcpy(dataBuffer, client->mqtt_state.in_buffer, client->mqtt_state.in_buffer_length);
+      dataLen = client->mqtt_state.in_buffer_length;
+      mqtt_tcpclient_recv(client, dataBuffer, dataLen);
       break;
   }
 }
