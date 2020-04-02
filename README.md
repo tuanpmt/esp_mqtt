@@ -44,6 +44,8 @@ make ESPPORT=/dev/ttyUSB0 flash
 
 See file: `user/user_main.c`
 
+**Notes**
+- The client id needs to be unique. If not, When there are more than 2 clients use the same ClientID, the following logged-in client will kick the ahead logged-in client, and so on forever
 
 **Publish message and Subscribe**
 
@@ -64,7 +66,7 @@ MQTT_InitLWT(&mqttClient, "/lwt", "offline", 0, 0);
 
 ```
 
-#Default configuration
+# Default configuration
 
 See: **include/user_config.sample.h**
 

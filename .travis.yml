@@ -5,8 +5,8 @@ before_install:
 install:
 - mkdir tools && cd tools
 - git clone https://github.com/themadinventor/esptool.git
-- wget https://github.com/nodemcu/nodemcu-firmware/raw/master/tools/esp-open-sdk.tar.gz
-- tar -zxvf esp-open-sdk.tar.gz
+- wget https://github.com/nodemcu/nodemcu-firmware/raw/master/tools/esp-open-sdk.tar.xz
+- tar -xvf esp-open-sdk.tar.xz
 - export PATH=$PATH:$PWD/esp-open-sdk/xtensa-lx106-elf/bin
 - chmod +x $PWD/esptool/esptool.py
 - export ESPTOOL=$PWD/esptool/esptool.py
