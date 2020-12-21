@@ -585,7 +585,7 @@ mqtt_tcpclient_recon_cb(void *arg, sint8 errType)
   * @retval TRUE if success queue
   */
 BOOL ICACHE_FLASH_ATTR
-MQTT_Publish(MQTT_Client *client, const char* topic, const char* data, int data_length, int qos, int retain)
+MQTT_Publish(MQTT_Client *client, const char* topic, const char* data, int data_length, uint8_t qos, uint8_t retain)
 {
   uint8_t dataBuffer[MQTT_BUF_SIZE];
   uint16_t dataLen;
@@ -617,7 +617,7 @@ MQTT_Publish(MQTT_Client *client, const char* topic, const char* data, int data_
   * @retval TRUE if success queue
   */
 BOOL ICACHE_FLASH_ATTR
-MQTT_Subscribe(MQTT_Client *client, char* topic, uint8_t qos)
+MQTT_Subscribe(MQTT_Client *client, const char* topic, uint8_t qos)
 {
   uint8_t dataBuffer[MQTT_BUF_SIZE];
   uint16_t dataLen;
@@ -645,7 +645,7 @@ MQTT_Subscribe(MQTT_Client *client, char* topic, uint8_t qos)
   * @retval TRUE if success queue
   */
 BOOL ICACHE_FLASH_ATTR
-MQTT_UnSubscribe(MQTT_Client *client, char* topic)
+MQTT_UnSubscribe(MQTT_Client *client, const char* topic)
 {
   uint8_t dataBuffer[MQTT_BUF_SIZE];
   uint16_t dataLen;
@@ -773,7 +773,7 @@ MQTT_Task(os_event_t *e)
   * @retval None
   */
 void ICACHE_FLASH_ATTR
-MQTT_InitConnection(MQTT_Client *mqttClient, uint8_t* host, uint32_t port, uint8_t security)
+MQTT_InitConnection(MQTT_Client *mqttClient, const char* host, uint32_t port, uint8_t security)
 {
   uint32_t temp;
   MQTT_INFO("MQTT:InitConnection\r\n");
@@ -797,7 +797,7 @@ MQTT_InitConnection(MQTT_Client *mqttClient, uint8_t* host, uint32_t port, uint8
   * @retval None
   */
 BOOL ICACHE_FLASH_ATTR
-MQTT_InitClient(MQTT_Client *mqttClient, uint8_t* client_id, uint8_t* client_user, uint8_t* client_pass, uint32_t keepAliveTime, uint8_t cleanSession)
+MQTT_InitClient(MQTT_Client *mqttClient, const char* client_id, const char* client_user, const char* client_pass, uint32_t keepAliveTime, uint8_t cleanSession)
 {
   uint32_t temp;
   MQTT_INFO("MQTT:InitClient\r\n");
@@ -867,7 +867,7 @@ MQTT_InitClient(MQTT_Client *mqttClient, uint8_t* client_id, uint8_t* client_use
   return true;
 }
 void ICACHE_FLASH_ATTR
-MQTT_InitLWT(MQTT_Client *mqttClient, uint8_t* will_topic, uint8_t* will_msg, uint8_t will_qos, uint8_t will_retain)
+MQTT_InitLWT(MQTT_Client *mqttClient, const char* will_topic, const char* will_msg, uint8_t will_qos, uint8_t will_retain)
 {
   uint32_t temp;
   temp = os_strlen(will_topic);
