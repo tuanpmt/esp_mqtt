@@ -94,7 +94,7 @@ typedef void (*MqttDataCallback)(uint32_t *args, const char* topic, uint32_t top
 typedef struct  {
   struct espconn *pCon;
   uint8_t security;
-  uint8_t* host;
+  char* host;
   uint32_t port;
   ip_addr_t ip;
   mqtt_state_t  mqtt_state;

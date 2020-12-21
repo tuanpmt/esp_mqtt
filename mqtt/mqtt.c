@@ -39,6 +39,7 @@
 #include "user_config.h"
 #include "mqtt.h"
 #include "queue.h"
+#include "utils.h"
 
 #define MQTT_TASK_PRIO        2
 #define MQTT_TASK_QUEUE_SIZE  1
@@ -763,7 +764,7 @@ MQTT_InitConnection(MQTT_Client *mqttClient, const char* host, uint32_t port, ui
   MQTT_INFO("MQTT:InitConnection\r\n");
   os_memset(mqttClient, 0, sizeof(MQTT_Client));
   temp = os_strlen(host);
-  mqttClient->host = (uint8_t*)os_zalloc(temp + 1);
+  mqttClient->host = (char *)os_zalloc(temp + 1);
   os_strcpy(mqttClient->host, host);
   mqttClient->host[temp] = 0;
   mqttClient->port = port;
@@ -809,21 +810,21 @@ MQTT_InitClient(MQTT_Client *mqttClient, const char* client_id, const char* clie
    * assume the passed client_id is non-NULL.                                 */
   if ( !(mqttClient->connect_info.client_id) ) {
     temp = os_strlen(client_id);
-    mqttClient->connect_info.client_id = (uint8_t*)os_zalloc(temp + 1);
+    mqttClient->connect_info.client_id = (char *)os_zalloc(temp + 1);
     os_strcpy(mqttClient->connect_info.client_id, client_id);
     mqttClient->connect_info.client_id[temp] = 0;
   }
 
   if (client_user) {
     temp = os_strlen(client_user);
-    mqttClient->connect_info.username = (uint8_t*)os_zalloc(temp + 1);
+    mqttClient->connect_info.username = (char *)os_zalloc(temp + 1);
     os_strcpy(mqttClient->connect_info.username, client_user);
     mqttClient->connect_info.username[temp] = 0;
   }
 
   if (client_pass) {
     temp = os_strlen(client_pass);
-    mqttClient->connect_info.password = (uint8_t*)os_zalloc(temp + 1);
+    mqttClient->connect_info.password = (char *)os_zalloc(temp + 1);
     os_strcpy(mqttClient->connect_info.password, client_pass);
     mqttClient->connect_info.password[temp] = 0;
   }
@@ -852,12 +853,12 @@ MQTT_InitLWT(MQTT_Client *mqttClient, const char* will_topic, const char* will_m
   uint32_t temp;
 
   temp = os_strlen(will_topic);
-  mqttClient->connect_info.will_topic = (uint8_t*)os_zalloc(temp + 1);
+  mqttClient->connect_info.will_topic = (char *)os_zalloc(temp + 1);
   os_strcpy(mqttClient->connect_info.will_topic, will_topic);
   mqttClient->connect_info.will_topic[temp] = 0;
 
   temp = os_strlen(will_msg);
-  mqttClient->connect_info.will_message = (uint8_t*)os_zalloc(temp + 1);
+  mqttClient->connect_info.will_message = (char *)os_zalloc(temp + 1);
   os_strcpy(mqttClient->connect_info.will_message, will_msg);
   mqttClient->connect_info.will_message[temp] = 0;
 
