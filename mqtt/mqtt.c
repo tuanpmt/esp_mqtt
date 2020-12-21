@@ -117,7 +117,7 @@ deliver_publish(MQTT_Client* client, uint8_t* message, int length)
 
 }
 
-void ICACHE_FLASH_ATTR
+LOCAL void ICACHE_FLASH_ATTR
 mqtt_send_keepalive(MQTT_Client *client)
 {
   MQTT_INFO("\r\nMQTT: Send keepalive packet to %s:%d!\r\n", client->host, client->port);
@@ -157,7 +157,7 @@ mqtt_send_keepalive(MQTT_Client *client)
   * @param  mqttClient: The mqtt client which contain TCP client
   * @retval None
   */
-void ICACHE_FLASH_ATTR
+LOCAL void ICACHE_FLASH_ATTR
 mqtt_tcpclient_delete(MQTT_Client *mqttClient)
 {
   if (mqttClient->pCon != NULL) {
@@ -181,7 +181,7 @@ mqtt_tcpclient_delete(MQTT_Client *mqttClient)
   * @param  mqttClient: The mqtt client
   * @retval None
   */
-void ICACHE_FLASH_ATTR
+LOCAL void ICACHE_FLASH_ATTR
 mqtt_client_delete(MQTT_Client *mqttClient)
 {
   if (mqttClient == NULL)
@@ -278,7 +278,7 @@ mqtt_client_delete(MQTT_Client *mqttClient)
   * @param  len: the lenght of received data
   * @retval None
   */
-void ICACHE_FLASH_ATTR
+LOCAL void ICACHE_FLASH_ATTR
 mqtt_tcpclient_recv(void *arg, char *pdata, unsigned short len)
 {
   uint8_t msg_type;
@@ -434,7 +434,7 @@ READPACKET:
   * @param  arg: contain the ip link information
   * @retval None
   */
-void ICACHE_FLASH_ATTR
+LOCAL void ICACHE_FLASH_ATTR
 mqtt_tcpclient_sent_cb(void *arg)
 {
   struct espconn *pCon = (struct espconn *)arg;
@@ -452,7 +452,8 @@ mqtt_tcpclient_sent_cb(void *arg)
   system_os_post(MQTT_TASK_PRIO, 0, (os_param_t)client);
 }
 
-void ICACHE_FLASH_ATTR mqtt_timer(void *arg)
+LOCAL void ICACHE_FLASH_ATTR
+mqtt_timer(void *arg)
 {
   MQTT_Client* client = (MQTT_Client*)arg;
 
@@ -477,7 +478,7 @@ void ICACHE_FLASH_ATTR mqtt_timer(void *arg)
     client->sendTimeout --;
 }
 
-void ICACHE_FLASH_ATTR
+LOCAL void ICACHE_FLASH_ATTR
 mqtt_tcpclient_discon_cb(void *arg)
 {
   struct espconn *pespconn = (struct espconn *)arg;
@@ -504,7 +505,7 @@ mqtt_tcpclient_discon_cb(void *arg)
   * @param  arg: contain the ip link information
   * @retval None
   */
-void ICACHE_FLASH_ATTR
+LOCAL void ICACHE_FLASH_ATTR
 mqtt_tcpclient_connect_cb(void *arg)
 {
   struct espconn *pCon = (struct espconn *)arg;
@@ -543,7 +544,7 @@ mqtt_tcpclient_connect_cb(void *arg)
   * @param  arg: contain the ip link information
   * @retval None
   */
-void ICACHE_FLASH_ATTR
+LOCAL void ICACHE_FLASH_ATTR
 mqtt_tcpclient_recon_cb(void *arg, sint8 errType)
 {
   struct espconn *pCon = (struct espconn *)arg;
