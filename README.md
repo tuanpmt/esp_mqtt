@@ -58,27 +58,25 @@ See file: `user/user_main.c`
 
 ```c
 /* TRUE if success */
-BOOL MQTT_Subscribe(MQTT_Client *client, char* topic, uint8_t qos);
+BOOL MQTT_Subscribe(MQTT_Client *client, const char* topic, uint8_t qos);
 
-BOOL MQTT_Publish(MQTT_Client *client, const char* topic, const char* data, int data_length, int qos, int retain);
-
+BOOL MQTT_Publish(MQTT_Client *client, const char* topic, const char* data, int data_length, uint8_t qos, uint8_t retain);
 ```
 
 
 **Already support LWT: (Last Will and Testament)**
 
 ```c
-
 /* Broker will publish a message with qos = 0, retain = 0, data = "offline" to topic "/lwt" if client don't send keepalive packet */
 MQTT_InitLWT(&mqttClient, "/lwt", "offline", 0, 0);
-
 ```
+
 
 # Default configuration
 
 See: **include/user_config.sample.h**
 
-Define protocol name in include/user_config.local.h
+Define protocol name in `include/user_config.local.h`
 
 ```c
 #define PROTOCOL_NAMEv31	/*MQTT version 3.1 compatible with Mosquitto v0.15*/
@@ -104,7 +102,7 @@ On client side (ESP8266) you need to provide a `ca.crt` and a `client.crt`, `cli
 For more details how to create and flash the `ca.crt` and `client.crt` see the `tools` folder in [SDK_BASE](https://github.com/espressif/ESP8266_NONOS_SDK/tree/master/tools).
 See also [ESP8266 Non-OS SDK SSL User Manual](https://www.espressif.com/sites/default/files/documentation/5a-esp8266_sdk_ssl_user_manual_en.pdf) in the Espressif documentation.
 
-You also need to configure the flash locations in `include/user_config.local.h`
+If needed you may configure the flash locations of the certificates in `include/user_config.local.h`
 
 ```c
 #define CA_CERT_FLASH_ADDRESS 0x77 // CA certificate address in flash to read, 0x77 means address 0x77000

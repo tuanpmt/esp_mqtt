@@ -23,8 +23,8 @@
 
 
 //#define DEFAULT_SECURITY SEC_NONSSL // disable SSL/TLS
-//#define DEFAULT_SECURITY SEC_SSL_WITHOUT_AUTH // enable SSL/TLS, but there is no a certificate verify
-#define DEFAULT_SECURITY SEC_SSL_ONE_WAY_AUTH // enable SSL/TLS, ESP8266 would verify the SSL server certificate at the same time
+#define DEFAULT_SECURITY SEC_SSL_WITHOUT_AUTH // enable SSL/TLS, but there is no a certificate verify
+//#define DEFAULT_SECURITY SEC_SSL_ONE_WAY_AUTH // enable SSL/TLS, ESP8266 would verify the SSL server certificate at the same time
 //#define DEFAULT_SECURITY SEC_SSL_TWO_WAY_AUTH // enable SSL/TLS, ESP8266 would verify the SSL server certificate and SSL server would verify ESP8266 certificate
 
 #if DEFAULT_SECURITY == SEC_NONSSL
