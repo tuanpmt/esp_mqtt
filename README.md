@@ -38,10 +38,10 @@ make SDK_BASE=/tools/esp8266/sdk/ESP8266_NONOS_SDK ESPTOOL=/tools/esp8266/esptoo
 #flash
 make ESPPORT=/dev/ttyUSB0 flash
 ```
-To create the library use
+To create the library (and removing the uart debug output) use
 
 ```bash
-make SDK_BASE=/tools/esp8266/sdk/ESP8266_NONOS_SDK lib
+make SDK_BASE=/tools/esp8266/sdk/ESP8266_NONOS_SDK FLAVOR=release lib
 ```
 
 
