@@ -61,7 +61,7 @@ unsigned int default_private_key_len = 0;
 os_event_t mqtt_procTaskQueue[MQTT_TASK_QUEUE_SIZE];
 
 #ifdef PROTOCOL_NAMEv311
-LOCAL uint8_t zero_len_id[2] = { 0, 0 };
+LOCAL char zero_len_id[2] = { 0, 0 };
 #endif
 
 LOCAL void ICACHE_FLASH_ATTR
@@ -86,6 +86,12 @@ mqtt_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
     os_memcpy(client->pCon->proto.tcp->remote_ip, &ipaddr->addr, 4);
     if (client->security) {
 #ifdef MQTT_SSL_ENABLE
+      if (client->security >= SEC_SSL_ONE_WAY_AUTH) {
+        espconn_secure_ca_enable(ESPCONN_CLIENT, CA_CERT_FLASH_ADDRESS);
+      }
+      if (client->security >= SEC_SSL_TWO_WAY_AUTH) {
+        espconn_secure_cert_req_enable(ESPCONN_CLIENT, CLIENT_CERT_FLASH_ADDRESS);
+      }
       espconn_secure_set_size(ESPCONN_CLIENT, MQTT_SSL_SIZE);
       espconn_secure_connect(client->pCon);
 #else
@@ -227,7 +233,7 @@ mqtt_client_delete(MQTT_Client *mqttClient)
   if (mqttClient->connect_info.client_id != NULL) {
 #ifdef PROTOCOL_NAMEv311
     /* Don't attempt to free if it's the zero_len array */
-    if ( ((uint8_t*)mqttClient->connect_info.client_id) != zero_len_id )
+    if (mqttClient->connect_info.client_id != zero_len_id)
       os_free(mqttClient->connect_info.client_id);
 #else
     os_free(mqttClient->connect_info.client_id);
@@ -897,10 +903,17 @@ MQTT_Connect(MQTT_Client *mqttClient)
   os_timer_setfn(&mqttClient->mqttTimer, (os_timer_func_t *)mqtt_timer, mqttClient);
   os_timer_arm(&mqttClient->mqttTimer, 1000, 1);
 
+  MQTT_INFO("your ESP SSL/TLS configuration is %d. [0:NONSSL\t1:SSL_WITHOUT_AUTH\t2:SSL_ONE_WAY_AUTH\t3:SSL_TWO_WAY_AUTH]\r\n", mqttClient->security);
   if (UTILS_StrToIP(mqttClient->host, &mqttClient->pCon->proto.tcp->remote_ip)) {
     MQTT_INFO("TCP: Connect to ip  %s:%d\r\n", mqttClient->host, mqttClient->port);
     if (mqttClient->security) {
 #ifdef MQTT_SSL_ENABLE
+      if (mqttClient->security >= SEC_SSL_ONE_WAY_AUTH) {
+        espconn_secure_ca_enable(ESPCONN_CLIENT, CA_CERT_FLASH_ADDRESS);
+      }
+      if (mqttClient->security >= SEC_SSL_TWO_WAY_AUTH) {
+        espconn_secure_cert_req_enable(ESPCONN_CLIENT, CLIENT_CERT_FLASH_ADDRESS);
+      }
       espconn_secure_set_size(ESPCONN_CLIENT, MQTT_SSL_SIZE);
       espconn_secure_connect(mqttClient->pCon);
 #else

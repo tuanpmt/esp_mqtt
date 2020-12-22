@@ -29,11 +29,10 @@
 */
 #ifndef USER_AT_MQTT_H_
 #define USER_AT_MQTT_H_
-#include "user_config.h"
 #include "mqtt_msg.h"
 #include "user_interface.h"
-
 #include "queue.h"
+
 typedef struct mqtt_event_data_t
 {
   uint8_t type;
@@ -113,8 +112,11 @@ typedef struct  {
   void* user_data;
 } MQTT_Client;
 
-#define SEC_NONSSL 0
-#define SEC_SSL 1
+// define the possible MQTT SSL/TLS certificate options
+#define SEC_NONSSL           0 // disable SSL/TLS
+#define SEC_SSL_WITHOUT_AUTH 1 // enable SSL/TLS, but there is no a certificate verify
+#define SEC_SSL_ONE_WAY_AUTH 2 // enable SSL/TLS, ESP8266 would verify the SSL server certificate at the same time
+#define SEC_SSL_TWO_WAY_AUTH 3 // enable SSL/TLS, ESP8266 would verify the SSL server certificate and SSL server would verify ESP8266 certificate
 
 #define MQTT_FLAG_CONNECTED 1
 #define MQTT_FLAG_READY     2
