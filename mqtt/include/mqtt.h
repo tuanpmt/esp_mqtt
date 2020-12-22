@@ -29,11 +29,10 @@
 */
 #ifndef USER_AT_MQTT_H_
 #define USER_AT_MQTT_H_
-#include "user_config.h"
 #include "mqtt_msg.h"
 #include "user_interface.h"
-
 #include "queue.h"
+
 typedef struct mqtt_event_data_t
 {
   uint8_t type;
@@ -94,7 +93,7 @@ typedef void (*MqttDataCallback)(uint32_t *args, const char* topic, uint32_t top
 typedef struct  {
   struct espconn *pCon;
   uint8_t security;
-  uint8_t* host;
+  char* host;
   uint32_t port;
   ip_addr_t ip;
   mqtt_state_t  mqtt_state;
@@ -113,36 +112,39 @@ typedef struct  {
   void* user_data;
 } MQTT_Client;
 
-#define SEC_NONSSL 0
-#define SEC_SSL 1
+// define the possible MQTT SSL/TLS certificate options
+#define SEC_NONSSL           0 // disable SSL/TLS
+#define SEC_SSL_WITHOUT_AUTH 1 // enable SSL/TLS, but there is no a certificate verify
+#define SEC_SSL_ONE_WAY_AUTH 2 // enable SSL/TLS, ESP8266 would verify the SSL server certificate at the same time
+#define SEC_SSL_TWO_WAY_AUTH 3 // enable SSL/TLS, ESP8266 would verify the SSL server certificate and SSL server would verify ESP8266 certificate
 
-#define MQTT_FLAG_CONNECTED   1
+#define MQTT_FLAG_CONNECTED 1
 #define MQTT_FLAG_READY     2
 #define MQTT_FLAG_EXIT      4
 
-#define MQTT_EVENT_TYPE_NONE      0
+#define MQTT_EVENT_TYPE_NONE          0
 #define MQTT_EVENT_TYPE_CONNECTED     1
 #define MQTT_EVENT_TYPE_DISCONNECTED  2
 #define MQTT_EVENT_TYPE_SUBSCRIBED    3
 #define MQTT_EVENT_TYPE_UNSUBSCRIBED  4
-#define MQTT_EVENT_TYPE_PUBLISH     5
+#define MQTT_EVENT_TYPE_PUBLISH       5
 #define MQTT_EVENT_TYPE_PUBLISHED     6
-#define MQTT_EVENT_TYPE_EXITED      7
+#define MQTT_EVENT_TYPE_EXITED        7
 #define MQTT_EVENT_TYPE_PUBLISH_CONTINUATION 8
 
-void ICACHE_FLASH_ATTR MQTT_InitConnection(MQTT_Client *mqttClient, uint8_t* host, uint32_t port, uint8_t security);
-BOOL ICACHE_FLASH_ATTR MQTT_InitClient(MQTT_Client *mqttClient, uint8_t* client_id, uint8_t* client_user, uint8_t* client_pass, uint32_t keepAliveTime, uint8_t cleanSession);
+void ICACHE_FLASH_ATTR MQTT_InitConnection(MQTT_Client *mqttClient, const char* host, uint32_t port, uint8_t security);
+BOOL ICACHE_FLASH_ATTR MQTT_InitClient(MQTT_Client *mqttClient, const char* client_id, const char* client_user, const char* client_pass, uint32_t keepAliveTime, uint8_t cleanSession);
 void ICACHE_FLASH_ATTR MQTT_DeleteClient(MQTT_Client *mqttClient);
-void ICACHE_FLASH_ATTR MQTT_InitLWT(MQTT_Client *mqttClient, uint8_t* will_topic, uint8_t* will_msg, uint8_t will_qos, uint8_t will_retain);
+void ICACHE_FLASH_ATTR MQTT_InitLWT(MQTT_Client *mqttClient, const char* will_topic, const char* will_msg, uint8_t will_qos, uint8_t will_retain);
 void ICACHE_FLASH_ATTR MQTT_OnConnected(MQTT_Client *mqttClient, MqttCallback connectedCb);
 void ICACHE_FLASH_ATTR MQTT_OnDisconnected(MQTT_Client *mqttClient, MqttCallback disconnectedCb);
 void ICACHE_FLASH_ATTR MQTT_OnPublished(MQTT_Client *mqttClient, MqttCallback publishedCb);
 void ICACHE_FLASH_ATTR MQTT_OnTimeout(MQTT_Client *mqttClient, MqttCallback timeoutCb);
 void ICACHE_FLASH_ATTR MQTT_OnData(MQTT_Client *mqttClient, MqttDataCallback dataCb);
-BOOL ICACHE_FLASH_ATTR MQTT_Subscribe(MQTT_Client *client, char* topic, uint8_t qos);
-BOOL ICACHE_FLASH_ATTR MQTT_UnSubscribe(MQTT_Client *client, char* topic);
+BOOL ICACHE_FLASH_ATTR MQTT_Subscribe(MQTT_Client *client, const char* topic, uint8_t qos);
+BOOL ICACHE_FLASH_ATTR MQTT_UnSubscribe(MQTT_Client *client, const char* topic);
 void ICACHE_FLASH_ATTR MQTT_Connect(MQTT_Client *mqttClient);
 void ICACHE_FLASH_ATTR MQTT_Disconnect(MQTT_Client *mqttClient);
-BOOL ICACHE_FLASH_ATTR MQTT_Publish(MQTT_Client *client, const char* topic, const char* data, int data_length, int qos, int retain);
+BOOL ICACHE_FLASH_ATTR MQTT_Publish(MQTT_Client *client, const char* topic, const char* data, int data_length, uint8_t qos, uint8_t retain);
 
 #endif /* USER_AT_MQTT_H_ */

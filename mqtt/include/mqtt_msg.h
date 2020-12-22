@@ -7,7 +7,6 @@
 
 #ifndef MQTT_MSG_H
 #define MQTT_MSG_H
-#include "user_config.h"
 #include "c_types.h"
 #ifdef  __cplusplus
 extern "C" {
@@ -138,4 +137,3 @@ mqtt_message_t* ICACHE_FLASH_ATTR mqtt_msg_disconnect(mqtt_connection_t* connect
 #endif
 
 #endif  /* MQTT_MSG_H */
-

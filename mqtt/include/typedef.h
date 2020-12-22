@@ -14,4 +14,17 @@ typedef long I32;
 typedef unsigned long U32;
 typedef unsigned long long U64;
 
+#ifdef __cplusplus
+// fix bug in c_types.h include, not defining BOOL, TRUE, FALSE for c++
+#ifndef BOOL
+#	define BOOL bool
+#endif // BOOL
+#ifndef TRUE
+#	define TRUE true
+#endif // TRUE
+#ifndef FALSE
+#	define FALSE false
+#endif // FALSE
+#endif // __cplusplus
+
 #endif

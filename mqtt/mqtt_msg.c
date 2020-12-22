@@ -296,7 +296,7 @@ mqtt_message_t* ICACHE_FLASH_ATTR mqtt_msg_connect(mqtt_connection_t* connection
 
   if (connection->message.length + sizeof(*variable_header) > connection->buffer_length)
     return fail_message(connection);
-  variable_header = (void*)(connection->buffer + connection->message.length);
+  variable_header = (struct mqtt_connect_variable_header*)(connection->buffer + connection->message.length);
   connection->message.length += sizeof(*variable_header);
 
   variable_header->lengthMsb = 0;
