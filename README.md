@@ -78,11 +78,11 @@ MQTT_InitLWT(&mqttClient, "/lwt", "offline", 0, 0);
 
 See: **include/user_config.sample.h**
 
-**Define protocol name in include/user_config.local.h**
+Define protocol name in include/user_config.local.h
 
 ```c
 #define PROTOCOL_NAMEv31	/*MQTT version 3.1 compatible with Mosquitto v0.15*/
-//#define PROTOCOL_NAMEv311			/*MQTT version 3.11 compatible with https://eclipse.org/paho/clients/testing/*/
+//#define PROTOCOL_NAMEv311	/*MQTT version 3.11 compatible with https://eclipse.org/paho/clients/testing/*/
 ```
 
 
@@ -92,7 +92,7 @@ See: **include/user_config.sample.h**
 openssl req -x509 -newkey rsa:1024 -keyout key.pem -out cert.pem -days XXX
 ```
 
-On client (ESP8266) side you need to provide a `ca.crt` and a `client.crt`, `client.key` pair depending what kind of security you choose (SEC_SSL_ONE_WAY_AUTH or SEC_SSL_TWO_WAY_AUTH).
+On client side (ESP8266) you need to provide a `ca.crt` and a `client.crt`, `client.key` pair depending what kind of security you choose (SEC_SSL_ONE_WAY_AUTH or SEC_SSL_TWO_WAY_AUTH).
 
 ```c
 //#define DEFAULT_SECURITY SEC_NONSSL // disable SSL/TLS
@@ -101,10 +101,10 @@ On client (ESP8266) side you need to provide a `ca.crt` and a `client.crt`, `cli
 //#define DEFAULT_SECURITY SEC_SSL_TWO_WAY_AUTH // enable SSL/TLS, ESP8266 would verify the SSL server certificate and SSL server would verify ESP8266 certificate
 ```
 
-For more details how to create and flash the `ca.crt` and `client.crt` see the `tools` folder in SDK_BASE.
+For more details how to create and flash the `ca.crt` and `client.crt` see the `tools` folder in [SDK_BASE](https://github.com/espressif/ESP8266_NONOS_SDK/tree/master/tools).
 See also [ESP8266 Non-OS SDK SSL User Manual](https://www.espressif.com/sites/default/files/documentation/5a-esp8266_sdk_ssl_user_manual_en.pdf) in the Espressif documentation.
 
-You also need to configure the flash locations in include/user_config.local.h
+You also need to configure the flash locations in `include/user_config.local.h`
 
 ```c
 #define CA_CERT_FLASH_ADDRESS 0x77 // CA certificate address in flash to read, 0x77 means address 0x77000
