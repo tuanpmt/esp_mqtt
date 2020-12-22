@@ -5,29 +5,28 @@
 This is MQTT client library for ESP8266, port from: [MQTT client library for Contiki](https://github.com/esar/contiki-mqtt) (thanks)
 
 
-
 **Features:**
 
  * Support subscribing, publishing, authentication, will messages, keep alive pings and all 3 QoS levels (it should be a fully functional client).
  * Support multiple connection (to multiple hosts).
- * Support SSL connection
+ * Support SSL connection (including cert verification).
  * Easy to setup and use
+
 
 ***Prerequire:***
 
 - ESPTOOL.PY: https://github.com/themadinventor/esptool
 - SDK 2.0 or higher: http://bbs.espressif.com/viewtopic.php?f=46&t=2451
-- ESP8266 compiler: 
+- ESP8266 compiler:
     + OSX or Linux: http://tuanpm.net/esp8266-development-kit-on-mac-os-yosemite-and-eclipse-ide/
-    + Windows: http://programs74.ru/udkew-en.html 
+    + Windows: http://programs74.ru/udkew-en.html
+
 
 **Compile:**
 
 - Copy file `include/user_config.sample.h` to `include/user_config.local.h` and change settings, included: SSID, PASS, MQTT configurations ...
 
-
 Make sure to add PYTHON PATH and compile PATH to Eclipse environment variable if using Eclipse
-
 
 ```bash
 git clone --recursive https://github.com/tuanpmt/esp_mqtt
@@ -35,17 +34,25 @@ cd esp_mqtt
 #clean
 make clean
 #make
-make SDK_BASE=/tools/esp8266/sdk/ESP8266_NONOS_SDK ESPTOOL=tools/esp8266/esptool/esptool.py all
+make SDK_BASE=/tools/esp8266/sdk/ESP8266_NONOS_SDK ESPTOOL=/tools/esp8266/esptool/esptool.py all
 #flash
 make ESPPORT=/dev/ttyUSB0 flash
 ```
+To create the library use
+
+```bash
+make SDK_BASE=/tools/esp8266/sdk/ESP8266_NONOS_SDK lib
+```
+
 
 **Usage**
 
 See file: `user/user_main.c`
 
+
 **Notes**
-- The client id needs to be unique. If not, When there are more than 2 clients use the same ClientID, the following logged-in client will kick the ahead logged-in client, and so on forever
+- The client id needs to be unique. If not, when there are more than 2 clients use the same ClientID, the following logged-in client will kick the ahead logged-in client, and so on forever.
+
 
 **Publish message and Subscribe**
 
@@ -56,6 +63,7 @@ BOOL MQTT_Subscribe(MQTT_Client *client, char* topic, uint8_t qos);
 BOOL MQTT_Publish(MQTT_Client *client, const char* topic, const char* data, int data_length, int qos, int retain);
 
 ```
+
 
 **Already support LWT: (Last Will and Testament)**
 
@@ -74,7 +82,7 @@ See: **include/user_config.sample.h**
 
 ```c
 #define PROTOCOL_NAMEv31	/*MQTT version 3.1 compatible with Mosquitto v0.15*/
-//PROTOCOL_NAMEv311			/*MQTT version 3.11 compatible with https://eclipse.org/paho/clients/testing/*/
+//#define PROTOCOL_NAMEv311			/*MQTT version 3.11 compatible with https://eclipse.org/paho/clients/testing/*/
 ```
 
 
@@ -83,6 +91,26 @@ See: **include/user_config.sample.h**
 ```
 openssl req -x509 -newkey rsa:1024 -keyout key.pem -out cert.pem -days XXX
 ```
+
+On client (ESP8266) side you need to provide a `ca.crt` and a `client.crt`, `client.key` pair depending what kind of security you choose (SEC_SSL_ONE_WAY_AUTH or SEC_SSL_TWO_WAY_AUTH).
+
+```c
+//#define DEFAULT_SECURITY SEC_NONSSL // disable SSL/TLS
+#define DEFAULT_SECURITY SEC_SSL_WITHOUT_AUTH // enable SSL/TLS, but there is no a certificate verify
+//#define DEFAULT_SECURITY SEC_SSL_ONE_WAY_AUTH // enable SSL/TLS, ESP8266 would verify the SSL server certificate at the same time
+//#define DEFAULT_SECURITY SEC_SSL_TWO_WAY_AUTH // enable SSL/TLS, ESP8266 would verify the SSL server certificate and SSL server would verify ESP8266 certificate
+```
+
+For more details how to create and flash the `ca.crt` and `client.crt` see the `tools` folder in SDK_BASE.
+See also [ESP8266 Non-OS SDK SSL User Manual](https://www.espressif.com/sites/default/files/documentation/5a-esp8266_sdk_ssl_user_manual_en.pdf) in the Espressif documentation.
+
+You also need to configure the flash locations in include/user_config.local.h
+
+```c
+#define CA_CERT_FLASH_ADDRESS 0x77 // CA certificate address in flash to read, 0x77 means address 0x77000
+#define CLIENT_CERT_FLASH_ADDRESS 0x78 // client certificate and private key address in flash to read, 0x78 means address 0x78000
+```
+
 
 **SSL Mqtt broker for test**
 
